@@ -148,4 +148,13 @@
     <string name="track_solid">Solid</string>
     <string name="track_dashed">Dashed</string>
     <string name="track_points">Track points: %1$d</string>
+    <string name="diagnostics">Diagnostics</string>
+    <string name="aprs_received">APRS-IS received</string>
+    <string name="aprs_sent">APRS-IS sent</string>
+    <string name="tnc_received">TNC received</string>
+    <string name="tnc_sent">TNC sent</string>
+    <string name="station_count">Known stations</string>
+    <string name="rf_link_count">RF link records</string>
+    <string name="aprs_error">APRS-IS error</string>
+    <string name="tnc_error">TNC error</string>
 </resources>
