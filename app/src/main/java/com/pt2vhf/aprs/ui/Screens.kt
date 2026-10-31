@@ -98,13 +98,22 @@ fun MapScreen(onStation: (String) -> Unit) {
     val stations by AprsRepository.stations.collectAsState()
     val links by AprsRepository.links.collectAsState()
     val status by AprsRepository.status.collectAsState()
+    val followedCall by AprsRepository.followCall.collectAsState()
+    var followPaused by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(followedCall) { followPaused = false }
     var centered by remember { mutableStateOf(false) }
+    Box(Modifier.fillMaxSize()) {
     AndroidView(
         modifier = Modifier.fillMaxSize(),
         factory = { ctx ->
             MapView(ctx).apply {
                 setTileSource(TileSourceFactory.MAPNIK)
                 setMultiTouchControls(true)
+                setOnTouchListener { _, event ->
+                    if (followedCall != null && event.actionMasked == android.view.MotionEvent.ACTION_MOVE)
+                        followPaused = true
+                    false
+                }
                 controller.setZoom(9.0)
                 controller.setCenter(GeoPoint(-15.78, -47.93))
             }
@@ -138,11 +147,28 @@ fun MapScreen(onStation: (String) -> Unit) {
                     title = UiText.text(R.string.me)
                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                 })
-                if (!centered) { map.controller.setCenter(GeoPoint(lat, lon)); centered = true }
+                if (!centered && followedCall == null) {
+                    map.controller.setCenter(GeoPoint(lat, lon)); centered = true
+                }
             }
+            val followed = followedCall?.let { stations[it] }
+            if (followed != null && !followPaused)
+                map.controller.setCenter(GeoPoint(followed.lat, followed.lon))
             map.invalidate()
         },
     )
+    if (followedCall != null) {
+        Row(Modifier.align(Alignment.BottomCenter).background(Pal.bar, RoundedCornerShape(12.dp))) {
+            TextButton(onClick = { followPaused = !followPaused }) {
+                Text(if (followPaused) UiText.text(R.string.follow_paused)
+                    else UiText.text(R.string.following, followedCall!!))
+            }
+            TextButton(onClick = { AprsRepository.followStation(null) }) {
+                Text(UiText.text(R.string.stop_following))
+            }
+        }
+    }
+    }
 }
 
 // ---------- Mensagens ----------
@@ -299,6 +325,8 @@ private fun GroupChat(list: List<ChatMessage>, settings: Settings, defaultTo: St
 fun StationsScreen(onStation: (String) -> Unit) {
     val stations by AprsRepository.stations.collectAsState()
     val status by AprsRepository.status.collectAsState()
+    val favorites by AprsRepository.favorites.collectAsState()
+    var favoritesOnly by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
     var query by rememberSaveable { mutableStateOf("") }
     val types = listOf("all", "Digipeater", "iGate", "Estação meteorológica", "Móvel", "Estação")
@@ -307,7 +335,8 @@ fun StationsScreen(onStation: (String) -> Unit) {
     var order by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_order", "nearest")) }
     val list = stations.values.filter {
         (query.isBlank() || it.call.contains(query.trim(), ignoreCase = true)) &&
-            (type == "all" || it.role == type)
+            (type == "all" || it.role == type) &&
+            (!favoritesOnly || it.call in favorites)
     }.let { items ->
         when (order) {
             "recent" -> items.sortedByDescending { it.lastHeard }
@@ -333,13 +362,16 @@ fun StationsScreen(onStation: (String) -> Unit) {
                 type = types[(types.indexOf(type) + 1) % types.size]
                 Settings.saveOption(context, "station_type", type)
             }) { Text(if (type == "all") UiText.text(R.string.filter_all) else UiText.role(type)) }
+            TextButton(onClick = { favoritesOnly = !favoritesOnly }) {
+                Text(if (favoritesOnly) UiText.text(R.string.favorites_only) else "☆")
+            }
         }
         if (list.isEmpty()) Empty(UiText.text(R.string.no_stations))
         LazyColumn {
             items(list, key = { it.call }) { s ->
                 Row(Modifier.fillMaxWidth().clickable { onStation(s.call) }.padding(16.dp, 10.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(s.call, fontWeight = FontWeight.Bold)
+                        Text(s.call + if (s.call in favorites) " ★" else "", fontWeight = FontWeight.Bold)
                         Text("${UiText.role(s.role)} · ${s.medium.label} · ${ago(s.lastHeard)}", color = Pal.muted, fontSize = 12.sp)
                     }
                     val lat = status.lat; val lon = status.lon
@@ -353,6 +385,8 @@ fun StationsScreen(onStation: (String) -> Unit) {
 @Composable
 fun StationDialog(call: String, onDismiss: () -> Unit, onMessage: () -> Unit) {
     val context = LocalContext.current
+    val favorites by AprsRepository.favorites.collectAsState()
+    val followed by AprsRepository.followCall.collectAsState()
     val stations by AprsRepository.stations.collectAsState()
     val status by AprsRepository.status.collectAsState()
     val s: Station? = stations[call]
@@ -380,7 +414,20 @@ fun StationDialog(call: String, onDismiss: () -> Unit, onMessage: () -> Unit) {
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onMessage) { Text(UiText.text(R.string.message)) } },
+        confirmButton = {
+            Row {
+                TextButton(onClick = { AprsRepository.toggleFavorite(call) }) {
+                    Text(UiText.text(if (call in favorites) R.string.favorite_remove else R.string.favorite_add))
+                }
+                TextButton(onClick = {
+                    AprsRepository.followStation(if (followed == call) null else call)
+                    onDismiss()
+                }) {
+                    Text(UiText.text(if (followed == call) R.string.stop_following else R.string.follow_station))
+                }
+                TextButton(onClick = onMessage) { Text(UiText.text(R.string.message)) }
+            }
+        },
         dismissButton = {
             Row {
                 if (s != null) TextButton(onClick = {
