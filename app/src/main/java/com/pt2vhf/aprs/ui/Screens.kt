@@ -84,6 +84,8 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
 import java.util.Date
+import java.util.UUID
+import com.pt2vhf.aprs.data.OutboundSendResult
 
 private fun ago(t: Long): String {
     val s = (System.currentTimeMillis() - t) / 1000
@@ -342,20 +344,40 @@ private fun Bubble(m: ChatMessage, showSender: Boolean, onStation: (String) -> U
 }
 
 @Composable
-private fun Composer(placeholder: String, onSend: (String) -> Boolean) {
-    var text by rememberSaveable { mutableStateOf("") }
-    var error by remember { mutableStateOf(false) }
+private fun Composer(placeholder: String, onSend: (String, String) -> Unit) {
+    var text by rememberSaveable(placeholder) { mutableStateOf("") }
+    var pendingId by remember(placeholder) { mutableStateOf<String?>(null) }
+    var pendingText by remember(placeholder) { mutableStateOf("") }
+    var error by remember(placeholder) { mutableStateOf<String?>(null) }
+    val results by AprsRepository.sendResults.collectAsState()
+    LaunchedEffect(results, pendingId) {
+        val result = pendingId?.let { results[it] }
+        if (result != null) {
+            if (result.submitted) {
+                // Preserve text edited while the service processed the previous send request.
+                if (text == pendingText) text = ""
+                error = null
+            } else {
+                error = result.reason.ifBlank { UiText.text(R.string.tx_route_unavailable) }
+            }
+            pendingId = null
+        }
+    }
     Column(Modifier.fillMaxWidth().background(Pal.bar)) {
-        if (error) Text(UiText.text(R.string.tx_route_unavailable), color = Pal.orange, modifier = Modifier.padding(horizontal = 12.dp))
+        error?.let { Text(it, color = Pal.orange, modifier = Modifier.padding(horizontal = 12.dp)) }
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(text, { text = it; error = false }, placeholder = { Text(placeholder) },
+            OutlinedTextField(text, { text = it; error = null }, placeholder = { Text(placeholder) },
                 modifier = Modifier.weight(1f), minLines = 1, maxLines = 4)
             Button(onClick = {
-                if (text.isNotBlank()) {
-                    if (onSend(text)) { text = ""; error = false }
-                    else error = true
+                if (text.isNotBlank() && pendingId == null) {
+                    val id = UUID.randomUUID().toString()
+                    pendingId = id
+                    pendingText = text
+                    onSend(text, id)
                 }
-            }, modifier = Modifier.padding(start = 4.dp)) { Text(UiText.text(R.string.send)) }
+            }, enabled = pendingId == null, modifier = Modifier.padding(start = 4.dp)) {
+                Text(UiText.text(R.string.send))
+            }
         }
     }
 }
@@ -381,13 +403,14 @@ private fun Conversation(settings: Settings, contact: String, onBack: () -> Unit
         LazyColumn(Modifier.weight(1f).padding(horizontal = 12.dp), state = state, verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(list, key = { it.id }) { Bubble(it, false, onStation) }
         }
-        val status by AprsRepository.status.collectAsState()
-        Composer(UiText.text(R.string.message_to, contact)) {
-            val ready = settings.configured && ((settings.txViaInternet && status.aprsIsVerified) ||
-                (settings.txViaRf && status.tncConnected))
-            if (ready) AprsService.send(context, AprsService.ACTION_MESSAGE,
-                mapOf(AprsService.EXTRA_TO to contact, AprsService.EXTRA_TEXT to it))
-            ready
+        Composer(UiText.text(R.string.message_to, contact)) { message, requestId ->
+            val dispatched = runCatching {
+                AprsService.send(context, AprsService.ACTION_MESSAGE,
+                    mapOf(AprsService.EXTRA_TO to contact, AprsService.EXTRA_TEXT to message,
+                        AprsService.EXTRA_REQUEST_ID to requestId))
+            }.isSuccess
+            if (!dispatched) AprsRepository.reportSendResult(OutboundSendResult(requestId, false,
+                UiText.text(R.string.tx_dispatch_failed)))
         }
     }
 }
@@ -402,13 +425,14 @@ private fun GroupChat(list: List<ChatMessage>, settings: Settings, defaultTo: St
         LazyColumn(Modifier.weight(1f).padding(horizontal = 12.dp), state = state, verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(list, key = { it.id }) { Bubble(it, true, onStation) }
         }
-        val link by AprsRepository.status.collectAsState()
-        Composer(if (defaultTo == "CQ") UiText.text(R.string.message_all) else UiText.text(R.string.bulletin_default)) {
-            val ready = settings.configured && ((settings.txViaInternet && link.aprsIsVerified) ||
-                (settings.txViaRf && link.tncConnected))
-            if (ready) AprsService.send(context, AprsService.ACTION_MESSAGE,
-                mapOf(AprsService.EXTRA_TO to defaultTo, AprsService.EXTRA_TEXT to it))
-            ready
+        Composer(if (defaultTo == "CQ") UiText.text(R.string.message_all) else UiText.text(R.string.bulletin_default)) { message, requestId ->
+            val dispatched = runCatching {
+                AprsService.send(context, AprsService.ACTION_MESSAGE,
+                    mapOf(AprsService.EXTRA_TO to defaultTo, AprsService.EXTRA_TEXT to message,
+                        AprsService.EXTRA_REQUEST_ID to requestId))
+            }.isSuccess
+            if (!dispatched) AprsRepository.reportSendResult(OutboundSendResult(requestId, false,
+                UiText.text(R.string.tx_dispatch_failed)))
         }
     }
 }

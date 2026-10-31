@@ -196,4 +196,10 @@
     <string name="tracker_auto_start">Start tracking automatically</string>
     <string name="tracker_auto_start_notice">When enabled, transmit your position through authorized APRS links after a GPS fix. You can stop tracking at any time.</string>
     <string name="tx_route_unavailable">No authorized transmission route. Check APRS-IS TX, RF/TNC and connection in Settings.</string>
+    <string name="tx_disabled">Transmission disabled. Enable APRS-IS TX or RF TX in Settings.</string>
+    <string name="tx_tnc_unavailable">RF transmission enabled but TNC is disconnected. Enable APRS-IS TX or connect the TNC.</string>
+    <string name="tx_aprs_unverified">APRS-IS connected, but login is not verified; transmitting is blocked.</string>
+    <string name="tx_aprs_unavailable">APRS-IS is disconnected. Reconnect before sending.</string>
+    <string name="tx_send_failed">Transmission failed despite an authorized route. Check the connection and try again; your text was preserved.</string>
+    <string name="tx_dispatch_failed">Could not start the messaging service. Your text was preserved.</string>
 </resources>

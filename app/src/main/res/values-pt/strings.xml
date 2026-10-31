@@ -196,4 +196,10 @@
     <string name="tracker_auto_start">Iniciar rastreamento automaticamente</string>
     <string name="tracker_auto_start_notice">Quando ativado, transmite sua posição pelos meios APRS autorizados após obter GPS. Você pode interromper o rastreamento a qualquer momento.</string>
     <string name="tx_route_unavailable">Sem rota de transmissão autorizada. Confira TX APRS-IS, RF/TNC e conexão nas Configurações.</string>
+    <string name="tx_disabled">Transmissão desativada. Habilite TX via APRS-IS ou RF nas Configurações.</string>
+    <string name="tx_tnc_unavailable">TX via RF está habilitado, mas o TNC está desconectado. Habilite TX APRS-IS ou conecte o TNC.</string>
+    <string name="tx_aprs_unverified">APRS-IS conectado, mas login não verificado. Envio bloqueado.</string>
+    <string name="tx_aprs_unavailable">APRS-IS desconectado. Reconecte antes de enviar.</string>
+    <string name="tx_send_failed">Falha de transmissão apesar de rota autorizada. Confira a conexão e tente novamente. Seu texto foi preservado.</string>
+    <string name="tx_dispatch_failed">Não foi possível iniciar o serviço de mensagens. Seu texto foi preservado.</string>
 </resources>

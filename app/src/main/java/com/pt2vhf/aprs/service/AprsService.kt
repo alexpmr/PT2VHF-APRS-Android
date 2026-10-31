@@ -39,6 +39,7 @@ import com.pt2vhf.aprs.core.splitMessage
 import com.pt2vhf.aprs.data.AprsRepository
 import com.pt2vhf.aprs.data.ChatMessage
 import com.pt2vhf.aprs.data.Medium
+import com.pt2vhf.aprs.data.OutboundSendResult
 import com.pt2vhf.aprs.data.Settings
 import kotlin.math.abs
 
@@ -130,7 +131,13 @@ class AprsService : Service(), LocationListener {
                 AprsRepository.updateStatus { it.copy(trackerOn = false, nextBeaconSec = null) }
             }
             ACTION_MESSAGE -> intent.getStringExtra(EXTRA_TO)?.let { to ->
-                sendMessage(to, intent.getStringExtra(EXTRA_TEXT).orEmpty())
+                // Service owns the TX decision. The UI must not assume an Intent is a successful write.
+                settings = Settings.load(this)
+                val submitted = sendMessage(to, intent.getStringExtra(EXTRA_TEXT).orEmpty())
+                intent.getStringExtra(EXTRA_REQUEST_ID)?.let { id ->
+                    AprsRepository.reportSendResult(OutboundSendResult(id, submitted,
+                        if (submitted) "" else sendFailureReason()))
+                }
             }
             ACTION_BT_CONNECT -> intent.getStringExtra(EXTRA_ADDRESS)?.let {
                 settings = settings.copy(btAddress = it); Settings.save(this, settings); connectBluetooth(it)
@@ -275,22 +282,25 @@ class AprsService : Service(), LocationListener {
         return used
     }
 
-    private fun sendMessage(to: String, text: String) {
+    private fun sendMessage(to: String, text: String): Boolean {
         val dest = to.trim().uppercase()
-        if (dest.isEmpty() || text.isBlank()) return
+        if (dest.isEmpty() || text.isBlank() || !settings.configured) return false
         val general = dest == "CQ" || dest.startsWith("BLN")
+        var allSubmitted = true
         for (part in splitMessage(text)) {
             val msgId = if (general) null else nextMsgId()
             val local = ChatMessage(AprsRepository.newId(), settings.fullCall, dest, part, System.currentTimeMillis(),
                 true, null, msgId = msgId, status = "Enviando",
                 kind = if (dest.startsWith("BLN")) AprsMessage.Kind.BULLETIN else AprsMessage.Kind.MESSAGE)
             AprsRepository.add(local)
-            sendWithRetry(local, dest, part, msgId, 0)
+            if (!sendWithRetry(local, dest, part, msgId, 0)) allSubmitted = false
         }
+        return allSubmitted
     }
 
-    private fun sendWithRetry(local: ChatMessage, dest: String, text: String, msgId: String?, attempt: Int) {
-        if (AprsRepository.isAcked(local.id)) return
+    /** true means written to at least one authorized transport, not remotely delivered. */
+    private fun sendWithRetry(local: ChatMessage, dest: String, text: String, msgId: String?, attempt: Int): Boolean {
+        if (AprsRepository.isAcked(local.id)) return true
         val medium = transmit(messageInfo(dest, text, msgId))
         when {
             medium == null -> AprsRepository.setStatus(local.id, "Sem conexão para enviar")
@@ -301,6 +311,19 @@ class AprsService : Service(), LocationListener {
                     else "Aguardando ACK (${attempt + 1}ª tentativa)")
                 handler.postDelayed({ sendWithRetry(local, dest, text, msgId, attempt + 1) }, 30_000L * (attempt + 1))
             }
+        }
+        return medium != null
+    }
+
+    private fun sendFailureReason(): String {
+        val s = AprsRepository.status.value
+        return when {
+            !settings.configured -> UiText.text(R.string.configure_callsign)
+            !settings.txViaInternet && !settings.txViaRf -> UiText.text(R.string.tx_disabled)
+            !settings.txViaInternet && !s.tncConnected -> UiText.text(R.string.tx_tnc_unavailable)
+            settings.txViaInternet && !s.aprsIsVerified && (!settings.txViaRf || !s.tncConnected) ->
+                UiText.text(if (s.aprsIsConnected) R.string.tx_aprs_unverified else R.string.tx_aprs_unavailable)
+            else -> UiText.text(R.string.tx_send_failed)
         }
     }
 
@@ -407,6 +430,7 @@ class AprsService : Service(), LocationListener {
         const val ACTION_STOP = "stop"
         const val EXTRA_TO = "to"
         const val EXTRA_TEXT = "text"
+        const val EXTRA_REQUEST_ID = "request_id"
         const val EXTRA_ADDRESS = "address"
 
         fun send(context: Context, action: String, extras: Map<String, String> = emptyMap()) {

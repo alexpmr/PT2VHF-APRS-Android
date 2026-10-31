@@ -196,4 +196,10 @@
     <string name="tracker_auto_start">Démarrer le suivi automatiquement</string>
     <string name="tracker_auto_start_notice">Une fois activé, votre position est transmise par les liaisons APRS autorisées après acquisition GPS. Vous pouvez arrêter le suivi à tout moment.</string>
     <string name="tx_route_unavailable">Aucune voie de transmission autorisée. Vérifiez TX APRS-IS, RF/TNC et la connexion dans Paramètres.</string>
+    <string name="tx_disabled">Transmission désactivée. Activez TX APRS-IS ou RF dans les paramètres.</string>
+    <string name="tx_tnc_unavailable">TX RF est activé, mais le TNC est déconnecté. Activez TX APRS-IS ou connectez le TNC.</string>
+    <string name="tx_aprs_unverified">APRS-IS connecté, mais session non vérifiée. Envoi bloqué.</string>
+    <string name="tx_aprs_unavailable">APRS-IS déconnecté. Reconnectez-vous avant tout envoi.</string>
+    <string name="tx_send_failed">Échec de transmission malgré une liaison autorisée. Vérifiez la connexion et réessayez. Le texte est conservé.</string>
+    <string name="tx_dispatch_failed">Impossible de démarrer le service de messagerie. Le texte est conservé.</string>
 </resources>
