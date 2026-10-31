@@ -14,6 +14,9 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicLong
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 enum class Medium(val label: String) { RF("RF"), INTERNET("APRS-IS") }
 
@@ -126,6 +129,7 @@ object AprsRepository {
     private var file: File? = null
     private var stationStore: StationStore? = null
     private val diskWorker = Executors.newSingleThreadExecutor { r -> Thread(r, "aprs-station-db").apply { isDaemon = true } }
+    private val stationCacheEpoch = AtomicLong(0L)
     private const val RETENTION_MS = 30L * 24 * 60 * 60 * 1000
 
     @Synchronized fun init(context: Context) {
@@ -135,6 +139,7 @@ object AprsRepository {
         file = File(context.filesDir, "messages.json")
         stationStore = StationStore(context.applicationContext)
         runCatching { load() }
+        val restoreEpoch = stationCacheEpoch.get()
         diskWorker.execute {
             runCatching {
                 val store = stationStore ?: return@execute
@@ -145,6 +150,7 @@ object AprsRepository {
                 val previousTrack = store.readTrack(System.currentTimeMillis() - 7L * 86400000)
                 // A packet received during restore must never be replaced by older cache data.
                 _stations.update { live ->
+                    if (restoreEpoch != stationCacheEpoch.get()) return@update live
                     val combined = previousStations.toMutableMap()
                     for ((call, fresh) in live) {
                         if ((combined[call]?.lastHeard ?: 0L) <= fresh.lastHeard) combined[call] = fresh
@@ -152,6 +158,7 @@ object AprsRepository {
                     combined
                 }
                 _links.update { current ->
+                    if (restoreEpoch != stationCacheEpoch.get()) return@update current
                     val combined = (previousLinks + current).groupBy { it.from to it.to }
                     combined.values.map { list -> list.maxBy { it.lastSeen } }.takeLast(2000)
                 }
@@ -182,6 +189,29 @@ object AprsRepository {
         _track.value = emptyList()
         diskWorker.execute { runCatching { stationStore?.clearTrack() } }
     }
+
+    suspend fun clearStations(): Boolean {
+        val store = stationStore ?: return false
+        stationCacheEpoch.incrementAndGet()
+        _stations.value = emptyMap()
+        _links.value = emptyList()
+        _followCall.value = null
+        return withContext(Dispatchers.IO) {
+            runCatching { diskWorker.submit<Boolean> { store.clearStationsAndLinks(); true }.get() }
+                .getOrDefault(false)
+        }
+    }
+
+    @Synchronized fun clearMessages(): Boolean {
+        val f = file ?: return false
+        return runCatching {
+            f.writeText("[]")
+            _messages.value = emptyList()
+            true
+        }.getOrDefault(false)
+    }
+
+    fun containsMessage(id: Long): Boolean = _messages.value.any { it.id == id }
 
     fun updateStatus(change: (LinkStatus) -> LinkStatus) = _status.update(change)
 
@@ -289,7 +319,7 @@ object AprsRepository {
     fun isAcked(localId: Long): Boolean =
         _messages.value.firstOrNull { it.id == localId }?.status?.let { it == "ACK recebido" || it == "Rejeitada" } == true
 
-    private fun save() {
+    @Synchronized private fun save() {
         val f = file ?: return
         val arr = JSONArray()
         for (m in _messages.value.takeLast(500)) {
