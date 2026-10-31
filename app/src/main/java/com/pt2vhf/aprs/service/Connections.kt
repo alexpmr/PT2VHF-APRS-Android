@@ -71,19 +71,36 @@ class AprsIsClient(
     }
 
     fun send(line: String): Boolean {
-        val out = output ?: return false
-        return try {
-            synchronized(this) { out.write((line + "\r\n").toByteArray(Charsets.ISO_8859_1)); out.flush() }
-            true
-        } catch (e: Exception) { false }
+        // Validate the current socket and writer together; never use a stale writer
+        // kept from before a network handover or service restart.
+        val sent = synchronized(this) {
+            val activeSocket = socket
+            val writer = output
+            if (!running || activeSocket == null || writer == null ||
+                activeSocket.isClosed || !activeSocket.isConnected || activeSocket.isOutputShutdown) {
+                false
+            } else {
+                try {
+                    writer.write((line + "\r\n").toByteArray(Charsets.ISO_8859_1))
+                    writer.flush()
+                    true
+                } catch (_: Exception) { false }
+            }
+        }
+        if (!sent && running) reconnectNow()
+        return sent
     }
 
-    /** Força nova conexão (ex.: troca entre Wi-Fi e dados móveis). */
-    fun reconnectNow() { runCatching { socket?.close() } }
+    /** Invalidate green TX indication immediately before closing an obsolete socket. */
+    fun reconnectNow() {
+        onState(false, false, "")
+        runCatching { socket?.close() }
+    }
 
     fun stop() {
         running = false
         epoch.incrementAndGet()
+        onState(false, false, "")
         runCatching { socket?.close() }
         output = null
         thread = null
