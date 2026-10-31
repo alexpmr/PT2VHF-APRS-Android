@@ -8,6 +8,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -47,6 +50,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -248,11 +252,12 @@ fun MessagesScreen(settings: Settings, chatWith: String?, onOpenChat: (String?) 
     val context = LocalContext.current
     var filter by rememberSaveable { mutableStateOf("") }
     var newestFirst by rememberSaveable {
-        mutableStateOf(Settings.readOption(context, "messages_order", "oldest") == "newest")
+        mutableStateOf(Settings.readOption(context, "messages_order", "newest") == "newest")
     }
     var tab by rememberSaveable { mutableStateOf(0) }
+    val keyboardVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     Column(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (!keyboardVisible) Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(filter, { filter = it }, label = { Text(UiText.text(R.string.messages_filter)) },
                 modifier = Modifier.weight(1f), singleLine = true)
             TextButton(onClick = {
@@ -276,7 +281,7 @@ fun MessagesScreen(settings: Settings, chatWith: String?, onOpenChat: (String?) 
                 val byContact = direct.groupBy { if (it.outgoing) it.to else it.from }
                     .toList().let { items ->
                         if (newestFirst) items.sortedByDescending { (_, list) -> list.maxOf { it.time } }
-                        else items.sortedBy { (_, list) -> list.minOf { it.time } }
+                        else items.sortedBy { (_, list) -> list.maxOf { it.time } }
                     }
                 var newCall by rememberSaveable { mutableStateOf("") }
                 Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -303,7 +308,7 @@ fun MessagesScreen(settings: Settings, chatWith: String?, onOpenChat: (String?) 
                 }
                 val filtered = list.filter {
                     filter.isBlank() || it.from.contains(filter, true) || it.text.contains(filter, true)
-                }.let { items -> if (newestFirst) items.sortedByDescending { it.time } else items.sortedBy { it.time } }
+                }.sortedWith(compareBy<ChatMessage> { it.time }.thenBy { it.id })
                 GroupChat(filtered, settings, if (tab == 1) "CQ" else "BLN0", onStation)
             }
         }
@@ -318,8 +323,9 @@ private fun Empty(text: String) {
 @Composable
 private fun Bubble(m: ChatMessage, showSender: Boolean, onStation: (String) -> Unit) {
     Column(Modifier.fillMaxWidth(), horizontalAlignment = if (m.outgoing) Alignment.End else Alignment.Start) {
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
         Column(
-            Modifier.widthIn(max = 300.dp)
+            Modifier.widthIn(max = maxWidth * 0.90f)
                 .background(if (m.outgoing) Pal.mine else Pal.card, RoundedCornerShape(14.dp))
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(3.dp),
@@ -330,15 +336,26 @@ private fun Bubble(m: ChatMessage, showSender: Boolean, onStation: (String) -> U
             val meta = if (m.outgoing) "${hhmm(m.time)} · ${UiText.messageStatus(m.status)}" else "${hhmm(m.time)} · ${UiText.receptionVia(m.via)}"
             Text(meta, color = if (m.outgoing && m.status.startsWith("Aguardando")) Pal.yellow else Pal.muted, fontSize = 11.sp)
         }
+        }
     }
 }
 
 @Composable
-private fun Composer(placeholder: String, onSend: (String) -> Unit) {
+private fun Composer(placeholder: String, onSend: (String) -> Boolean) {
     var text by rememberSaveable { mutableStateOf("") }
-    Row(Modifier.fillMaxWidth().background(Pal.bar).padding(10.dp).imePadding(), verticalAlignment = Alignment.CenterVertically) {
-        OutlinedTextField(text, { text = it }, placeholder = { Text(placeholder) }, modifier = Modifier.weight(1f), maxLines = 3)
-        Button(onClick = { if (text.isNotBlank()) { onSend(text); text = "" } }, modifier = Modifier.padding(start = 8.dp)) { Text(UiText.text(R.string.send)) }
+    var error by remember { mutableStateOf(false) }
+    Column(Modifier.fillMaxWidth().background(Pal.bar)) {
+        if (error) Text(UiText.text(R.string.no_connection), color = Pal.orange, modifier = Modifier.padding(horizontal = 12.dp))
+        Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(text, { text = it; error = false }, placeholder = { Text(placeholder) },
+                modifier = Modifier.weight(1f), minLines = 1, maxLines = 4)
+            Button(onClick = {
+                if (text.isNotBlank()) {
+                    if (onSend(text)) { text = ""; error = false }
+                    else error = true
+                }
+            }, modifier = Modifier.padding(start = 4.dp)) { Text(UiText.text(R.string.send)) }
+        }
     }
 }
 
@@ -349,6 +366,7 @@ private fun Conversation(settings: Settings, contact: String, onBack: () -> Unit
     val stations by AprsRepository.stations.collectAsState()
     val list = messages.filter { it.kind == AprsMessage.Kind.MESSAGE &&
         ((it.outgoing && it.to == contact) || (!it.outgoing && it.from == contact && it.to == settings.fullCall)) }
+        .sortedWith(compareBy<ChatMessage> { it.time }.thenBy { it.id })
     val state = rememberLazyListState()
     LaunchedEffect(list.size) { if (list.isNotEmpty()) state.animateScrollToItem(list.size - 1) }
     Column(Modifier.fillMaxSize()) {
@@ -362,8 +380,13 @@ private fun Conversation(settings: Settings, contact: String, onBack: () -> Unit
         LazyColumn(Modifier.weight(1f).padding(horizontal = 12.dp), state = state, verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(list, key = { it.id }) { Bubble(it, false, onStation) }
         }
+        val status by AprsRepository.status.collectAsState()
         Composer(UiText.text(R.string.message_to, contact)) {
-            AprsService.send(context, AprsService.ACTION_MESSAGE, mapOf(AprsService.EXTRA_TO to contact, AprsService.EXTRA_TEXT to it))
+            val ready = settings.configured && ((settings.txViaInternet && status.aprsIsVerified) ||
+                (settings.txViaRf && status.tncConnected))
+            if (ready) AprsService.send(context, AprsService.ACTION_MESSAGE,
+                mapOf(AprsService.EXTRA_TO to contact, AprsService.EXTRA_TEXT to it))
+            ready
         }
     }
 }
@@ -378,8 +401,13 @@ private fun GroupChat(list: List<ChatMessage>, settings: Settings, defaultTo: St
         LazyColumn(Modifier.weight(1f).padding(horizontal = 12.dp), state = state, verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(list, key = { it.id }) { Bubble(it, true, onStation) }
         }
+        val link by AprsRepository.status.collectAsState()
         Composer(if (defaultTo == "CQ") UiText.text(R.string.message_all) else UiText.text(R.string.bulletin_default)) {
-            AprsService.send(context, AprsService.ACTION_MESSAGE, mapOf(AprsService.EXTRA_TO to defaultTo, AprsService.EXTRA_TEXT to it))
+            val ready = settings.configured && ((settings.txViaInternet && link.aprsIsVerified) ||
+                (settings.txViaRf && link.tncConnected))
+            if (ready) AprsService.send(context, AprsService.ACTION_MESSAGE,
+                mapOf(AprsService.EXTRA_TO to defaultTo, AprsService.EXTRA_TEXT to it))
+            ready
         }
     }
 }
@@ -572,29 +600,28 @@ fun StationDialog(call: String, onDismiss: () -> Unit, onMessage: () -> Unit) {
                     Text(UiText.text(R.string.via, s.via.ifBlank { UiText.text(R.string.direct) }), color = Pal.muted, fontSize = 12.sp)
                     if (s.heardBy.isNotEmpty()) Text(UiText.text(R.string.heard_by_rf, s.heardBy.joinToString(", ")), color = Pal.green, fontSize = 12.sp)
                 }
-            }
-        },
-        confirmButton = {
-            Row {
-                TextButton(onClick = { AprsRepository.toggleFavorite(call) }) {
+                TextButton(onClick = { AprsRepository.toggleFavorite(call) }, modifier = Modifier.fillMaxWidth()) {
                     Text(UiText.text(if (call in favorites) R.string.favorite_remove else R.string.favorite_add))
                 }
                 TextButton(onClick = {
                     AprsRepository.followStation(if (followed == call) null else call)
                     onDismiss()
-                }) {
+                }, modifier = Modifier.fillMaxWidth()) {
                     Text(UiText.text(if (followed == call) R.string.stop_following else R.string.follow_station))
                 }
-                TextButton(onClick = onMessage) { Text(UiText.text(R.string.message)) }
+                if (s != null) TextButton(onClick = {
+                    context.startActivity(Intent(Intent.ACTION_VIEW,
+                        Uri.parse("geo:${s.lat},${s.lon}?q=${s.lat},${s.lon}($call)")))
+                }, modifier = Modifier.fillMaxWidth()) { Text(UiText.text(R.string.navigate)) }
+            }
+        },
+        confirmButton = {
+            Button(onClick = onMessage, modifier = Modifier.fillMaxWidth()) {
+                Text(UiText.text(R.string.message))
             }
         },
         dismissButton = {
-            Row {
-                if (s != null) TextButton(onClick = {
-                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("geo:${s.lat},${s.lon}?q=${s.lat},${s.lon}($call)")))
-                }) { Text(UiText.text(R.string.navigate)) }
-                TextButton(onClick = onDismiss) { Text(UiText.text(R.string.close)) }
-            }
+            TextButton(onClick = onDismiss) { Text(UiText.text(R.string.close)) }
         },
     )
 }
