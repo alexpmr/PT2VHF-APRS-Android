@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.update
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.util.concurrent.Executors
 
 enum class Medium(val label: String) { RF("RF"), INTERNET("APRS-IS") }
 
@@ -97,11 +98,36 @@ object AprsRepository {
 
     private var nextId = System.currentTimeMillis()
     private var file: File? = null
+    private var stationStore: StationStore? = null
+    private val diskWorker = Executors.newSingleThreadExecutor { r -> Thread(r, "aprs-station-db").apply { isDaemon = true } }
+    private const val RETENTION_MS = 30L * 24 * 60 * 60 * 1000
 
-    fun init(context: Context) {
+    @Synchronized fun init(context: Context) {
         if (file != null) return
         file = File(context.filesDir, "messages.json")
+        stationStore = StationStore(context.applicationContext)
         runCatching { load() }
+        diskWorker.execute {
+            runCatching {
+                val store = stationStore ?: return@execute
+                val since = System.currentTimeMillis() - RETENTION_MS
+                store.prune(since)
+                val previousStations = store.readStations(since)
+                val previousLinks = store.readLinks(since)
+                // A packet received during restore must never be replaced by older cache data.
+                _stations.update { live ->
+                    val combined = previousStations.toMutableMap()
+                    for ((call, fresh) in live) {
+                        if ((combined[call]?.lastHeard ?: 0L) <= fresh.lastHeard) combined[call] = fresh
+                    }
+                    combined
+                }
+                _links.update { current ->
+                    val combined = (previousLinks + current).groupBy { it.from to it.to }
+                    combined.values.map { list -> list.maxBy { it.lastSeen } }.takeLast(2000)
+                }
+            }
+        }
     }
 
     fun updateStatus(change: (LinkStatus) -> LinkStatus) = _status.update(change)
@@ -119,17 +145,22 @@ object AprsRepository {
             _links.update { old ->
                 (old.filter { l -> newLinks.none { it.from == l.from && it.to == l.to } } + newLinks).takeLast(2000)
             }
+            diskWorker.execute { runCatching { stationStore?.saveLinks(newLinks) } }
             if (packet.source == ownCall) _status.update { it.copy(beaconsDigipeated = it.beaconsDigipeated + 1) }
         }
         parsePosition(packet.info)?.let { pos ->
             val m = if (medium == Medium.RF || digis.isNotEmpty()) Medium.RF else Medium.INTERNET
+            var persisted: Station? = null
             _stations.update { map ->
                 val heardBy = (map[packet.source]?.heardBy ?: emptySet()) + digis.take(1)
-                map + (packet.source to Station(
-                    packet.source, pos.lat, pos.lon, pos.symbolTable, pos.symbol, pos.comment, now, m,
+                val station = Station(
+                    packet.source, pos.lat, pos.lon, pos.symbolTable, pos.symbol, pos.comment, now, medium,
                     packet.path.joinToString(","), pos.speedKmh, pos.course, heardBy,
-                ))
+                )
+                persisted = station
+                map + (packet.source to station)
             }
+            persisted?.let { station -> diskWorker.execute { runCatching { stationStore?.saveStation(station) } } }
         }
         val msg = parseMessage(packet.info) ?: return null
         return when (msg.kind) {
