@@ -30,6 +30,11 @@ internal class StationStore(context: Context) : SQLiteOpenHelper(context, "stati
             source TEXT NOT NULL, destination TEXT NOT NULL, seen INTEGER NOT NULL,
             PRIMARY KEY(source, destination)
         )""")
+        db.execSQL("""CREATE TABLE own_track(
+            id INTEGER PRIMARY KEY AUTOINCREMENT, recorded INTEGER NOT NULL,
+            lat REAL NOT NULL, lon REAL NOT NULL
+        )""")
+        db.execSQL("CREATE INDEX idx_track_recorded ON own_track(recorded)")
         db.execSQL("CREATE INDEX idx_station_heard ON stations(heard)")
         db.execSQL("CREATE INDEX idx_link_seen ON rf_links(seen)")
     }
@@ -121,8 +126,34 @@ internal class StationStore(context: Context) : SQLiteOpenHelper(context, "stati
         } finally { db.endTransaction() }
     }
 
+    fun readTrack(since: Long): List<TrackPoint> {
+        val out = ArrayList<TrackPoint>()
+        readableDatabase.query("own_track", arrayOf("lat", "lon", "recorded"),
+            "recorded >= ?", arrayOf(since.toString()), null, null,
+            "recorded ASC", "10000").use { cursor ->
+            while (cursor.moveToNext()) out.add(
+                TrackPoint(cursor.getDouble(0), cursor.getDouble(1), cursor.getLong(2))
+            )
+        }
+        return out
+    }
+
+    fun saveTrack(point: TrackPoint) {
+        val c = ContentValues().apply {
+            put("recorded", point.recordedAt)
+            put("lat", point.lat); put("lon", point.lon)
+        }
+        val db = writableDatabase
+        db.insert("own_track", null, c)
+        db.execSQL("""DELETE FROM own_track WHERE id NOT IN
+            (SELECT id FROM own_track ORDER BY recorded DESC LIMIT 10000)""")
+    }
+
+    fun clearTrack() { writableDatabase.delete("own_track", null, null) }
+
     fun prune(olderThan: Long) {
         writableDatabase.delete("stations", "heard < ?", arrayOf(olderThan.toString()))
         writableDatabase.delete("rf_links", "seen < ?", arrayOf(olderThan.toString()))
+        writableDatabase.delete("own_track", "recorded < ?", arrayOf((System.currentTimeMillis() - 7L * 86400000).toString()))
     }
 }
