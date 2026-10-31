@@ -192,4 +192,5 @@
     <string name="exit_app">Sair</string>
     <string name="exit_stop_tracker">Sair e interromper tracker</string>
     <string name="exit_keep_tracker">Sair e manter tracker</string>
+    <string name="current_installed_version">Versão instalada: %1$s</string>
 </resources>
