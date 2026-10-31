@@ -60,3 +60,37 @@ _Registrado em 31/10/2026._
 - Na aba Configurações, permitir configurar o estilo da linha: espessura, cor, opacidade, tipo (contínua/tracejada)
   e por quanto tempo manter o trajeto. Incluir ligar/desligar a gravação e limpar o tracklog.
 - Avaliar exportar o trajeto (GPX) e mostrar o trajeto das outras estações móveis com o mesmo estilo ou estilo próprio.
+
+### 6. Configurações no nível do APRSdroid
+_Registrado em 31/10/2026 (referência: preferências do APRSdroid, `res/xml/*.xml` em github.com/ge0rg/aprsdroid).
+Só as ideias e opções; o APRSdroid é GPL, não copiar código._
+
+Hoje a tela de Configurações tem indicativo, SSID, servidor/porta, filtro, comentário, símbolo, path RF e
+transmitir por RF/APRS-IS. O que o APRSdroid oferece e falta aqui, agrupado por seção:
+
+- **Fonte de posição:** escolher entre SmartBeaconing, periódica (intervalo em min + distância mínima em m) e
+  manual (lat/lon digitadas, escolhidas no mapa ou "última posição conhecida", com envio automático periódico).
+  Opções de GPS: precisão/consumo (alta, média, baixa) e usar localização da rede.
+- **Parâmetros do SmartBeaconing editáveis:** velocidade rápida/lenta, intervalo rápido/lento e corner pegging
+  (tempo mínimo de curva, ângulo mínimo, inclinação). Hoje são fixos em `core/Aprs.kt` (`SmartBeaconing`).
+  Expor também o `stoppedBeaconMinutes`, que já existe em `data/Settings.kt` mas não aparece na tela.
+  Incluir uma ajuda curta explicando cada parâmetro.
+- **Seletor de símbolo visual:** grade de ícones APRS em vez de digitar tabela + símbolo (depende dos ícones do item 1).
+- **Frequência de voz** no beacon (campo opcional, ex.: 146.520 MHz) e campo de status/comentário separado.
+- **Privacidade:** ambiguidade de posição (0 a 4 dígitos), e ligar/desligar envio de velocidade/rumo e de altitude.
+- **Conexão APRS-IS:** filtro por distância em km como atalho (gerar `r/lat/lon/dist` com minha posição),
+  link para ajuda de filtros, timeout do socket TCP e opção de modo só recepção (UDP/HTTP para envio sem login).
+- **Tipos de conexão/TNC:** escolher protocolo (APRS-IS, KISS, TNC2/texto, Kenwood com GPS do rádio, AFSK pelo
+  áudio do celular) e meio (Bluetooth, USB-OTG com baud rate, TCP/IP). Para Bluetooth: modo cliente/servidor e
+  canal. Para KISS: string de inicialização e atraso de init. Para AFSK: demodulador de alta qualidade,
+  áudio via Bluetooth SCO, saída de áudio e prefixo de sincronismo. (USB-OTG e KISS TCP já estão pendentes
+  desde a 0.1.0.)
+- **Notificações configuráveis** separadas para mensagens, posições recebidas e meus pacotes digipeados:
+  LED, vibração e toque de cada uma.
+- **Tela e mapa:** manter tela ligada, tempo máximo de idade das estações exibidas, mostrar/ocultar objetos,
+  mapa satélite, arquivo de mapa offline e tema de mapa (liga com o mapa offline pendente).
+- **Log da conexão:** ligar/desligar registro detalhado da conexão para diagnóstico.
+
+Itens do APRSdroid que já temos ou cobrimos melhor: passcode automático (lá é digitado), lista de servidores
+APRS-IS, path RF e TNC KISS por Bluetooth. Organizar a tela de Configurações em seções (como no APRSdroid) em
+vez de um único diálogo.
