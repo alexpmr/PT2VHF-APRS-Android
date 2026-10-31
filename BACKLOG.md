@@ -25,3 +25,12 @@ _Registrado em 31/10/2026._
 
 - Adicionar filtro na aba Mensagens. Ordem padrão: por ordem de chegada, com opção de o usuário alterar a ordem
   (ex.: mais recentes primeiro ou mais antigas primeiro), lembrando a escolha nas preferências.
+
+### 3. Estações: ordenação e filtro por tipo
+_Registrado em 31/10/2026._
+
+- **Ordenação** na aba Estações, configurável pelo usuário. Padrão: por proximidade (distância da minha posição).
+  Outras opções sugeridas: ouvida por último, indicativo (A-Z).
+- **Filtro por tipo** de estação: estações, iGates, digipeaters, objetos, itens, meteorológicas etc., reaproveitando
+  as categorias de filtro já definidas no PT2VHF APRS Client (desktop). Padrão: tudo ligado. O app já classifica
+  cada estação em `role` (`data/AprsRepository.kt`), que pode servir de base. Avaliar aplicar o mesmo filtro no mapa.
