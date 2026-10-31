@@ -121,6 +121,13 @@ jobs:
           echo "VERSION=$version" >> "$GITHUB_ENV"
           rm -f "$RUNNER_TEMP/release.jks"
 
+      - name: Upload signed release APK for site synchronization
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-release-apk
+          path: dist/*.apk
+          retention-days: 14
+
       - name: Publish GitHub release (origem dos arquivos do site)
         env:
           GH_TOKEN: ${{ github.token }}
@@ -130,5 +137,5 @@ jobs:
             gh release upload "$tag" dist/*.apk --clobber
           else
             gh release create "$tag" dist/*.apk --target "$GITHUB_SHA" --title "PT2VHF APRS Client for Android $tag" \
-              --notes "Downloads oficiais em https://www.pt2vhf.com/android"
+              --notes "Atualização 0.1.2: estações e enlaces persistentes, filtros, rastreamento, diagnóstico e opção APRS-IS. Recursos avançados do backlog continuam pendentes. Downloads oficiais em https://www.pt2vhf.com/aprs-android"
           fi
