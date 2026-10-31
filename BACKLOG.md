@@ -121,3 +121,27 @@ _Registrado em 31/10/2026 (relato: ao fechar o app, o mapa e a lista de estaçõ
   estações anteriores devem aparecer com horários originais; reconectar e verificar atualizações,
   sem duplicatas ou regressões; testar volume elevado de pacotes e limpeza configurada.
 - **Escopo:** registrar para uma próxima versão; não implementar nem gerar APK até solicitação explícita.
+
+### 8. Indicadores superiores de conexão: somente nome e cor (verde/vermelho)
+_Registrado em 31/10/2026 (solicitação de simplificação do cabeçalho)._
+
+- **Tela:** cabeçalho em `ui/App.kt`, componente `TopBar` e `Chip`.
+  Hoje aparecem textos variáveis como `TNC desligado`, `APRS-IS desconectado`,
+  `APRS-IS sem verificação`, `TNC <nome>` e `Sem GPS`.
+- **Requisito:** exibir somente rótulos estáveis `APRS-IS`, `TNC` e `GPS`
+  nos indicadores superiores. Remover palavras visíveis de estado
+  (`ligado`, `desligado`, `conectado`, `desconectado`, `sem verificação`,
+  `Sem GPS`). O estado deve ser sinalizado **pela cor**:
+  **verde** quando operacional e **vermelho** quando inativo/indisponível.
+  Alterar cor do indicador e do texto/ícone de maneira consistente, em tempo real.
+- **Sem falsos positivos:** APRS-IS só fica verde após conexão **verificada**
+  (`aprsIsVerified`); TNC somente com `tncConnected`; GPS somente
+  com posicionamento disponível/atual (não somente último fix antigo), avaliando
+  `gpsAccuracyM` e validade temporal do fix. Desconexões devem mudar para vermelho.
+- **Acessibilidade:** cores são o único sinal **visual** pedido; disponibilizar
+  estado textual para leitores de tela por `contentDescription`/semântica
+  e deixar informações detalhadas (servidor, nome do TNC, precisão/erro) nas telas
+  pertinentes, não no cabeçalho.
+- **Teste:** verificar transições de cada indicador em conexão/desconexão,
+  autenticação APRS-IS, perda/recuperação de GPS e Bluetooth.
+- **Escopo:** apenas backlog; implementar quando for solicitada nova versão.
