@@ -19,3 +19,9 @@ _Registrado em 31/10/2026 (referência: print do mapa do APRSdroid)._
   (`data/Settings.kt`). Ajustar o padrão para incluir `www.PT2VHF.com` dentro do limite de 43 caracteres
   (ex.: `PT2VHF APRS Android www.PT2VHF.com`) e decidir se o site é anexado sempre, mesmo quando o usuário
   edita o comentário.
+
+### 2. Mensagens: filtro e ordenação
+_Registrado em 31/10/2026._
+
+- Adicionar filtro na aba Mensagens. Ordem padrão: por ordem de chegada, com opção de o usuário alterar a ordem
+  (ex.: mais recentes primeiro ou mais antigas primeiro), lembrando a escolha nas preferências.
