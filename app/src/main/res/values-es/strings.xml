@@ -192,4 +192,5 @@
     <string name="exit_app">Salir</string>
     <string name="exit_stop_tracker">Salir y detener rastreador</string>
     <string name="exit_keep_tracker">Salir y mantener rastreador</string>
+    <string name="current_installed_version">Versión instalada: %1$s</string>
 </resources>
