@@ -145,3 +145,34 @@ _Registrado em 31/10/2026 (solicitação de simplificação do cabeçalho)._
 - **Teste:** verificar transições de cada indicador em conexão/desconexão,
   autenticação APRS-IS, perda/recuperação de GPS e Bluetooth.
 - **Escopo:** apenas backlog; implementar quando for solicitada nova versão.
+
+### 9. Conexão automática APRS-IS configurável (ativada por padrão)
+_Registrado em 31/10/2026 (solicitação: conectar ao APRS-IS por padrão e permitir controle junto à configuração do servidor)._
+
+- **Comportamento atual confirmado:** `MainActivity.kt` inicia o `AprsService` se o indicativo estiver
+  configurado; `AprsService.onCreate()` chama `connectAprsIs()`, que conecta ao servidor
+  configurado. Portanto, a tentativa automática de conexão **já existe** na v0.1.0.
+  O que falta é um controle explícito de ativação/desativação dessa conexão.
+- **Nova opção em Configurações → APRS-IS:** adicionar controle
+  **"Conectar automaticamente ao APRS-IS"**, habilitado por padrão em novas instalações,
+  junto aos campos de servidor, porta e filtro. Persistir em `data/Settings.kt`,
+  respeitar escolha salva após fechar/reabrir o app ou reiniciar o serviço.
+- **Independência entre conexão e transmissão:** não confundir com a opção já existente
+  `txViaInternet` ("Transmitir pelo APRS-IS"). É possível manter conexão para
+  **receber** mensagens/estações enquanto o envio pela internet está desativado.
+  Ao desativar a nova opção de conexão, parar o cliente APRS-IS e não tentar reconectar
+  automaticamente em mudanças de rede nem em recargas de configuração.
+- **Ao reativar:** conectar ao servidor e porta configurados, com passcode e filtro
+  existentes; manter reconexão automática quando houver queda ou troca Wi-Fi/dados
+  móveis, desde que a opção permaneça habilitada. A conexão só inicia após configurar
+  um indicativo válido e respeita disponibilidade de rede.
+- **Terminologia:** o servidor atualmente configurado é **APRS-IS**;
+  `aprs.fi` é um serviço distinto de consulta/visualização de dados APRS.
+  Não substituir inadvertidamente o hostname do servidor APRS-IS pelo domínio
+  `aprs.fi`. Manter os servidores predefinidos e a seleção de servidor customizado.
+- **Teste de aceitação:** validar padrão ativo em instalação nova; persistência da
+  escolha; desativação com desconexão efetiva; nenhuma reconexão quando desativado;
+  recepção sem TX quando `txViaInternet=false`; restabelecimento da conexão após
+  reativação e troca de redes; indicador do cabeçalho coerente com item 8.
+- **Escopo:** somente registro no backlog; sem alteração funcional nem release
+  até solicitação explícita de uma nova versão.
