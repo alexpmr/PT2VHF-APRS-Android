@@ -3,6 +3,7 @@ package com.pt2vhf.aprs
 import android.app.Application
 import android.content.Context
 import androidx.annotation.StringRes
+import java.util.Locale
 
 /** Translations use Android resource qualifiers. The default values are English. */
 class Pt2vhfApplication : Application() {
@@ -18,6 +19,8 @@ object UiText {
     fun initialize(application: Context) {
         context = application.applicationContext
     }
+
+    fun locale(): Locale = context.resources.configuration.locales[0]
 
     fun text(@StringRes id: Int, vararg arguments: Any): String =
         if (arguments.isEmpty()) context.getString(id) else context.getString(id, *arguments)
