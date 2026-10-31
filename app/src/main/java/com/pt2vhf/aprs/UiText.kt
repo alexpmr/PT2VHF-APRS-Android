@@ -54,6 +54,16 @@ object UiText {
         raw == "Sem ACK após 5 tentativas" -> text(R.string.no_ack)
         raw.startsWith("Enviada · ") -> text(R.string.msg_sent_via, raw.removePrefix("Enviada · "))
         raw.startsWith("Aguardando ACK · ") -> text(R.string.awaiting_ack, raw.removePrefix("Aguardando ACK · "))
+        raw.startsWith("Aguardando ACK (") && raw.endsWith("ª tentativa)") -> {
+            val attempt = raw.substringAfter("Aguardando ACK (").substringBefore("ª tentativa)").toIntOrNull()
+            if (attempt != null) text(R.string.retry_ack, attempt) else raw
+        }
+        else -> raw
+    }
+
+    fun receptionVia(raw: String): String = when {
+        raw == "RF direto" -> text(R.string.rf_direct)
+        raw.startsWith("RF via ") -> text(R.string.via, raw.removePrefix("RF via "))
         else -> raw
     }
 
