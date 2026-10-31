@@ -14,12 +14,13 @@ data class Settings(
     val server: String = DEFAULT_SERVER,
     val port: Int = DEFAULT_PORT,
     val filter: String = DEFAULT_FILTER,
-    val comment: String = "PT2VHF APRS Client for Android",
+    val comment: String = "PT2VHF APRS www.PT2VHF.com",
     val symbolTable: Char = '/',
     val symbol: Char = '>',
     val rfPath: String = "WIDE1-1,WIDE2-1",
     val txViaRf: Boolean = true,
     val txViaInternet: Boolean = true,
+    val connectAprsIs: Boolean = true,
     val stoppedBeaconMinutes: Int = 30,
     val btAddress: String = "",
 ) {
@@ -45,6 +46,7 @@ data class Settings(
                 rfPath = p.getString("rf_path", d.rfPath) ?: d.rfPath,
                 txViaRf = p.getBoolean("tx_rf", d.txViaRf),
                 txViaInternet = p.getBoolean("tx_is", d.txViaInternet),
+                connectAprsIs = p.getBoolean("connect_aprs_is", d.connectAprsIs),
                 stoppedBeaconMinutes = p.getInt("stopped_minutes", d.stoppedBeaconMinutes),
                 btAddress = p.getString("bt_address", "") ?: "",
             )
@@ -63,6 +65,7 @@ data class Settings(
                 .putString("rf_path", s.rfPath.trim())
                 .putBoolean("tx_rf", s.txViaRf)
                 .putBoolean("tx_is", s.txViaInternet)
+                .putBoolean("connect_aprs_is", s.connectAprsIs)
                 .putInt("stopped_minutes", s.stoppedBeaconMinutes)
                 .putString("bt_address", s.btAddress)
                 .apply()
