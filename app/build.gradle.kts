@@ -5,8 +5,9 @@ plugins {
 }
 
 // Versão única do app; o site (updates.json) e o aviso de atualização usam este valor.
-val appVersionName = "0.1.0"
-val appVersionCode = 1
+// Release solicitada pelo mantenedor. versionCode > v0.1.0 para atualização sem perda de dados.
+val appVersionName = "0.1.2"
+val appVersionCode = 2
 
 android {
     namespace = "com.pt2vhf.aprs"

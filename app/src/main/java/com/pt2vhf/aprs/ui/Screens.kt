@@ -97,20 +97,46 @@ private fun hhmm(t: Long) = java.text.DateFormat.getTimeInstance(java.text.DateF
 fun MapScreen(onStation: (String) -> Unit) {
     val stations by AprsRepository.stations.collectAsState()
     val links by AprsRepository.links.collectAsState()
+    val ownTrack by AprsRepository.track.collectAsState()
+    val context = LocalContext.current
     val status by AprsRepository.status.collectAsState()
+    val followedCall by AprsRepository.followCall.collectAsState()
+    val activeFollow by androidx.compose.runtime.rememberUpdatedState(followedCall)
+    var followPaused by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(followedCall) { followPaused = false }
     var centered by remember { mutableStateOf(false) }
+    Box(Modifier.fillMaxSize()) {
     AndroidView(
         modifier = Modifier.fillMaxSize(),
         factory = { ctx ->
             MapView(ctx).apply {
                 setTileSource(TileSourceFactory.MAPNIK)
                 setMultiTouchControls(true)
+                setOnTouchListener { _, event ->
+                    if (activeFollow != null && event.actionMasked == android.view.MotionEvent.ACTION_MOVE)
+                        followPaused = true
+                    false
+                }
                 controller.setZoom(9.0)
                 controller.setCenter(GeoPoint(-15.78, -47.93))
             }
         },
         update = { map ->
             map.overlays.clear()
+            if (ownTrack.size > 1) {
+                val trace = Polyline(map).apply {
+                    setPoints(ownTrack.map { GeoPoint(it.lat, it.lon) })
+                    outlinePaint.color = when (Settings.readOption(context, "track_color", "blue")) {
+                        "red" -> 0xFFF45B69.toInt()
+                        "green" -> 0xFF20D397.toInt()
+                        else -> 0xFF5CAEFF.toInt()
+                    }
+                    outlinePaint.strokeWidth = 6f
+                    if (Settings.readOption(context, "track_style", "solid") == "dashed")
+                        outlinePaint.pathEffect = android.graphics.DashPathEffect(floatArrayOf(15f, 10f), 0f)
+                }
+                map.overlays.add(trace)
+            }
             val dayAgo = System.currentTimeMillis() - 24 * 3600_000L
             for (l in links.filter { it.lastSeen > dayAgo }) {
                 val a = stations[l.from] ?: continue
@@ -138,11 +164,28 @@ fun MapScreen(onStation: (String) -> Unit) {
                     title = UiText.text(R.string.me)
                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                 })
-                if (!centered) { map.controller.setCenter(GeoPoint(lat, lon)); centered = true }
+                if (!centered && followedCall == null) {
+                    map.controller.setCenter(GeoPoint(lat, lon)); centered = true
+                }
             }
+            val followed = followedCall?.let { stations[it] }
+            if (followed != null && !followPaused)
+                map.controller.setCenter(GeoPoint(followed.lat, followed.lon))
             map.invalidate()
         },
     )
+    if (followedCall != null) {
+        Row(Modifier.align(Alignment.BottomCenter).background(Pal.bar, RoundedCornerShape(12.dp))) {
+            TextButton(onClick = { followPaused = !followPaused }) {
+                Text(if (followPaused) UiText.text(R.string.follow_paused)
+                    else UiText.text(R.string.following, followedCall!!))
+            }
+            TextButton(onClick = { AprsRepository.followStation(null) }) {
+                Text(UiText.text(R.string.stop_following))
+            }
+        }
+    }
+    }
 }
 
 // ---------- Mensagens ----------
@@ -154,8 +197,21 @@ fun MessagesScreen(settings: Settings, chatWith: String?, onOpenChat: (String?) 
         return
     }
     val messages by AprsRepository.messages.collectAsState()
+    val context = LocalContext.current
+    var filter by rememberSaveable { mutableStateOf("") }
+    var newestFirst by rememberSaveable {
+        mutableStateOf(Settings.readOption(context, "messages_order", "oldest") == "newest")
+    }
     var tab by rememberSaveable { mutableStateOf(0) }
     Column(Modifier.fillMaxSize()) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(filter, { filter = it }, label = { Text(UiText.text(R.string.messages_filter)) },
+                modifier = Modifier.weight(1f), singleLine = true)
+            TextButton(onClick = {
+                newestFirst = !newestFirst
+                Settings.saveOption(context, "messages_order", if (newestFirst) "newest" else "oldest")
+            }) { Text(UiText.text(if (newestFirst) R.string.sort_newest else R.string.sort_oldest)) }
+        }
         TabRow(selectedTabIndex = tab, containerColor = Pal.bar, contentColor = Pal.accent) {
             listOf(UiText.text(R.string.chats), UiText.text(R.string.general), UiText.text(R.string.bulletins)).forEachIndexed { i, label ->
                 Tab(selected = tab == i, onClick = { tab = i }, text = { Text(label) })
@@ -164,9 +220,16 @@ fun MessagesScreen(settings: Settings, chatWith: String?, onOpenChat: (String?) 
         when (tab) {
             0 -> {
                 val own = settings.fullCall
-                val direct = messages.filter { it.kind == AprsMessage.Kind.MESSAGE && it.to != "CQ" && (it.to == own || it.outgoing) }
+                val direct = messages.filter {
+                    it.kind == AprsMessage.Kind.MESSAGE && it.to != "CQ" && (it.to == own || it.outgoing) &&
+                    (filter.isBlank() || it.from.contains(filter, true) ||
+                        it.to.contains(filter, true) || it.text.contains(filter, true))
+                }
                 val byContact = direct.groupBy { if (it.outgoing) it.to else it.from }
-                    .toList().sortedByDescending { (_, list) -> list.maxOf { it.time } }
+                    .toList().let { items ->
+                        if (newestFirst) items.sortedByDescending { (_, list) -> list.maxOf { it.time } }
+                        else items.sortedBy { (_, list) -> list.minOf { it.time } }
+                    }
                 var newCall by rememberSaveable { mutableStateOf("") }
                 Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     OutlinedTextField(newCall, { newCall = it.uppercase().take(9) }, label = { Text(UiText.text(R.string.new_chat)) },
@@ -190,7 +253,10 @@ fun MessagesScreen(settings: Settings, chatWith: String?, onOpenChat: (String?) 
                     if (tab == 1) it.kind == AprsMessage.Kind.MESSAGE && (it.to == "CQ" || it.to.startsWith("CQ"))
                     else it.kind == AprsMessage.Kind.BULLETIN
                 }
-                GroupChat(list, settings, if (tab == 1) "CQ" else "BLN0", onStation)
+                val filtered = list.filter {
+                    filter.isBlank() || it.from.contains(filter, true) || it.text.contains(filter, true)
+                }.let { items -> if (newestFirst) items.sortedByDescending { it.time } else items.sortedBy { it.time } }
+                GroupChat(filtered, settings, if (tab == 1) "CQ" else "BLN0", onStation)
             }
         }
     }
@@ -276,18 +342,53 @@ private fun GroupChat(list: List<ChatMessage>, settings: Settings, defaultTo: St
 fun StationsScreen(onStation: (String) -> Unit) {
     val stations by AprsRepository.stations.collectAsState()
     val status by AprsRepository.status.collectAsState()
+    val favorites by AprsRepository.favorites.collectAsState()
+    var favoritesOnly by rememberSaveable { mutableStateOf(false) }
+    val context = LocalContext.current
     var query by rememberSaveable { mutableStateOf("") }
-    val list = stations.values.filter { query.isBlank() || it.call.contains(query.trim(), ignoreCase = true) }
-        .sortedByDescending { it.lastHeard }
+    val types = listOf("all", "Digipeater", "iGate", "Estação meteorológica", "Móvel", "Estação")
+    val orders = listOf("nearest", "recent", "callsign")
+    var type by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_type", "all")) }
+    var order by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_order", "nearest")) }
+    val list = stations.values.filter {
+        (query.isBlank() || it.call.contains(query.trim(), ignoreCase = true)) &&
+            (type == "all" || it.role == type) &&
+            (!favoritesOnly || it.call in favorites)
+    }.let { items ->
+        when (order) {
+            "recent" -> items.sortedByDescending { it.lastHeard }
+            "callsign" -> items.sortedBy { it.call }
+            else -> {
+                if (status.lat == null || status.lon == null) items.sortedByDescending { it.lastHeard }
+                else items.sortedBy { haversineKm(status.lat!!, status.lon!!, it.lat, it.lon) }
+            }
+        }
+    }
     Column(Modifier.fillMaxSize()) {
         OutlinedTextField(query, { query = it }, label = { Text(UiText.text(R.string.search_callsign)) }, singleLine = true,
             modifier = Modifier.fillMaxWidth().padding(12.dp))
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceEvenly) {
+            TextButton(onClick = {
+                order = orders[(orders.indexOf(order) + 1) % orders.size]
+                Settings.saveOption(context, "station_order", order)
+            }) { Text(UiText.text(when (order) {
+                "recent" -> R.string.sort_recent; "callsign" -> R.string.sort_callsign; else -> R.string.sort_nearest
+            })) }
+            TextButton(onClick = {
+                type = types[(types.indexOf(type) + 1) % types.size]
+                Settings.saveOption(context, "station_type", type)
+            }) { Text(if (type == "all") UiText.text(R.string.filter_all) else UiText.role(type)) }
+            TextButton(onClick = { favoritesOnly = !favoritesOnly }) {
+                Text(if (favoritesOnly) UiText.text(R.string.favorites_only) else "☆")
+            }
+        }
         if (list.isEmpty()) Empty(UiText.text(R.string.no_stations))
         LazyColumn {
             items(list, key = { it.call }) { s ->
                 Row(Modifier.fillMaxWidth().clickable { onStation(s.call) }.padding(16.dp, 10.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(s.call, fontWeight = FontWeight.Bold)
+                        Text(s.call + if (s.call in favorites) " ★" else "", fontWeight = FontWeight.Bold)
                         Text("${UiText.role(s.role)} · ${s.medium.label} · ${ago(s.lastHeard)}", color = Pal.muted, fontSize = 12.sp)
                     }
                     val lat = status.lat; val lon = status.lon
@@ -301,6 +402,8 @@ fun StationsScreen(onStation: (String) -> Unit) {
 @Composable
 fun StationDialog(call: String, onDismiss: () -> Unit, onMessage: () -> Unit) {
     val context = LocalContext.current
+    val favorites by AprsRepository.favorites.collectAsState()
+    val followed by AprsRepository.followCall.collectAsState()
     val stations by AprsRepository.stations.collectAsState()
     val status by AprsRepository.status.collectAsState()
     val s: Station? = stations[call]
@@ -328,7 +431,20 @@ fun StationDialog(call: String, onDismiss: () -> Unit, onMessage: () -> Unit) {
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onMessage) { Text(UiText.text(R.string.message)) } },
+        confirmButton = {
+            Row {
+                TextButton(onClick = { AprsRepository.toggleFavorite(call) }) {
+                    Text(UiText.text(if (call in favorites) R.string.favorite_remove else R.string.favorite_add))
+                }
+                TextButton(onClick = {
+                    AprsRepository.followStation(if (followed == call) null else call)
+                    onDismiss()
+                }) {
+                    Text(UiText.text(if (followed == call) R.string.stop_following else R.string.follow_station))
+                }
+                TextButton(onClick = onMessage) { Text(UiText.text(R.string.message)) }
+            }
+        },
         dismissButton = {
             Row {
                 if (s != null) TextButton(onClick = {
@@ -348,6 +464,8 @@ fun RadioScreen(settings: Settings) {
     val context = LocalContext.current
     val status by AprsRepository.status.collectAsState()
     val monitor by AprsRepository.monitor.collectAsState()
+    val stations by AprsRepository.stations.collectAsState()
+    val links by AprsRepository.links.collectAsState()
     val bonded = remember {
         runCatching { context.getSystemService(BluetoothManager::class.java)?.adapter?.bondedDevices?.toList() }
             .getOrNull().orEmpty()
@@ -373,6 +491,20 @@ fun RadioScreen(settings: Settings) {
             }
             Text(UiText.text(R.string.future_tnc), color = Pal.muted, fontSize = 12.sp)
         }
+        SectionCard(UiText.text(R.string.diagnostics)) {
+            KeyValue(UiText.text(R.string.aprs_received), status.aprsRx.toString())
+            KeyValue(UiText.text(R.string.aprs_sent), status.aprsTx.toString())
+            KeyValue(UiText.text(R.string.tnc_received), status.tncRx.toString())
+            KeyValue(UiText.text(R.string.tnc_sent), status.tncTx.toString())
+            KeyValue(UiText.text(R.string.station_count), stations.size.toString())
+            KeyValue(UiText.text(R.string.rf_link_count), links.size.toString())
+            if (status.aprsIsError.isNotBlank())
+                Text(UiText.text(R.string.aprs_error) + ": " + UiText.connectionError(status.aprsIsError),
+                    color = Pal.orange, fontSize = 12.sp)
+            if (status.tncError.isNotBlank())
+                Text(UiText.text(R.string.tnc_error) + ": " + UiText.connectionError(status.tncError),
+                    color = Pal.orange, fontSize = 12.sp)
+        }
         SectionCard(UiText.text(R.string.live_monitor)) {
             if (monitor.isEmpty()) Text(UiText.text(R.string.await_tnc), color = Pal.muted, fontSize = 13.sp)
             for (line in monitor.takeLast(40).reversed()) Text(line, fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = Pal.text)
@@ -386,6 +518,16 @@ fun RadioScreen(settings: Settings) {
 fun TrackerScreen(settings: Settings) {
     val context = LocalContext.current
     val status by AprsRepository.status.collectAsState()
+    val track by AprsRepository.track.collectAsState()
+    var trackEnabled by rememberSaveable {
+        mutableStateOf(Settings.readOption(context, "tracklog_enabled", "true") == "true")
+    }
+    var trackStyle by rememberSaveable {
+        mutableStateOf(Settings.readOption(context, "track_style", "solid"))
+    }
+    var trackColor by rememberSaveable {
+        mutableStateOf(Settings.readOption(context, "track_color", "blue"))
+    }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         SectionCard {
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -414,6 +556,33 @@ fun TrackerScreen(settings: Settings) {
                 enabled = settings.configured && status.lat != null) { Text(UiText.text(R.string.start_tracker)) }
         }
         Text(UiText.text(R.string.tracker_notice), color = Pal.muted, fontSize = 12.sp)
+        SectionCard(UiText.text(R.string.track_line)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(trackEnabled, {
+                    trackEnabled = it
+                    Settings.saveOption(context, "tracklog_enabled", it.toString())
+                })
+                Text(UiText.text(R.string.track_record))
+            }
+            Text(UiText.text(R.string.track_points, track.size), color = Pal.muted)
+            Row {
+                TextButton(onClick = {
+                    trackStyle = if (trackStyle == "solid") "dashed" else "solid"
+                    Settings.saveOption(context, "track_style", trackStyle)
+                }) {
+                    Text(UiText.text(if (trackStyle == "solid") R.string.track_solid else R.string.track_dashed))
+                }
+                TextButton(onClick = {
+                    trackColor = when (trackColor) { "blue" -> "red"; "red" -> "green"; else -> "blue" }
+                    Settings.saveOption(context, "track_color", trackColor)
+                }) { Text("●", color = when (trackColor) {
+                    "red" -> Pal.orange; "green" -> Pal.green; else -> Pal.accent
+                }) }
+                TextButton(onClick = { AprsRepository.clearTrack() }) {
+                    Text(UiText.text(R.string.track_clear))
+                }
+            }
+        }
     }
 }
 
@@ -442,6 +611,13 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
     var path by remember { mutableStateOf(current.rfPath) }
     var txRf by remember { mutableStateOf(current.txViaRf) }
     var txIs by remember { mutableStateOf(current.txViaInternet) }
+    var autoAprsIs by remember { mutableStateOf(current.connectAprsIs) }
+    var beaconMode by remember { mutableStateOf(current.beaconMode) }
+    var periodicSec by remember { mutableStateOf(current.periodicIntervalSec.toString()) }
+    var slowSpeed by remember { mutableStateOf(current.smartSlowSpeedKmh.toString()) }
+    var fastSpeed by remember { mutableStateOf(current.smartFastSpeedKmh.toString()) }
+    var slowSec by remember { mutableStateOf(current.smartSlowIntervalSec.toString()) }
+    var fastSec by remember { mutableStateOf(current.smartFastIntervalSec.toString()) }
     var expanded by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf("") }
     var confirmEmptyFilter by remember { mutableStateOf(false) }
@@ -458,7 +634,14 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
             !validHostPort(server, portN) -> { error = UiText.text(R.string.invalid_server); null }
             symbol.length != 2 -> { error = UiText.text(R.string.invalid_symbol); null }
             else -> current.copy(callsign = base, ssid = ssidN, server = server.trim(), port = portN, filter = filter.trim(),
-                comment = comment, symbolTable = symbol[0], symbol = symbol[1], rfPath = path, txViaRf = txRf, txViaInternet = txIs)
+                comment = comment, symbolTable = symbol[0], symbol = symbol[1], rfPath = path,
+                txViaRf = txRf, txViaInternet = txIs, connectAprsIs = autoAprsIs,
+                beaconMode = beaconMode,
+                periodicIntervalSec = (periodicSec.toIntOrNull() ?: current.periodicIntervalSec).coerceIn(30, 86400),
+                smartSlowSpeedKmh = (slowSpeed.toIntOrNull() ?: current.smartSlowSpeedKmh).coerceIn(1, 200),
+                smartFastSpeedKmh = (fastSpeed.toIntOrNull() ?: current.smartFastSpeedKmh).coerceIn(5, 300),
+                smartSlowIntervalSec = (slowSec.toIntOrNull() ?: current.smartSlowIntervalSec).coerceIn(30, 86400),
+                smartFastIntervalSec = (fastSec.toIntOrNull() ?: current.smartFastIntervalSec).coerceIn(30, 86400))
         }
     }
 
@@ -492,6 +675,10 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
                 if (custom) OutlinedTextField(server, { server = it.trim() }, label = { Text(UiText.text(R.string.server)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(port, { port = it.filter(Char::isDigit).take(5) }, label = { Text(UiText.text(R.string.port)) }, singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(autoAprsIs, { autoAprsIs = it })
+                    Text(UiText.text(R.string.aprs_auto_connect))
+                }
                 OutlinedTextField(filter, { filter = it }, label = { Text(UiText.text(R.string.aprs_filter)) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
                     supportingText = { Text(UiText.text(R.string.filter_hint, DEFAULT_FILTER)) })
                 OutlinedTextField(comment, { comment = it.take(43) }, label = { Text(UiText.text(R.string.beacon_comment)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
@@ -500,6 +687,40 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
                 OutlinedTextField(path, { path = it.uppercase() }, label = { Text(UiText.text(R.string.rf_path)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(txRf, { txRf = it }); Text(UiText.text(R.string.tx_rf)) }
                 Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(txIs, { txIs = it }); Text(UiText.text(R.string.tx_aprs)) }
+                Text(UiText.text(R.string.beacon_mode), color = Pal.muted)
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    listOf("smart", "periodic", "manual").forEach { mode ->
+                        TextButton(onClick = { beaconMode = mode }) {
+                            Text(
+                                UiText.text(when (mode) {
+                                    "periodic" -> R.string.mode_periodic
+                                    "manual" -> R.string.mode_manual
+                                    else -> R.string.mode_smart
+                                }),
+                                color = if (mode == beaconMode) Pal.green else Pal.muted
+                            )
+                        }
+                    }
+                }
+                if (beaconMode == "periodic") {
+                    OutlinedTextField(periodicSec, { periodicSec = it.filter(Char::isDigit).take(5) },
+                        label = { Text(UiText.text(R.string.beacon_interval)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth())
+                }
+                if (beaconMode == "smart") {
+                    listOf(
+                        Triple(R.string.smart_slow_speed, slowSpeed, { v: String -> slowSpeed = v }),
+                        Triple(R.string.smart_fast_speed, fastSpeed, { v: String -> fastSpeed = v }),
+                        Triple(R.string.smart_slow_rate, slowSec, { v: String -> slowSec = v }),
+                        Triple(R.string.smart_fast_rate, fastSec, { v: String -> fastSec = v })
+                    ).forEach { (labelId, value, setter) ->
+                        OutlinedTextField(value, { setter(it.filter(Char::isDigit).take(5)) },
+                            label = { Text(UiText.text(labelId)) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.fillMaxWidth())
+                    }
+                }
                 if (error.isNotEmpty()) Text(error, color = Pal.orange, fontSize = 13.sp)
             }
         },

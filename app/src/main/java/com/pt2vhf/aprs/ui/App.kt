@@ -49,6 +49,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -196,10 +198,10 @@ private fun TopBar(settings: Settings, onSettings: () -> Unit) {
             IconButton(onClick = onSettings) { Icon(Icons.Filled.Settings, contentDescription = UiText.text(R.string.settings), tint = Pal.text) }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Chip(if (status.aprsIsVerified) "APRS-IS" else if (status.aprsIsConnected) UiText.text(R.string.aprs_unverified) else UiText.text(R.string.aprs_disconnected),
-                status.aprsIsVerified)
-            Chip(if (status.tncConnected) "TNC ${status.tncName}" else UiText.text(R.string.tnc_off), status.tncConnected)
-            Chip(status.gpsAccuracyM?.let { "GPS ±${it.toInt()} m" } ?: UiText.text(R.string.no_gps), status.gpsAccuracyM != null)
+            Chip("APRS-IS", status.aprsIsVerified)
+            Chip("TNC", status.tncConnected)
+            Chip("GPS", status.gpsAccuracyM != null &&
+                status.gpsFixTimeMs > 0 && System.currentTimeMillis() - status.gpsFixTimeMs <= 120_000L)
         }
     }
 }
@@ -207,12 +209,14 @@ private fun TopBar(settings: Settings, onSettings: () -> Unit) {
 @Composable
 fun Chip(text: String, ok: Boolean) {
     Row(
-        Modifier.background(if (ok) Pal.greenBg else Pal.card, RoundedCornerShape(14.dp)).padding(horizontal = 10.dp, vertical = 5.dp),
+        Modifier.background(if (ok) Pal.greenBg else Color(0xFF3A1A23), RoundedCornerShape(14.dp))
+            .semantics { contentDescription = "$text: ${if (ok) "connected" else "disconnected"}" }
+            .padding(horizontal = 10.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.size(8.dp).background(if (ok) Color(0xFF3CCF7C) else Pal.muted, CircleShape))
+        Box(Modifier.size(8.dp).background(if (ok) Color(0xFF3CCF7C) else Color(0xFFF26F70), CircleShape))
         Spacer(Modifier.size(6.dp))
-        Text(text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = if (ok) Pal.green else Pal.muted)
+        Text(text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = if (ok) Pal.green else Color(0xFFF26F70))
     }
 }
 

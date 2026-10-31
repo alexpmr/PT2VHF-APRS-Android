@@ -120,4 +120,17 @@ class AprsTest {
         assertFalse(isNewerVersion("0.1.0", "0.1.0"))
         assertFalse(isNewerVersion("0.0.9", "0.1.0"))
     }
+ 
+    @Test fun onlyLocalTncFramesProduceRfLinkEvidence() {
+        val rf = AprsPacket.parse("PT2MOB-9>APRS,PT2DIG-1*,qAR,PT2IG:!1548.00S/04806.60W>Teste")!!
+        assertEquals(emptyList<Pair<String, String>>(), localRfEvidenceLinks(rf, false))
+        assertEquals(listOf("PT2MOB-9" to "PT2DIG-1"), localRfEvidenceLinks(rf, true))
+
+        // Internet and digital-network hops do not become local RF proof.
+        val internet = AprsPacket.parse("PT2MOB-9>APRS,TCPIP*,qAC:!1548.00S/04806.60W>Teste")!!
+        assertTrue(localRfEvidenceLinks(internet, true).isEmpty())
+        val direct = AprsPacket.parse("PT2MOB-9>APRS:!1548.00S/04806.60W>Teste")!!
+        assertTrue(localRfEvidenceLinks(direct, true).isEmpty())
+    }
+
 }

@@ -92,6 +92,15 @@ data class AprsPacket(
     }
 }
 
+/** Evidência *local* de um caminho RF exige que o pacote tenha chegado pelo TNC.
+ * Um caminho APRS-IS pode relatar digipeaters, mas não confirma recepção no rádio deste aparelho.
+ */
+fun localRfEvidenceLinks(packet: AprsPacket, receivedViaTnc: Boolean): List<Pair<String, String>> {
+    if (!receivedViaTnc) return emptyList()
+    val chain = listOf(packet.source) + packet.rfDigipeaters
+    return chain.zipWithNext()
+}
+
 /** Marcadores de internet/redes digitais/gateways que não comprovam RF (ex.: DMR*). */
 private val NON_RF_HOPS = setOf(
     "TCPIP", "TCPXX", "NOGATE", "RFONLY", "DMR", "DSTAR", "D-STAR", "YSF", "C4FM",

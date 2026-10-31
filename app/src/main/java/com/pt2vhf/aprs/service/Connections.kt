@@ -12,6 +12,7 @@ import java.io.OutputStream
 import java.net.InetSocketAddress
 import java.net.Socket
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicLong
 
 /** Conexão APRS-IS com reconexão automática; uma linha TNC2 por pacote. */
 class AprsIsClient(
@@ -21,17 +22,22 @@ class AprsIsClient(
     @Volatile private var socket: Socket? = null
     @Volatile private var output: OutputStream? = null
     @Volatile private var running = false
+    private val epoch = AtomicLong(0L)
     private var thread: Thread? = null
 
     fun start(host: String, port: Int, call: String, passcode: Int, filter: String) {
         stop()
+        val sessionEpoch = epoch.incrementAndGet()
         running = true
         thread = Thread({
             var backoff = 5_000L
-            while (running) {
+            while (running && epoch.get() == sessionEpoch) {
+                var sessionSocket: Socket? = null
                 try {
                     val s = Socket()
+                    sessionSocket = s
                     s.connect(InetSocketAddress(host, port), 15_000)
+                    if (!running || epoch.get() != sessionEpoch) { s.close(); break }
                     s.soTimeout = 120_000
                     socket = s
                     output = s.getOutputStream()
@@ -39,26 +45,26 @@ class AprsIsClient(
                         (if (filter.isNotBlank()) " filter $filter" else "") + "\r\n"
                     output?.write(login.toByteArray(Charsets.ISO_8859_1))
                     output?.flush()
-                    onState(true, false, "")
+                    if (epoch.get() == sessionEpoch) onState(true, false, "")
                     backoff = 5_000L
                     val reader = BufferedReader(InputStreamReader(s.getInputStream(), Charsets.ISO_8859_1))
-                    while (running) {
+                    while (running && epoch.get() == sessionEpoch) {
                         val line = reader.readLine() ?: break
                         if (line.startsWith("#")) {
-                            if (line.contains("logresp") && line.contains(" verified")) onState(true, true, "")
-                            if (line.contains("unverified")) onState(true, false, "Passcode não verificado pelo servidor")
+                            if (line.contains("logresp") && line.contains(" verified") && epoch.get() == sessionEpoch) onState(true, true, "")
+                            if (line.contains("unverified") && epoch.get() == sessionEpoch) onState(true, false, "Passcode não verificado pelo servidor")
                             continue
                         }
                         onLine(line)
                     }
-                    onState(false, false, if (running) "Servidor encerrou a conexão" else "")
+                    if (epoch.get() == sessionEpoch) onState(false, false, if (running) "Servidor encerrou a conexão" else "")
                 } catch (e: Exception) {
-                    onState(false, false, e.message ?: e.javaClass.simpleName)
+                    if (epoch.get() == sessionEpoch) onState(false, false, e.message ?: e.javaClass.simpleName)
                 } finally {
-                    runCatching { socket?.close() }
-                    socket = null; output = null
+                    runCatching { sessionSocket?.close() }
+                    if (socket === sessionSocket) { socket = null; output = null }
                 }
-                if (running) Thread.sleep(backoff)
+                if (running && epoch.get() == sessionEpoch) Thread.sleep(backoff)
                 backoff = (backoff * 2).coerceAtMost(120_000L)
             }
         }, "aprs-is").also { it.isDaemon = true; it.start() }
@@ -77,7 +83,9 @@ class AprsIsClient(
 
     fun stop() {
         running = false
+        epoch.incrementAndGet()
         runCatching { socket?.close() }
+        output = null
         thread = null
     }
 }

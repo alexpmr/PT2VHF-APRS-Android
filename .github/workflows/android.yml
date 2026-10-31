@@ -6,6 +6,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+concurrency:
+  group: android-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
 
@@ -28,6 +32,47 @@ jobs:
         with:
           name: debug-apk
           path: app/build/outputs/apk/debug/*.apk
+
+
+  qa-signed:
+    name: Signed APK for physical validation (no release)
+    needs: build
+    # Only trusted branches in this repository; never use signing secrets on fork PRs.
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Build and validate signed QA APK
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$ANDROID_KEYSTORE_BASE64"
+          test -n "$ANDROID_KEYSTORE_PASSWORD"
+          test -n "$ANDROID_KEY_ALIAS"
+          test -n "$ANDROID_KEY_PASSWORD"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | LC_ALL=C tr -cd 'A-Za-z0-9+/=' | base64 -d > "$RUNNER_TEMP/qa.jks"
+          export ANDROID_KEYSTORE_FILE="$RUNNER_TEMP/qa.jks"
+          ./gradlew --no-daemon assembleRelease
+          mkdir -p dist
+          version=$(grep -oP 'val appVersionName = "\\K[^"]+' app/build.gradle.kts)
+          cp app/build/outputs/apk/release/app-release.apk "dist/PT2VHF_APRS_Client_Android_v${version}_QA.apk"
+          apksigner="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner"
+          "$apksigner" verify dist/PT2VHF_APRS_Android_0.2.0-rc1_QA.apk
+          sha256sum dist/*.apk > dist/SHA256SUMS.txt
+          rm -f "$RUNNER_TEMP/qa.jks"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-signed-qa-rc1
+          path: dist/
+          retention-days: 14
 
   release:
     needs: build
@@ -76,6 +121,13 @@ jobs:
           echo "VERSION=$version" >> "$GITHUB_ENV"
           rm -f "$RUNNER_TEMP/release.jks"
 
+      - name: Upload signed release APK for site synchronization
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-release-apk
+          path: dist/*.apk
+          retention-days: 14
+
       - name: Publish GitHub release (origem dos arquivos do site)
         env:
           GH_TOKEN: ${{ github.token }}
@@ -85,5 +137,5 @@ jobs:
             gh release upload "$tag" dist/*.apk --clobber
           else
             gh release create "$tag" dist/*.apk --target "$GITHUB_SHA" --title "PT2VHF APRS Client for Android $tag" \
-              --notes "Downloads oficiais em https://www.pt2vhf.com/android"
+              --notes "Atualização 0.1.2: estações e enlaces persistentes, filtros, rastreamento, diagnóstico e opção APRS-IS. Recursos avançados do backlog continuam pendentes. Downloads oficiais em https://www.pt2vhf.com/aprs-android"
           fi
