@@ -193,4 +193,6 @@
     <string name="exit_stop_tracker">Quitter et arrêter le suivi</string>
     <string name="exit_keep_tracker">Quitter et conserver le suivi</string>
     <string name="current_installed_version">Version installée : %1$s</string>
+    <string name="tracker_auto_start">Démarrer le suivi automatiquement</string>
+    <string name="tracker_auto_start_notice">Une fois activé, votre position est transmise par les liaisons APRS autorisées après acquisition GPS. Vous pouvez arrêter le suivi à tout moment.</string>
 </resources>
