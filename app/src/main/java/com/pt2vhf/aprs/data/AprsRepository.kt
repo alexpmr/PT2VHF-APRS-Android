@@ -42,6 +42,8 @@ data class Station(
 
 data class RfLink(val from: String, val to: String, val lastSeen: Long)
 
+data class TrackPoint(val lat: Double, val lon: Double, val recordedAt: Long)
+
 data class ChatMessage(
     val id: Long,
     val from: String,
@@ -93,6 +95,9 @@ object AprsRepository {
     private val _links = MutableStateFlow<List<RfLink>>(emptyList())
     val links: StateFlow<List<RfLink>> = _links.asStateFlow()
 
+    private val _track = MutableStateFlow<List<TrackPoint>>(emptyList())
+    val track: StateFlow<List<TrackPoint>> = _track.asStateFlow()
+
     private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
     val messages: StateFlow<List<ChatMessage>> = _messages.asStateFlow()
 
@@ -122,6 +127,7 @@ object AprsRepository {
                 store.prune(since)
                 val previousStations = store.readStations(since)
                 val previousLinks = store.readLinks(since)
+                val previousTrack = store.readTrack(System.currentTimeMillis() - 7L * 86400000)
                 // A packet received during restore must never be replaced by older cache data.
                 _stations.update { live ->
                     val combined = previousStations.toMutableMap()
@@ -134,6 +140,9 @@ object AprsRepository {
                     val combined = (previousLinks + current).groupBy { it.from to it.to }
                     combined.values.map { list -> list.maxBy { it.lastSeen } }.takeLast(2000)
                 }
+                _track.update { current ->
+                    (previousTrack + current).distinctBy { it.recordedAt }.sortedBy { it.recordedAt }.takeLast(10000)
+                }
             }
         }
     }
@@ -144,6 +153,20 @@ object AprsRepository {
     }
 
     fun followStation(call: String?) { _followCall.value = call }
+
+    fun recordTrack(lat: Double, lon: Double, whenMs: Long = System.currentTimeMillis()) {
+        val p = TrackPoint(lat, lon, whenMs)
+        val last = _track.value.lastOrNull()
+        if (last != null && whenMs - last.recordedAt < 15_000L &&
+            com.pt2vhf.aprs.core.haversineKm(last.lat, last.lon, lat, lon) < 0.01) return
+        _track.update { (it + p).takeLast(10000) }
+        diskWorker.execute { runCatching { stationStore?.saveTrack(p) } }
+    }
+
+    fun clearTrack() {
+        _track.value = emptyList()
+        diskWorker.execute { runCatching { stationStore?.clearTrack() } }
+    }
 
     fun updateStatus(change: (LinkStatus) -> LinkStatus) = _status.update(change)
 
