@@ -77,9 +77,7 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
-import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 
 private fun ago(t: Long): String {
     val s = (System.currentTimeMillis() - t) / 1000
@@ -87,11 +85,11 @@ private fun ago(t: Long): String {
         s < 60 -> UiText.text(R.string.now)
         s < 3600 -> UiText.text(R.string.minutes_ago, s / 60)
         s < 86400 -> UiText.text(R.string.hours_ago, s / 3600)
-        else -> SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(Date(t))
+        else -> java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT, UiText.locale()).format(Date(t))
     }
 }
 
-private fun hhmm(t: Long) = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(t))
+private fun hhmm(t: Long) = java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT, UiText.locale()).format(Date(t))
 
 // ---------- Mapa ----------
 
@@ -215,7 +213,7 @@ private fun Bubble(m: ChatMessage, showSender: Boolean, onStation: (String) -> U
             if (showSender && !m.outgoing) Text(m.from, color = Pal.accent, fontWeight = FontWeight.Bold, fontSize = 12.sp,
                 modifier = Modifier.clickable { onStation(m.from) })
             Text(m.text, fontSize = 15.sp)
-            val meta = if (m.outgoing) "${hhmm(m.time)} · ${UiText.messageStatus(m.status)}" else "${hhmm(m.time)} · ${m.via}"
+            val meta = if (m.outgoing) "${hhmm(m.time)} · ${UiText.messageStatus(m.status)}" else "${hhmm(m.time)} · ${UiText.receptionVia(m.via)}"
             Text(meta, color = if (m.outgoing && m.status.startsWith("Aguardando")) Pal.yellow else Pal.muted, fontSize = 11.sp)
         }
     }
