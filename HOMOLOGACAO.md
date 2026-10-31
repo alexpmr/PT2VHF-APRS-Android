@@ -115,3 +115,6 @@ Responder com códigos e evidência objetiva, por exemplo:
 `T01 OK — atualização preservou mensagens; T02 OK — GPS verde/vermelho; T03 FALHA — reconectou após desabilitar, log/imagem...`
 
 Após cada resultado, reavaliar o item, corrigir erros se houver e atualizar os dois arquivos `BACKLOG.md` e `HOMOLOGACAO.md` com o commit correspondente. Baixar somente os itens totalmente validados.
+
+
+**T33 — Lista Estações compacta (item #33):** na aba Estações, validar exatamente um registro por linha visível, sem segunda linha para metadados. Mostrar indicativo/SSID em negrito seguido na mesma linha pelo texto recebido do campo Informação/comentário APRS (não substituir pelo papel da estação). Em seguida, se couber, exibir origem RF/APRS-IS, último contato, favorito e distância; dados que não couberem devem ser preservados no detalhe ao tocar, com reticências e sem cortes sobre os comandos. Comparar aparelhos de 320/360/412 dp, tablet/paisagem, fonte Android ampliada, comentários vazios/longos/acentuados, favorito, origem RF/IS e distância indisponível. Confirmar atualização em tempo real, ordenação/filtros e rolagem suave com centenas de estações. Nenhuma alteração de protocolo, recepção ou dados armazenados; só homologar com captura em dispositivo físico.
