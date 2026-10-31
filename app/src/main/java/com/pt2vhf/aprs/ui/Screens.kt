@@ -345,7 +345,7 @@ private fun Composer(placeholder: String, onSend: (String) -> Boolean) {
     var text by rememberSaveable { mutableStateOf("") }
     var error by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().background(Pal.bar)) {
-        if (error) Text(UiText.text(R.string.no_connection), color = Pal.orange, modifier = Modifier.padding(horizontal = 12.dp))
+        if (error) Text(UiText.text(R.string.tx_route_unavailable), color = Pal.orange, modifier = Modifier.padding(horizontal = 12.dp))
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(text, { text = it; error = false }, placeholder = { Text(placeholder) },
                 modifier = Modifier.weight(1f), minLines = 1, maxLines = 4)
