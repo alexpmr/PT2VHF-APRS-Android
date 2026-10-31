@@ -14,7 +14,7 @@ Itens registrados para as próximas versões. Não implementar até o pedido de 
 Aprovada a implementação integral, mas **não confundir código no PR com funcionalidade homologada**.
 A release **v0.1.2** foi gerada e assinada no GitHub ([tag v0.1.2](../../releases/tag/v0.1.2)),
 com implementação parcial do backlog. O site ainda permanece em **v0.1.0** até receber
-seu APK real; há homologação física pendente. Não afirmar que os 17 itens foram concluídos. Os critérios, roteiros e evidências ficam no
+seu APK real; há homologação física pendente. Não afirmar que os 18 itens foram concluídos. Os critérios, roteiros e evidências ficam no
 [HOMOLOGACAO.md](HOMOLOGACAO.md).
 
 | Item | Estado atual | Evidência necessária para baixa |
@@ -36,6 +36,8 @@ seu APK real; há homologação física pendente. Não afirmar que os 17 itens f
 | 15 | Pendente | API segura e testes de permissões |
 | 16 | **Pendente**: confirmar fechamento do aplicativo | Diálogo ao sair pela navegação Android, cancelar/sair e tratamento explícito de tracker/TX em segundo plano |
 | 17 | **Pendente**: restaurar mapa na abertura | Persistir centro e zoom do último acesso; ícone para localização atual; não sobrescrever a vista restaurada por GPS automático |
+| 18 | **Implementado no PR #8; CI e teste físico pendentes**: versão instalada no aviso do site oficial | Ao abrir, popup com versão real da instalação e link www.PT2VHF.com, uma vez por abertura |
+
 
 **Baixa definitiva:** marcar `Concluído` somente após CI aprovado,
 teste físico aplicável validado pelo usuário e requisitos da seção correspondente
@@ -405,6 +407,16 @@ _Registrado em 31/10/2026 (solicitação do usuário na v0.1.2)._
 - **Robustez:** validar limites de coordenadas e zoom; aplicar viewport somente depois de o `MapView` estar pronto; persistir estado sem operações pesadas na UI; respeitar rotação de tela e recriação de Activity; não expor localização ao servidor para salvar preferências.
 - **Critérios de aceite:** (1) abrir mapa e navegar para outra região com zoom personalizado; fechar totalmente e reabrir: mesmo centro/zoom, sem deslocamento automático pelo primeiro GPS; (2) usar "Minha localização" e verificar recentralização na posição atual; (3) mover o mapa manualmente e confirmar que o GPS não o recentraliza sozinho; (4) repetir sem GPS/internet e após mudança de aba/rotação; (5) testar Seguimento de estação e retorno ao enquadramento manual; (6) instalação limpa (sem preferências salvas) deve usar posição atual quando disponível.
 - **Status:** pendente no backlog; implementar somente mediante solicitação de nova versão.
+
+### 18. Anúncio do site oficial com a versão atualmente instalada
+_Solicitado em 31/10/2026 durante o desenvolvimento da v0.1.3._
+
+- **Na abertura do app**, apresentar o popup já existente de anúncio de downloads no site oficial, acrescentando uma linha **"Versão instalada: X.Y.Z"**, obtida dinamicamente de `BuildConfig.VERSION_NAME`, sem número fixo no texto.
+- Mostrar claramente o endereço **www.PT2VHF.com**, com link para o site. Manter o aviso apenas **uma vez por abertura**, independentemente de troca de abas ou mudanças de configuração.
+- Preservar o popup independente de **nova versão disponível**: o anúncio do site é informativo; a verificação OTA segue separada, com indicação de versão remota.
+- Disponibilizar as traduções da nova linha em PT/EN/ES/FR/IT; nunca confundir versão instalada com versão anunciada no servidor.
+- **Critério de aceitação:** iniciar com v0.1.3, conferir texto, endereço, versão exata da APK e abertura do link; fechar aviso, trocar de abas (não deve reaparecer), forçar novo lançamento do app (deve aparecer); conferir a separação do aviso OTA, sem duplicidade.
+- **Implementação** adicionada no PR [#8](../../pull/8); **não baixar** até CI aprovado e teste no aparelho.
 
 ## Consolidação das sugestões aprovadas com itens já existentes
 
