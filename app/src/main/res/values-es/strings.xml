@@ -211,4 +211,6 @@
     <string name="clear_local_data_success">Datos locales borrados correctamente.</string>
     <string name="clear_local_data_error">No se pudieron borrar completamente los datos locales. Compruebe el almacenamiento e inténtelo de nuevo.</string>
     <string name="clear_data_confirm">Borrar</string>
+    <string name="beacon_sending">Enviando…</string>
+    <string name="beacon_failed">Error de envío</string>
 </resources>
