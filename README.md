@@ -3,7 +3,7 @@
 Cliente APRS para Android (8.0 ou superior) do projeto PT2VHF: mapa com estações e enlaces RF,
 mensagens, beacon, modo tracker com SmartBeaconing em segundo plano e TNC KISS por Bluetooth.
 
-**Download oficial:** https://www.pt2vhf.com/aprs
+**Download oficial:** https://www.pt2vhf.com/android
 
 ## Recursos da versão 0.1
 
