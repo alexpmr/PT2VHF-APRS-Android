@@ -35,8 +35,8 @@ object UiText {
         }
     )
 
-    fun serverLabel(raw: String): String = text(
-        when (raw) {
+    fun serverLabel(raw: String): String {
+        val resource = when (raw) {
             "América do Sul (padrão)" -> R.string.server_sa
             "Mundial (automático)" -> R.string.server_global
             "América do Norte" -> R.string.server_na
@@ -45,7 +45,8 @@ object UiText {
             "Oceania" -> R.string.server_oceania
             else -> return raw
         }
-    )
+        return text(resource)
+    }
 
     /** Wire-format values, callsigns and raw APRS packets are never translated. */
     fun messageStatus(raw: String): String = when {
