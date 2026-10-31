@@ -13,15 +13,15 @@ Itens registrados para as próximas versões. Não implementar até o pedido de 
 ## Acompanhamento de implementação e baixa (31/10/2026)
 
 Aprovada a implementação integral, mas **não confundir código no PR com funcionalidade homologada**.
-A versão pública continua `v0.1.0`. O PR [#7](../../pull/7) contém implementação parcial
-em branch de homologação `0.2.0-rc1`; não atualizar o site até APK assinado, testes
-e release confirmados. Os critérios, roteiros e evidências ficam no
+A release **v0.1.2** foi gerada e assinada no GitHub ([tag v0.1.2](../../releases/tag/v0.1.2)),
+com implementação parcial do backlog. O site ainda permanece em **v0.1.0** até receber
+seu APK real; há homologação física pendente. Não afirmar que os 15 itens foram concluídos. Os critérios, roteiros e evidências ficam no
 [HOMOLOGACAO.md](HOMOLOGACAO.md).
 
 | Item | Estado atual | Evidência necessária para baixa |
 |---|---|---|
 | 1 | Parcial: comentário padrão | Símbolos APRS/overlays ainda faltam |
-| 2 | Implementado no PR; **teste pendente** | Filtro, ordem e persistência no Android |
+| 2 | Implementado no PR; **teste físico pendente** | Filtro, ordem e persistência no Android |
 | 3 | Implementado no PR; **teste pendente** | Proximidade, tipo, ordenação e persistência |
 | 4 | Parcial: origem de RX RF corrigida | Evidência no TNC e apresentação dos meus enlaces |
 | 5 | Parcial: tracklog SQLite/mapa | Uso real, estilo completo, retenção e GPX |
