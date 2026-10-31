@@ -14,14 +14,14 @@ Itens registrados para as próximas versões. Não implementar até o pedido de 
 Aprovada a implementação integral, mas **não confundir código no PR com funcionalidade homologada**.
 A release **v0.1.2** foi gerada e assinada no GitHub ([tag v0.1.2](../../releases/tag/v0.1.2)),
 com implementação parcial do backlog. O site ainda permanece em **v0.1.0** até receber
-seu APK real; há homologação física pendente. Não afirmar que os 16 itens foram concluídos. Os critérios, roteiros e evidências ficam no
+seu APK real; há homologação física pendente. Não afirmar que os 17 itens foram concluídos. Os critérios, roteiros e evidências ficam no
 [HOMOLOGACAO.md](HOMOLOGACAO.md).
 
 | Item | Estado atual | Evidência necessária para baixa |
 |---|---|---|
 | 1 | **FALHA CONFIRMADA NA v0.1.2**: símbolos do mapa genéricos/incorretos; comentário padrão alterado | Renderização real de símbolos APRS, tabela primária/alternativa, overlays, ícone próprio e testes físicos |
 | 2 | Implementado no PR; **teste físico pendente** | Filtro, ordem e persistência no Android |
-| 3 | **FALHA RELATADA NA v0.1.2**: lista não atualiza imediatamente após novos pacotes/estações; seleção de classificação/filtro por botões cíclicos inadequada | Atualização reativa em tempo real + ícone de classificação/filtros com seleções explícitas; teste APRS-IS e TNC |
+| 3 | **Pendente (v0.1.2)**: lista sem atualização em tempo real; filtro/ordenação incompletos | Ícone com critérios de ordenação ASC/DESC e filtros efetivos por data, indicativo, primeira/última recepção, distância e tipo, atualizados em tempo real |
 | 4 | Parcial: origem de RX RF corrigida | Evidência no TNC e apresentação dos meus enlaces |
 | 5 | Parcial: tracklog SQLite/mapa | Uso real, estilo completo, retenção e GPX |
 | 6 | Parcial: beacon manual/periódico/Smart | Teste GPS e parâmetros; demais opções pendentes |
@@ -35,6 +35,7 @@ seu APK real; há homologação física pendente. Não afirmar que os 16 itens f
 | 14 | Pendente | Estatísticas/recordes RF comprovados |
 | 15 | Pendente | API segura e testes de permissões |
 | 16 | **Pendente**: confirmar fechamento do aplicativo | Diálogo ao sair pela navegação Android, cancelar/sair e tratamento explícito de tracker/TX em segundo plano |
+| 17 | **Pendente**: restaurar mapa na abertura | Persistir centro e zoom do último acesso; ícone para localização atual; não sobrescrever a vista restaurada por GPS automático |
 
 **Baixa definitiva:** marcar `Concluído` somente após CI aprovado,
 teste físico aplicável validado pelo usuário e requisitos da seção correspondente
@@ -116,6 +117,17 @@ o mecanismo atual de botões que apenas alternam ciclicamente entre as opções.
   cada pacote esteja produzindo os dados/estados corretos. Evitar listas
   memorizadas ou mutações que não emitam novo estado. Diferenciar não receber
   pacotes de receber sem refletir alterações na interface.
+**Ampliação solicitada em 31/10/2026 — filtros de fato, não apenas ordenação:**
+
+- Disponibilizar um **único ícone claramente visível de filtros/classificação** na aba Estações. Ao tocar, abrir painel estruturado com duas seções independentes:
+  - **Ordenar por**: nome/indicativo, data/hora da **primeira recepção** ("quando chegou"), data/hora da **última recepção** (último pacote), distância até minha posição e outros campos com metadados confiáveis; para **cada critério**, direção **crescente/ascendente** ou **decrescente/descendente**, não apenas A–Z/Z–A nem um ciclo de opções.
+  - **Filtrar resultados**: indicativo/nome (busca parcial, sem distinção de maiúsculas/minúsculas), data/horário inicial e final da primeira recepção, data/horário inicial e final da última recepção, distância mínima/máxima em km, tipo de estação (múltiplos tipos), fonte APRS-IS/TNC RF, favoritas e atividade/idade; **combinar os filtros simultaneamente (interseção/AND)**.
+- **Diferenciar primeira recepção de última recepção:** usar carimbos de tempo reais, preservar `firstSeen` na inserção inicial e `lastHeard` nos pacotes posteriores; persistir os dois com migração de banco compatível (registros antigos sem `firstSeen` devem ser identificados como desconhecidos ou migrados com regra explicitada, sem inventar histórico).
+- **Critérios com campo indisponível:** não atribuir distância fictícia quando falta GPS ou posição da estação; mostrar aviso/valor indisponível e fallback definido. Nunca confundir momento do pacote na rede com hora da primeira recepção local.
+- **Comportamento:** aplicar, limpar filtros, restaurar padrões, visualizar filtros ativos e quantidade de estações visíveis versus total. Manter configurações após reiniciar o app. A inserção ou atualização em tempo real deve respeitar os filtros sem esconder silenciosamente dados novos quando a opção estiver ativa.
+- **Teste físico e automatizado:** ordenar ASC/DESC por cada campo; usar intervalos de data/hora, substrings de indicativo e raios mínimo/máximo; combinar filtros; confirmar inclusão/exclusão correta quando chega pacote novo e quando um indicativo conhecido muda de distância/última recepção, com a tela aberta e também após reiniciar. Incluir casos sem GPS/sem posição e limites de horário/fuso (horários exibidos no fuso local).
+- **Escopo:** apenas registrar agora; implementar na próxima versão solicitada, preservando os critérios anteriores do item #3.
+
 - **Ordenação instantânea:** após inserção ou mudança de posição/horário,
   recalcular a ordem selecionada (proximidade, última recepção e indicativo)
   sem ação manual, mantendo filtros, favoritos e estado da tela. Atualizar
@@ -381,6 +393,18 @@ _Solicitado em 31/10/2026, após uso da versão v0.1.2._
 - Integrar ao tratamento de **Back** (inclusive gesto preditivo, se suportado) em `MainActivity.kt`/Compose; não interceptar botão Home, tela de recentes, encerramento forçado pelo sistema ou comando **Forçar parada**, pois essas ações não oferecem garantia de diálogo pelo Android.
 - **Teste de aceitação em celular real:** (1) tentar Voltar na tela principal e escolher **Cancelar**, verificando que continua na mesma tela; (2) confirmar **Sair**, verificando encerramento adequado; (3) com tracker/TNC conectado e beacon ativo, verificar as duas opções de continuidade/parada, ausência de TX inadvertido e notificação coerente; (4) abrir novamente e comprovar preservação de configurações, estações e mensagens; (5) repetir em navegação por gestos e por três botões, quando disponível.
 - **Status:** backlog apenas; não implementar nem publicar APK até solicitação explícita de nova versão.
+
+### 17. Mapa: restaurar centro e nível de zoom da última visualização ao abrir
+_Registrado em 31/10/2026 (solicitação do usuário na v0.1.2)._
+
+- **Defeito observado no código:** `ui/Screens.kt`, função `MapScreen`, define na fábrica do `MapView` um centro fixo em `GeoPoint(-15.78, -47.93)` e zoom `9.0`. Quando chega a primeira posição GPS, o bloco `!centered` pode recentralizar a visualização, sobrescrevendo a área que o usuário prefere.
+- **Persistir última vista do mapa:** guardar localmente latitude, longitude e zoom efetivos do **centro da visualização** após o usuário mover/aproximar/afastar o mapa (não somente a posição própria do GPS); recuperar esses valores ao voltar à aba e após fechar/reabrir o aplicativo, inclusive sem internet/GPS. Persistir também ao pausar/sair, sem gravações excessivas a cada frame.
+- **Precedência na abertura:** (1) se há centro/zoom salvos e válidos, restaurar exatamente o último enquadramento e **não recentralizar por GPS automaticamente**; (2) se for primeiro uso, sem vista salva, centralizar na localização atual quando disponível; (3) se o GPS ainda não estiver disponível, mostrar um enquadramento neutro/abrangente, sem usar Brasília como ponto fixo universal. Não bloquear mapa aguardando GPS.
+- **Mostrar onde estou:** manter marcador de posição própria (GPS) quando disponível e incluir ação/ícone **"Minha localização"** que recentralize sob comando explícito do usuário, conservando zoom útil; após interação manual com o mapa, não voltar a forçar centralização pelo GPS. Não transmitir localização por APRS apenas por abrir o mapa.
+- **Compatibilidade com "Seguir estação":** comando explícito de seguir alvo pode temporariamente prevalecer; ao cancelar o seguimento, retornar ao último enquadramento escolhido pelo usuário ou à vista restaurada, sem perder o estado anterior.
+- **Robustez:** validar limites de coordenadas e zoom; aplicar viewport somente depois de o `MapView` estar pronto; persistir estado sem operações pesadas na UI; respeitar rotação de tela e recriação de Activity; não expor localização ao servidor para salvar preferências.
+- **Critérios de aceite:** (1) abrir mapa e navegar para outra região com zoom personalizado; fechar totalmente e reabrir: mesmo centro/zoom, sem deslocamento automático pelo primeiro GPS; (2) usar "Minha localização" e verificar recentralização na posição atual; (3) mover o mapa manualmente e confirmar que o GPS não o recentraliza sozinho; (4) repetir sem GPS/internet e após mudança de aba/rotação; (5) testar Seguimento de estação e retorno ao enquadramento manual; (6) instalação limpa (sem preferências salvas) deve usar posição atual quando disponível.
+- **Status:** pendente no backlog; implementar somente mediante solicitação de nova versão.
 
 ## Consolidação das sugestões aprovadas com itens já existentes
 
