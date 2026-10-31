@@ -323,7 +323,8 @@ private fun Empty(text: String) {
 @Composable
 private fun Bubble(m: ChatMessage, showSender: Boolean, onStation: (String) -> Unit) {
     Column(Modifier.fillMaxWidth(), horizontalAlignment = if (m.outgoing) Alignment.End else Alignment.Start) {
-        BoxWithConstraints(Modifier.fillMaxWidth()) {
+        BoxWithConstraints(Modifier.fillMaxWidth(),
+            contentAlignment = if (m.outgoing) Alignment.TopEnd else Alignment.TopStart) {
         Column(
             Modifier.widthIn(max = maxWidth * 0.90f)
                 .background(if (m.outgoing) Pal.mine else Pal.card, RoundedCornerShape(14.dp))
