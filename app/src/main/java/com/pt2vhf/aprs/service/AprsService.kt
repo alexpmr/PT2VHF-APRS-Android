@@ -40,6 +40,7 @@ import com.pt2vhf.aprs.data.AprsRepository
 import com.pt2vhf.aprs.data.ChatMessage
 import com.pt2vhf.aprs.data.Medium
 import com.pt2vhf.aprs.data.OutboundSendResult
+import com.pt2vhf.aprs.data.OutboundBeaconResult
 import com.pt2vhf.aprs.data.Settings
 import kotlin.math.abs
 
@@ -119,7 +120,13 @@ class AprsService : Service(), LocationListener {
                 }
                 refreshNotification()
             }
-            ACTION_BEACON -> sendBeacon()
+            ACTION_BEACON -> {
+                val requestId = intent.getStringExtra(EXTRA_REQUEST_ID)
+                val transmitted = sendBeacon()
+                if (!requestId.isNullOrBlank()) {
+                    AprsRepository.reportBeaconResult(OutboundBeaconResult(requestId, transmitted))
+                }
+            }
             ACTION_TRACKER_ON -> {
                 Settings.setFlag(this, "tracker_explicit_off", false)
                 AprsRepository.updateStatus { it.copy(trackerOn = true) }
@@ -248,18 +255,19 @@ class AprsService : Service(), LocationListener {
         }
     }
 
-    private fun sendBeacon() {
-        if (!settings.configured) return
+    private fun sendBeacon(): Boolean {
+        if (!settings.configured) return false
         val s = AprsRepository.status.value
-        val lat = s.lat ?: return
-        val lon = s.lon ?: return
+        val lat = s.lat ?: return false
+        val lon = s.lon ?: return false
         val moving = s.speedKmh >= 5.0
         val info = positionInfo(lat, lon, settings.symbolTable, settings.symbol, beaconCommentWithSite(settings.comment),
             if (moving) s.course else null, if (moving) s.speedKmh else null)
-        if (transmit(info) == null) return
+        if (transmit(info) == null) return false
         lastBeaconAt = System.currentTimeMillis()
         lastBeaconCourse = s.course
         AprsRepository.updateStatus { it.copy(beaconsSent = it.beaconsSent + 1) }
+        return true
     }
 
     /** Envia pelo(s) meio(s) ativo(s) e autorizado(s): RF (TNC) e/ou APRS-IS. Retorna o meio usado. */
