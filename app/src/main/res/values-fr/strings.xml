@@ -157,4 +157,13 @@
     <string name="rf_link_count">Liaisons RF enregistrées</string>
     <string name="aprs_error">Erreur APRS-IS</string>
     <string name="tnc_error">Erreur TNC</string>
+    <string name="beacon_mode">Mode balise</string>
+    <string name="mode_smart">SmartBeaconing</string>
+    <string name="mode_periodic">Périodique</string>
+    <string name="mode_manual">Manuel</string>
+    <string name="beacon_interval">Intervalle périodique (secondes)</string>
+    <string name="smart_slow_speed">Vitesse lente (km/h)</string>
+    <string name="smart_fast_speed">Vitesse rapide (km/h)</string>
+    <string name="smart_slow_rate">Intervalle lent (secondes)</string>
+    <string name="smart_fast_rate">Intervalle rapide (secondes)</string>
 </resources>
