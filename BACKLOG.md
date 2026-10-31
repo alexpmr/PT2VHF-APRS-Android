@@ -13,7 +13,7 @@ Itens registrados para as próximas versões. Não implementar até o pedido de 
 
 Aprovada a implementação integral, mas **não confundir código no PR com funcionalidade homologada**.
 A release **v0.1.3** foi gerada e assinada no GitHub ([tag v0.1.3](../../releases/tag/v0.1.3)) e disponibilizada no site.
-O backlog permanece parcialmente implementado, com homologação física pendente. Não afirmar que os 21 itens foram concluídos. Os critérios, roteiros e evidências ficam no
+O backlog permanece parcialmente implementado, com homologação física pendente. Não afirmar que os 22 itens foram concluídos. Os critérios, roteiros e evidências ficam no
 [HOMOLOGACAO.md](HOMOLOGACAO.md).
 
 | Item | Estado atual | Evidência necessária para baixa |
@@ -39,6 +39,7 @@ O backlog permanece parcialmente implementado, com homologação física pendent
 | 19 | **Falha de usabilidade relatada na v0.1.3**: ação Mensagem já existe no código, mas não está claramente acessível no popup de detalhes da estação | Botão destacado Enviar mensagem, sempre visível, navegação direta à conversa com destinatário preenchido; teste Android real em telas pequenas |
 | 20 | **Pendente — v0.1.3**: responder a uma mensagem mantendo-a pressionada | Long press em bolha recebida, ação Responder e compositor com contexto/destino correto; não transmitir antes de Enviar |
 | 21 | **Pendente — v0.1.3**: procurar indicativos para iniciar conversa nova | Busca por indicativo completo/parcial em estações e contatos recentes, seleção de SSID exato e abertura da conversa sem TX automático |
+| 22 | **Pendente — v0.1.3**: controle de brilho do mapa inexistente | Ícone de sol com ajuste independente das configurações globais do Android, intensidade persistente, padrão neutro e teste de camadas/legibilidade |
 
 
 **Baixa definitiva:** marcar `Concluído` somente após CI aprovado,
@@ -648,6 +649,50 @@ não permite localizar ou selecionar uma estação conhecida.
   correspondência exata após seleção, cache offline, nenhum TX antes
   de Enviar, fallback manual, campos vazios e resultado sem coincidências.
 - **Status:** backlog apenas; ainda não implementado nem homologado.
+
+### 22. Mapa: controle de brilho da cartografia
+_Registrado em 31/10/2026. Solicitação: "Backlog: ajuste de brilho do mapa"._
+
+**Estado atual:** a tela `MapScreen` usa `osmdroid MapView` com tiles
+`TileSourceFactory.MAPNIK`, sem ajuste próprio de luminosidade.
+Não alterar o brilho global do Android nem requerer permissão de
+modificação das configurações do sistema.
+
+- Disponibilizar na tela Mapa um ícone de **sol/brilho** próximo de
+  "Minha localização", discreto, acessível e sem obstruir controles
+  ou marcadores. Ao tocar, abrir controle deslizante de **50% a 150%**,
+  com valor **100% (normal)** e ação **Restaurar padrão**; permitir
+  ajuste fino e mostrar porcentagem exata.
+- Aplicar mudança **em tempo real somente à camada cartográfica de
+  fundo** (tiles OSM ou outras fontes, quando suportadas), com
+  escurecimento abaixo de 100% e clareamento acima de 100%. Ajustar
+  renderização/cor do tile ou um tratamento equivalente **abaixo
+  das sobreposições APRS**; não desbotar nem reduzir legibilidade dos
+  ícones de estações, indicativos, rastros, links RF, popups ou botões.
+  Não modificar o estilo do mapa sem relação com a luminosidade.
+- **Persistência:** guardar o percentual em `Settings`/preferências
+  locais; reaplicar ao trocar de aba, reiniciar o aplicativo ou recriar
+  a `Activity`. Usar 100% em instalações novas; carregar valores
+  anteriores válidos e tratar preferências corrompidas sem travamentos.
+  O controle não deve interferir no centro e zoom memorizados (item
+  #17), nem na opção de seguir estação.
+- Compatibilidade com dispositivos modestos e funcionamento
+  offline/tiles em cache. Evitar tratamento caro por frame e
+  alteração permanente da imagem armazenada em cache. Se a fonte
+  cartográfica limitar realce acima de 100%, avaliar tratamento
+  apropriado e explicar limitações, sem simular aumento do brilho
+  físico da tela.
+- **Teste de aceite T22:** abrir mapa em 100%, ajustar 50%, 75%,
+  125% e 150%, verificar diferença visual real e responsiva apenas
+  no fundo cartográfico; confirmar marcadores APRS, linhas RF,
+  tracklogs, controles e textos com contraste íntegro; acionar
+  "Minha localização" e mover/alterar zoom; trocar de aba e reabrir
+  o aplicativo, confirmando persistência; restaurar 100%, testar
+  rotação, modo claro/escuro do sistema, cache offline, aparelho
+  de tela pequena e fonte ampliada. Comprovar que o brilho do
+  dispositivo permanece inalterado.
+- **Status:** backlog registrado, **ainda não implementado**. Não
+  gerar novo APK por este registro.
 
 ## Consolidação das sugestões aprovadas com itens já existentes
 
