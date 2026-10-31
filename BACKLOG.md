@@ -37,7 +37,7 @@ O backlog permanece parcialmente implementado, com homologação física pendent
 | 17 | **Pendente**: restaurar mapa na abertura | Persistir centro e zoom do último acesso; ícone para localização atual; não sobrescrever a vista restaurada por GPS automático |
 | 18 | **Implementado no PR #8; CI e teste físico pendentes**: versão instalada no aviso do site oficial | Ao abrir, popup com versão real da instalação e link www.PT2VHF.com, uma vez por abertura |
 | 19 | **Falha de usabilidade relatada na v0.1.3**: ação Mensagem já existe no código, mas não está claramente acessível no popup de detalhes da estação | Botão destacado Enviar mensagem, sempre visível, navegação direta à conversa com destinatário preenchido; teste Android real em telas pequenas |
-| 20 | **Pendente — v0.1.3**: responder a uma mensagem mantendo-a pressionada | Long press em bolha recebida, ação Responder e compositor com contexto/destino correto; não transmitir antes de Enviar |
+| 20 | **Pendente — v0.1.3**: pressão longa na mensagem com duas ações distintas | Menu **Responder à mensagem** (com contexto) ou **Mensagem direta ao remetente** (privada sem citação), SSID exato e nenhum TX automático |
 | 21 | **Pendente — v0.1.3**: procurar indicativos para iniciar conversa nova | Busca por indicativo completo/parcial em estações e contatos recentes, seleção de SSID exato e abertura da conversa sem TX automático |
 | 22 | **Pendente — v0.1.3**: controle de brilho do mapa inexistente | Ícone de sol com ajuste independente das configurações globais do Android, intensidade persistente, padrão neutro e teste de camadas/legibilidade |
 | 23 | **Pendente — v0.1.3**: ordenar cada mensagem pessoal ou geral pelo horário de recepção | Linha do tempo cronológica (antigas acima, recentes abaixo), desempate estável e atualização reativa; independente da ordem da lista de Conversas (#2) |
@@ -570,44 +570,57 @@ causada por vários botões concorrendo por espaço no `AlertDialog`.
 - **Status:** item aberto para correção de interface e homologação em
   celular. Não considerar resolvido apenas porque o callback já existe.
 
-### 20. Mensagens: responder mantendo uma mensagem pressionada
-_Solicitado em 31/10/2026, observação na versão v0.1.3._
+### 20. Mensagens: pressão prolongada — responder à mensagem ou diretamente ao remetente
+_Solicitado em 31/10/2026; detalhado novamente pelo usuário na v0.1.3._
 
-**Diagnóstico no código:** o composable `Bubble(m: ChatMessage, ...)` em
-`app/src/main/java/com/pt2vhf/aprs/ui/Screens.kt` mostra as mensagens,
-mas não implementa `onLongClick` ou menu de contexto para responder.
+**Diagnóstico:** `Bubble(m: ChatMessage, ...)` em `ui/Screens.kt`
+não implementa ação de pressão longa. O usuário quer **duas opções
+distintas**, e não apenas um botão genérico de responder.
 
-- Permitir **pressionar e segurar** qualquer bolha de mensagem recebida em
-  **conversa privada**, **canal geral (CQ)** ou **boletim**, abrindo menu
-  acessível com ação explícita **Responder**, sem disparar envio imediatamente.
-  Para mensagens próprias, não apresentar "Responder ao próprio indicativo"
-  como se fosse uma mensagem recebida.
-- Em conversa privada, **Responder** abre/focaliza o compositor daquela
-  conversa, com destinatário definido como o **indicativo exato do remetente,
-  incluindo SSID**. Para mensagem recebida em CQ/boletim, oferecer
-  **resposta privada ao remetente** como caminho padrão e não confundir
-  resposta dirigida com transmissão pública a CQ/BLN0.
-- Mostrar no compositor um **contexto visual** da mensagem selecionada
-  (remetente e trecho do texto original), com botão **Cancelar resposta**;
-  preservar o texto que o usuário já estava digitando. A UI pode guardar
-  localmente a associação da resposta ao `ChatMessage.id`, mas **APRS
-  convencional não transporta encadeamento de respostas como o WhatsApp**:
-  não prometer threading remoto. Não incluir citação longa automaticamente
-  no payload e respeitar o limite do formato (até 67 caracteres de texto
-  por mensagem no fluxo atual); se houver opção de citação breve, exigir
-  pré-visualização explícita e dimensionamento correto.
-- Depois de tocar em **Enviar**, usar o mecanismo existente de envio
-  APRS-IS/TNC, ACK, status e histórico; não duplicar pacotes pela ação de
-  pressionar, selecionar ou cancelar.
-- Garantir `combinedClickable`/gesto equivalente de longa duração,
-  acessibilidade, feedback tátil quando disponível, funcionamento com
-  seleção de texto/rolagem e ausência de acionamentos acidentais.
-- **Teste de aceitação T18:** manter pressionada mensagem recebida em
-  conversa privada, CQ e boletim; verificar menu, destinatário, contexto,
-  cancelar, texto pré-existente e envio único; conferir diferentes SSIDs,
-  mensagens próprias, telas pequenas, fontes grandes e modo sem conexão.
-  Comprovar que não há TX até o comando Enviar.
-- **Status:** backlog apenas; ainda não implementado nem homologado.
+- **Gesto:** ao **manter pressionado um balão recebido** em conversa
+  privada, mensagens gerais (CQ) ou boletins, apresentar um menu de
+  contexto com duas ações visíveis:
+  1. **Responder à mensagem** — abrir/focalizar o compositor com uma
+     faixa de contexto indicando **remetente + trecho da mensagem
+     selecionada**, mantendo associação local ao `ChatMessage.id`,
+     botão de cancelar e preservação de texto já digitado. Quando a
+     mensagem for de uma conversa privada, responder naquele
+     contato; em **CQ**, indicar explicitamente se a resposta irá ao
+     próprio canal (pública) ou oferecer seleção de destino antes do
+     envio, evitando broadcast inesperado. Em boletins, não enviar
+     silenciosamente ao endereço `BLN0`: a resposta dirigida ao
+     remetente é a opção segura.
+  2. **Mensagem direta ao remetente** — abrir **conversa privada**
+     com o `from` completo, inclusive **SSID**, sem citação/contexto
+     associado, preservando o histórico e permitindo escrever uma
+     mensagem nova para aquela estação. Deve funcionar também a
+     partir de mensagens recebidas no canal Geral/CQ ou boletins.
+- **Diferença funcional:** a primeira opção é uma resposta
+  **contextual à bolha escolhida**; a segunda inicia/abre uma
+  **conversa privada comum com o autor**, sem responder a um texto
+  específico. Em qualquer caso, mostrar o destinatário efetivo
+  antes do envio e impedir que o usuário responda ao próprio
+  indicativo por engano.
+- **Limitação APRS:** o contexto da primeira opção é uma associação
+  visual/local, porque o protocolo APRS clássico **não disponibiliza
+  threading remoto nativo**. Não inserir automaticamente a mensagem
+  inteira no pacote; se houver citação curta, mostrar prévia e
+  respeitar os limites de payload da transmissão (texto de até
+  67 caracteres no fluxo atual), sem truncamento silencioso.
+- **Proteções:** pressionar, abrir menu, selecionar opção ou cancelar
+  **nunca transmite**; somente o botão **Enviar** dispara o fluxo
+  existente de APRS-IS ou TNC/RF conforme permissões. Não duplicar
+  mensagens, alterar indevidamente ACK/status nem perder rascunhos.
+  Garantir acessibilidade, textos traduzidos e menu funcional em
+  telas pequenas, com fonte ampliada e rolagem.
+- **Teste de aceitação T18:** pressionar mensagem recebida em
+  conversas privadas, CQ e boletins; verificar **ambas as opções**,
+  contexto presente apenas na primeira, destino correto inclusive
+  SSID, diferenciação visual de resposta pública e privada,
+  cancelamento/rascunho, respostas a mensagens próprias,
+  histórico conservado, envio único somente após confirmação,
+  conexão offline e transmissão permitida APRS-IS/RF.
+- **Situação:** documentado no backlog, **ainda não implementado**.
 
 ### 21. Mensagens: pesquisa de indicativos para iniciar conversa direta
 _Solicitado em 31/10/2026, observação na versão v0.1.3._
