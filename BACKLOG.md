@@ -14,7 +14,7 @@ Itens registrados para as próximas versões. Não implementar até o pedido de 
 Aprovada a implementação integral, mas **não confundir código no PR com funcionalidade homologada**.
 A release **v0.1.2** foi gerada e assinada no GitHub ([tag v0.1.2](../../releases/tag/v0.1.2)),
 com implementação parcial do backlog. O site ainda permanece em **v0.1.0** até receber
-seu APK real; há homologação física pendente. Não afirmar que os 15 itens foram concluídos. Os critérios, roteiros e evidências ficam no
+seu APK real; há homologação física pendente. Não afirmar que os 16 itens foram concluídos. Os critérios, roteiros e evidências ficam no
 [HOMOLOGACAO.md](HOMOLOGACAO.md).
 
 | Item | Estado atual | Evidência necessária para baixa |
@@ -34,6 +34,7 @@ seu APK real; há homologação física pendente. Não afirmar que os 15 itens f
 | 13 | Parcial: indicadores/monitor | Exportação e diagnóstico detalhado faltam |
 | 14 | Pendente | Estatísticas/recordes RF comprovados |
 | 15 | Pendente | API segura e testes de permissões |
+| 16 | **Pendente**: confirmar fechamento do aplicativo | Diálogo ao sair pela navegação Android, cancelar/sair e tratamento explícito de tracker/TX em segundo plano |
 
 **Baixa definitiva:** marcar `Concluído` somente após CI aprovado,
 teste físico aplicável validado pelo usuário e requisitos da seção correspondente
@@ -370,6 +371,16 @@ _Aprovado em 31/10/2026, inspirado na interface de aplicativos do APRSdroid._
 - Versionar contratos, documentar formatos de eventos e criar testes de
   compatibilidade e segurança. Não copiar código de terceiros sob licença
   incompatível.
+
+### 16. Confirmar antes de sair do aplicativo
+_Solicitado em 31/10/2026, após uso da versão v0.1.2._
+
+- **Ao tentar fechar o app pelo botão Voltar/gesto de retorno na tela principal** ou pelo comando explícito **Sair** (caso exista), mostrar diálogo modal: **"Deseja sair do PT2VHF APRS Client?"** com ações **Cancelar** (padrão, mantém a aplicação aberta) e **Sair** (confirma o fechamento da interface). Não mostrar confirmação ao navegar entre abas, fechar submenus/diálogos ou retornar de outras telas.
+- **Com tracker, TNC, GPS em segundo plano ou TX programado ativo**, a confirmação deve deixar claro se haverá continuidade. Preferir ações inequívocas: **Cancelar**, **Sair e manter o rastreamento em segundo plano** e **Sair e interromper o rastreamento**, se os serviços estiverem ativos. Não desligar nem continuar transmissão RF/APRS-IS silenciosamente por ambiguidade.
+- No caminho **Sair e interromper o rastreamento**, solicitar parada ordenada do serviço e das automações de beacon, respeitar transições de estado e persistir preferências/histórico; não transmitir beacon extra ao encerrar. No caminho **manter rastreamento**, preservar o foreground service e sua notificação visível, conforme permissões e regras do Android.
+- Integrar ao tratamento de **Back** (inclusive gesto preditivo, se suportado) em `MainActivity.kt`/Compose; não interceptar botão Home, tela de recentes, encerramento forçado pelo sistema ou comando **Forçar parada**, pois essas ações não oferecem garantia de diálogo pelo Android.
+- **Teste de aceitação em celular real:** (1) tentar Voltar na tela principal e escolher **Cancelar**, verificando que continua na mesma tela; (2) confirmar **Sair**, verificando encerramento adequado; (3) com tracker/TNC conectado e beacon ativo, verificar as duas opções de continuidade/parada, ausência de TX inadvertido e notificação coerente; (4) abrir novamente e comprovar preservação de configurações, estações e mensagens; (5) repetir em navegação por gestos e por três botões, quando disponível.
+- **Status:** backlog apenas; não implementar nem publicar APK até solicitação explícita de nova versão.
 
 ## Consolidação das sugestões aprovadas com itens já existentes
 
