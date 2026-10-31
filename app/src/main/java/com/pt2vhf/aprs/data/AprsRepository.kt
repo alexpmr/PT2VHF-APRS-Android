@@ -77,6 +77,8 @@ data class LinkStatus(
     val beaconsDigipeated: Int = 0,
     val nextBeaconSec: Long? = null,
     val rxPackets: Int = 0,
+    val aprsRx: Int = 0,
+    val aprsTx: Int = 0,
     val tncRx: Int = 0,
     val tncTx: Int = 0,
 )
