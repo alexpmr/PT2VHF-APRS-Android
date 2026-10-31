@@ -4,7 +4,7 @@ Atualizado em 31/10/2026. **Esta matriz não é um release.**
 
 - Release **v0.1.3** gerada e assinada no GitHub e distribuída pelo site oficial; homologação física de itens do backlog continua pendente.
 - Desenvolvimento integrado à `main` por meio do PR [#7](../../pull/7); release [v0.1.2](../../releases/tag/v0.1.2).
-- Versão para instalação: **0.1.3**, APK de produção assinado e verificado no GitHub Actions. A homologação física pelo usuário permanece obrigatória; não marcar os 19 itens como totalmente concluídos.
+- Versão para instalação: **0.1.3**, APK de produção assinado e verificado no GitHub Actions. A homologação física pelo usuário permanece obrigatória; não marcar os 21 itens como totalmente concluídos.
 - Status: `Não iniciado` → `Implementação parcial` → `Pronto para teste físico` → `Validado pelo usuário` → `Concluído/baixado`.
 - **Regra de baixa:** nunca baixar um item apenas porque o código compilou; registrar evidência, validar todas as partes exigidas e separar pendências residuais. Atualizar `BACKLOG.md` e registrar commit a cada baixa.
 - **Segurança:** use baixa potência e frequência/canal autorizado; não envie beacons de posição residencial sem querer. O perfil 'somente RX' ainda não está implementado; desligue TX RF e APRS-IS para testes exclusivamente de recepção.
@@ -32,6 +32,8 @@ Atualizado em 31/10/2026. **Esta matriz não é um release.**
 | 17 | Restaurar mapa ao abrir | **Pendente na v0.1.2; centro e zoom fixos identificados no código** | Recuperar centro e zoom após reabrir; não recentralizar pelo GPS; botão Minha localização; cenário sem GPS |
 | 18 | Versão instalada no aviso de site oficial | Implementado no PR #8; CI/homologação pendentes | Popup inicial mostra BuildConfig.VERSION_NAME e www.PT2VHF.com; OTA permanece separado |
 | 19 | Enviar mensagem nos detalhes da estação | **Ação no código existente; usabilidade não homologada na v0.1.3** | Botão de envio direto sempre visível; abre conversa privada com indicativo/SSID correto; nenhum TX até o comando Enviar |
+| 20 | Responder por pressão prolongada em mensagem | **Não implementado na v0.1.3; backlog #20** | Long press, menu Responder, destinatário privado correto, texto existente preservado e ausência de TX automático |
+| 21 | Pesquisar estação para nova mensagem | **Não implementado na v0.1.3; backlog #21** | Busca por indicativo parcial/completo em estações + histórico, seleção exata de SSID, opção manual e cache offline |
 
 
 ## Roteiro de testes físicos, em ordem
@@ -70,6 +72,10 @@ Atualizado em 31/10/2026. **Esta matriz não é um release.**
 **T16 — Versão atual no aviso do site oficial (item #18):** instalar APK v0.1.3 no aparelho, abrir do zero e conferir o popup de boas-vindas com **"Versão instalada: 0.1.3"**, endereço/link **www.PT2VHF.com**, sem mostrar versão do servidor como instalada. Fechar aviso e trocar de abas: não pode reaparecer. Encerrar e abrir novamente: deve reaparecer. Com atualização OTA detectada, garantir popup separado após o anúncio inicial. Conferir as traduções PT/EN/ES/FR/IT.
 
 **T17 — Mensagem direta nos detalhes da estação (item #19):** selecionar uma estação na aba Estações, abrir os detalhes, localizar o botão destacado **Enviar mensagem** sem rolar horizontalmente, tocar e verificar que abre a conversa privada com o indicativo correto, inclusive SSID, histórico preservado e campo de digitação pronto. Repetir selecionando estação pelo mapa, em celulares com telas pequenas e fonte grande, e em todos os idiomas. Confirmar que abrir a conversa **não transmite nada**; somente enviar quando o usuário acionar Enviar e a configuração permitir. Conferir APRS-IS e TNC físico quando disponíveis, além dos caminhos de cancelar/voltar e selecionar outra estação. Anexar print e registro do TX quando aplicável.
+
+**T18 — Pressionar mensagem para responder (item #20):** em Mensagens, abrir conversa privada com mensagem recebida e pressionar a bolha por aproximadamente um segundo. Confirmar que surge opção **Responder** e que o compositor identifica o remetente correto (incluindo SSID), exibe contexto da mensagem e permite cancelar. Repetir em mensagens CQ/boletim e confirmar que a resposta abre um diálogo **privado** com o remetente, sem enviar CQ involuntário. Testar mensagens enviadas pelo próprio usuário, texto já em digitação, rolagem, fonte ampliada e cenário offline. Atestar ausência de TX ao abrir o menu, selecionar Responder e cancelar; somente Enviar deve originar transmissão, respeitando limite de payload e ACK existentes. Não exigir citação automática nem threading remoto, inexistentes no formato APRS convencional.
+
+**T19 — Pesquisar indicativo para iniciar conversa nova (item #21):** em Mensagens → Conversas, tocar em **Nova mensagem** e procurar por `PT2`, `VHF`, `-9` e um indicativo completo, confirmando resultados sem distinção de maiúsculas/minúsculas. Os resultados devem combinar estações recebidas por APRS-IS/TNC (do cache) e indicativos do histórico de mensagens; sem duplicatas. Selecionar indicativos com diferentes SSIDs e verificar abertura do contato exato, histórico correto e ausência de transmissão automática. Repetir sem internet com cache, com lista recém-atualizada, lista sem correspondência e com digitação manual de indicativo válido e inválido. Conferir que filtro de conversas não se confunde com pesquisa de destinatário e que apenas o botão Enviar transmite.
 
 ## Como informar o resultado
 
