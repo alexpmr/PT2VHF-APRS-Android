@@ -4,7 +4,7 @@ Itens registrados para as próximas versões. Não implementar até o pedido de 
 
 ## Onde estamos (31/10/2026)
 
-- Release mais recente no GitHub: **v0.1.2**, APK assinado. **Teste físico do mapa revelou falha** no item #1; demais itens têm o status individual abaixo.
+- Release mais recente publicada: **v0.1.3**, APK assinado; o site oficial também publica v0.1.3. Há validação física pendente dos itens do backlog, incluindo falhas anteriormente observadas na v0.1.2.
 - Continuar correções a partir do backlog e só baixar os requisitos validados. Distribuição pública no site requer confirmação separada do manifesto e do arquivo.
 - Também pendentes desde a 0.1.0 (ver CHANGELOG): TNC por USB-OTG e KISS TCP, mapa offline, mapa de calor de
   cobertura, modo carro, rotas e recordes RF.
@@ -12,9 +12,8 @@ Itens registrados para as próximas versões. Não implementar até o pedido de 
 ## Acompanhamento de implementação e baixa (31/10/2026)
 
 Aprovada a implementação integral, mas **não confundir código no PR com funcionalidade homologada**.
-A release **v0.1.2** foi gerada e assinada no GitHub ([tag v0.1.2](../../releases/tag/v0.1.2)),
-com implementação parcial do backlog. O site ainda permanece em **v0.1.0** até receber
-seu APK real; há homologação física pendente. Não afirmar que os 18 itens foram concluídos. Os critérios, roteiros e evidências ficam no
+A release **v0.1.3** foi gerada e assinada no GitHub ([tag v0.1.3](../../releases/tag/v0.1.3)) e disponibilizada no site.
+O backlog permanece parcialmente implementado, com homologação física pendente. Não afirmar que os 19 itens foram concluídos. Os critérios, roteiros e evidências ficam no
 [HOMOLOGACAO.md](HOMOLOGACAO.md).
 
 | Item | Estado atual | Evidência necessária para baixa |
@@ -37,6 +36,7 @@ seu APK real; há homologação física pendente. Não afirmar que os 18 itens f
 | 16 | **Pendente**: confirmar fechamento do aplicativo | Diálogo ao sair pela navegação Android, cancelar/sair e tratamento explícito de tracker/TX em segundo plano |
 | 17 | **Pendente**: restaurar mapa na abertura | Persistir centro e zoom do último acesso; ícone para localização atual; não sobrescrever a vista restaurada por GPS automático |
 | 18 | **Implementado no PR #8; CI e teste físico pendentes**: versão instalada no aviso do site oficial | Ao abrir, popup com versão real da instalação e link www.PT2VHF.com, uma vez por abertura |
+| 19 | **Falha de usabilidade relatada na v0.1.3**: ação Mensagem já existe no código, mas não está claramente acessível no popup de detalhes da estação | Botão destacado Enviar mensagem, sempre visível, navegação direta à conversa com destinatário preenchido; teste Android real em telas pequenas |
 
 
 **Baixa definitiva:** marcar `Concluído` somente após CI aprovado,
@@ -417,6 +417,42 @@ _Solicitado em 31/10/2026 durante o desenvolvimento da v0.1.3._
 - Disponibilizar as traduções da nova linha em PT/EN/ES/FR/IT; nunca confundir versão instalada com versão anunciada no servidor.
 - **Critério de aceitação:** iniciar com v0.1.3, conferir texto, endereço, versão exata da APK e abertura do link; fechar aviso, trocar de abas (não deve reaparecer), forçar novo lançamento do app (deve aparecer); conferir a separação do aviso OTA, sem duplicidade.
 - **Implementação** adicionada no PR [#8](../../pull/8); **não baixar** até CI aprovado e teste no aparelho.
+
+### 19. Detalhes da estação: ação evidente de enviar mensagem APRS diretamente
+_Solicitado em 31/10/2026 após selecionar uma estação na v0.1.3._
+
+**Diagnóstico técnico:** `StationDialog` em `ui/Screens.kt` já contém a ação
+`TextButton(onClick = onMessage)` com rótulo **"Mensagem"**, e `App.kt`
+já direciona `onMessage` a `chatWith = call; tab = Tab.MESSAGES`.
+A `Conversation` existente endereça o envio a `contact`. Portanto,
+**não é uma capacidade de transmissão inexistente**: a falha relatada é
+de **descoberta, apresentação e acessibilidade do comando**, possivelmente
+causada por vários botões concorrendo por espaço no `AlertDialog`.
+
+**Ajustes necessários:**
+
+- No popup de detalhes aberto a partir de **Estações** ou do **mapa**, incluir
+  botão primário, destacado e inequivocamente visível **"Enviar mensagem"**,
+  com ícone de mensagem (por exemplo, balão). Preferir linha de ação com
+  largura útil ou área de ações organizada verticalmente; não comprimir a
+  ação em uma linha de cinco botões.
+- Ao tocar, fechar o popup e abrir diretamente **Mensagens → conversa privada**
+  com o **indicativo completo, inclusive SSID**, da estação selecionada já
+  preenchido como destinatário. Permitir digitar e enviar usando o fluxo
+  APRS existente; preservar o histórico com aquela estação.
+- A simples abertura da conversa **não pode enviar automaticamente** nenhum
+  pacote por RF ou APRS-IS. O TX só deve acontecer quando o usuário tocar
+  em Enviar, observando configuração, conexão e restrições de transmissão.
+- Não confundir com **CQ**, boletins ou mensagens gerais; o destino da
+  mensagem deve ser a estação selecionada, nunca o próprio indicativo.
+- **Teste de aceitação (T17):** selecionar estação na aba Estações e no mapa,
+  abrir detalhes, conferir botão em aparelho pequeno e grande (inclusive
+  fontes ampliadas), tocar e verificar destinatário exato e histórico;
+  testar indicativos com e sem SSID, cancelar/voltar e abrir nova estação,
+  certificar que nada foi transmitido antes de Enviar e comprovar envio via
+  APRS-IS/TNC quando configurados e autorizados. Conferir todos os idiomas.
+- **Status:** item aberto para correção de interface e homologação em
+  celular. Não considerar resolvido apenas porque o callback já existe.
 
 ## Consolidação das sugestões aprovadas com itens já existentes
 
