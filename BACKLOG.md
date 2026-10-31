@@ -2,6 +2,14 @@
 
 Itens registrados para as próximas versões. Não implementar até o pedido de versão nova.
 
+## Onde estamos (31/10/2026)
+
+- Versão publicada: **0.1.0** (release v0.1.0 no GitHub, APK assinado), testada e aprovada no aparelho.
+- Nenhuma versão nova em andamento. Próximo passo: quando for pedida a versão 0.2.0, implementar os itens
+  pendentes abaixo, mover os entregues para o CHANGELOG e gerar o release (commit `release:` na `main`).
+- Também pendentes desde a 0.1.0 (ver CHANGELOG): TNC por USB-OTG e KISS TCP, mapa offline, mapa de calor de
+  cobertura, modo carro, rotas e recordes RF.
+
 ## Pendentes
 
 ### 1. Mapa: ícones APRS por estação/objeto e site PT2VHF no comentário padrão
