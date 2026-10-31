@@ -196,4 +196,10 @@
     <string name="tracker_auto_start">Iniciar el seguimiento automáticamente</string>
     <string name="tracker_auto_start_notice">Cuando esté activado, transmitirá su posición por enlaces APRS autorizados tras obtener señal GPS. Puede detenerlo en cualquier momento.</string>
     <string name="tx_route_unavailable">No hay una ruta de transmisión autorizada. Compruebe TX APRS-IS, RF/TNC y la conexión en Ajustes.</string>
+    <string name="tx_disabled">Transmisión desactivada. Active TX mediante APRS-IS o RF en Configuración.</string>
+    <string name="tx_tnc_unavailable">TX por RF está activado, pero el TNC está desconectado. Active TX APRS-IS o conecte el TNC.</string>
+    <string name="tx_aprs_unverified">APRS-IS conectado, pero el acceso no está verificado. Envío bloqueado.</string>
+    <string name="tx_aprs_unavailable">APRS-IS desconectado. Vuelva a conectar antes de enviar.</string>
+    <string name="tx_send_failed">Error de transmisión pese a existir una ruta autorizada. Revise la conexión e intente de nuevo. Se conservó el texto.</string>
+    <string name="tx_dispatch_failed">No se pudo iniciar el servicio de mensajes. Se conservó el texto.</string>
 </resources>
