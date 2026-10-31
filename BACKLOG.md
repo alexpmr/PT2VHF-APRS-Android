@@ -13,7 +13,7 @@ Itens registrados para as próximas versões. Não implementar até o pedido de 
 
 Aprovada a implementação integral, mas **não confundir código no PR com funcionalidade homologada**.
 A release **v0.1.3** foi gerada e assinada no GitHub ([tag v0.1.3](../../releases/tag/v0.1.3)) e disponibilizada no site.
-O backlog permanece parcialmente implementado, com homologação física pendente. Não afirmar que os 22 itens foram concluídos. Os critérios, roteiros e evidências ficam no
+O backlog permanece parcialmente implementado, com homologação física pendente. Não afirmar que os 23 itens foram concluídos. Os critérios, roteiros e evidências ficam no
 [HOMOLOGACAO.md](HOMOLOGACAO.md).
 
 | Item | Estado atual | Evidência necessária para baixa |
@@ -40,6 +40,7 @@ O backlog permanece parcialmente implementado, com homologação física pendent
 | 20 | **Pendente — v0.1.3**: responder a uma mensagem mantendo-a pressionada | Long press em bolha recebida, ação Responder e compositor com contexto/destino correto; não transmitir antes de Enviar |
 | 21 | **Pendente — v0.1.3**: procurar indicativos para iniciar conversa nova | Busca por indicativo completo/parcial em estações e contatos recentes, seleção de SSID exato e abertura da conversa sem TX automático |
 | 22 | **Pendente — v0.1.3**: controle de brilho do mapa inexistente | Ícone de sol com ajuste independente das configurações globais do Android, intensidade persistente, padrão neutro e teste de camadas/legibilidade |
+| 23 | **Pendente — v0.1.3**: ordenar cada mensagem pessoal ou geral pelo horário de recepção | Linha do tempo cronológica (antigas acima, recentes abaixo), desempate estável e atualização reativa; independente da ordem da lista de Conversas (#2) |
 
 
 **Baixa definitiva:** marcar `Concluído` somente após CI aprovado,
@@ -693,6 +694,66 @@ modificação das configurações do sistema.
   dispositivo permanece inalterado.
 - **Status:** backlog registrado, **ainda não implementado**. Não
   gerar novo APK por este registro.
+
+### 23. Mensagens privadas e gerais: ordem cronológica de recepção
+_Solicitado em 31/10/2026, relatado na v0.1.3._
+
+**Objetivo:** na visualização das **mensagens individuais** de uma conversa
+privada e da aba **Geral (CQ)**, organizar todas as bolhas em **ordem de
+recebimento/registro cronológico**, da mais antiga no topo até a mais
+recente embaixo, como em uma linha do tempo. Vale para mensagens
+recebidas e enviadas, mantendo a conversa coerente.
+
+**Diagnóstico técnico:** `ui/Screens.kt`, função `Conversation()`,
+renderiza `messages.filter { ... }` diretamente, sem
+`sortedWith` explícito. `GroupChat()` recebe uma lista ordenada
+por `newestFirst`, opção compartilhada com a lista de Conversas;
+assim o usuário pode ver a sequência invertida na aba Geral, e
+uma reidratação/atualização de histórico fora de sequência pode
+aparecer em posição errada. `ChatMessage.time` registra o timestamp
+local do evento de entrada/saída, e `ChatMessage.id` permite desempate
+estável; não assumir que a ordem física na lista é sempre confiável.
+
+**Requisitos:**
+
+- Em **Mensagens → Conversas → conversa particular**, ordenar as bolhas
+  por `(time asc, id asc)`, respeitando a cronologia de mensagens
+  recebidas e enviadas; manter o destinatário/SSID correto.
+- Em **Mensagens → Geral**, exibir mensagens CQ de todos os remetentes
+  em uma única sequência cronológica ascendente, sem agrupá-las ou
+  reordená-las arbitrariamente por estação, mantendo identificação do
+  remetente e horário em cada bolha. Mensagens transmitidas ao grupo
+  devem integrar a mesma linha do tempo.
+- A ordem usa **horário local de registro/recepção**, não horário
+  alegado no conteúdo ou texto do pacote; timestamps inválidos e
+  empates precisam de ordenação determinística sem descartar mensagens.
+  Não transformar ACK, alteração de status ou atualização de UI em
+  uma nova recepção capaz de mover a bolha de lugar.
+- Com nova mensagem enquanto a tela está aberta, inserir no ponto
+  correto **automaticamente**. Rolar para a última somente se o
+  usuário já estiver no final; se estiver lendo mensagens anteriores,
+  preservar a posição de leitura e oferecer indicação de novas mensagens
+  ou ação para ir ao fim. Ao abrir a conversa, mostrar o histórico
+  recente por padrão.
+- **Separar três regras de apresentação:** (a) a **lista de Conversas**
+  permanece ordenada da **última atividade mais recente para a mais
+  antiga** (item #2); (b) **dentro de cada conversa**, mensagens
+  aparecem da mais antiga para a mais recente; (c) na aba **Geral**,
+  usar igualmente a cronologia crescente. O controle de classificação
+  do item #2 não pode inverter inadvertidamente as bolhas internas.
+- Manter o comportamento correto com filtros de conteúdo, histórico
+  restaurado, alteração de conexão APRS-IS/TNC, mensagens duplicadas,
+  confirmação ACK e timestamps iguais; **nenhum envio automático**.
+- **Critério de aceite T23:** receber/enviar mensagens de diferentes
+  contatos e no canal CQ, intencionalmente fora de sequência no
+  carregamento do histórico, validar `time/id` ascendente nas
+  conversas e na aba Geral, checar que a lista de contatos continua
+  com mais recentes no topo; testar novas mensagens com a tela
+  aberta, desempates, ACK, rolagem quando o usuário está no fim ou
+  lendo mensagens antigas, reinício e cache local. Conferir mensagens
+  com e sem SSID e origem RF/APRS-IS.
+- **Status:** registrado para próxima implementação; **não corrigido
+  nem homologado nesta solicitação**.
 
 ## Consolidação das sugestões aprovadas com itens já existentes
 
