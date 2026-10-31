@@ -214,4 +214,5 @@
     <string name="beacon_sending">Enviando…</string>
     <string name="beacon_failed">Falha no envio</string>
     <string name="days_ago">há %1$d dias</string>
+    <string name="search_callsign_short">Indicativo</string>
 </resources>
