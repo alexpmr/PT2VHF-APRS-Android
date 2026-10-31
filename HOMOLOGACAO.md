@@ -13,7 +13,7 @@ Atualizado em 31/10/2026. **Esta matriz não é um release.**
 
 | # | Funcionalidade | Situação no PR #7 | Teste obrigatório / restrição |
 |---|---|---|---|
-| 1 | Símbolos APRS e comentário padrão | Parcial: comentário PT2VHF | Símbolos/overlays ainda não implementados; conferir comentário no beacon |
+| 1 | Símbolos APRS e comentário padrão | **Falha observada pelo usuário na v0.1.2**: mapa ainda apresenta ícones genéricos/incorretos | Renderizar símbolos APRS de ambas as tabelas e overlays; comparar em aparelho real com referência APRSdroid e registrar prints |
 | 2 | Filtro/ordenação de mensagens | Código para QA | Verificar filtros e persistência após reiniciar |
 | 3 | Filtro/ordenação de estações | Código para QA | Proximidade, indicativo, recência e tipos |
 | 4 | Meus enlaces RF | Parcial: origem RF por TNC corrigida e teste unitário | Validar pacote TNC versus APRS-IS; interface própria de enlaces pendente |
