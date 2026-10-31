@@ -85,5 +85,5 @@ jobs:
             gh release upload "$tag" dist/*.apk --clobber
           else
             gh release create "$tag" dist/*.apk --target "$GITHUB_SHA" --title "PT2VHF APRS Client for Android $tag" \
-              --notes "Downloads oficiais em https://www.pt2vhf.com/aprs"
+              --notes "Downloads oficiais em https://www.pt2vhf.com/android"
           fi
