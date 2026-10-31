@@ -71,6 +71,8 @@ import com.pt2vhf.aprs.data.ChatMessage
 import com.pt2vhf.aprs.data.Medium
 import com.pt2vhf.aprs.data.Settings
 import com.pt2vhf.aprs.data.Station
+import com.pt2vhf.aprs.data.StationCriteria
+import com.pt2vhf.aprs.data.selectStations
 import com.pt2vhf.aprs.service.AprsService
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -343,59 +345,154 @@ fun StationsScreen(onStation: (String) -> Unit) {
     val stations by AprsRepository.stations.collectAsState()
     val status by AprsRepository.status.collectAsState()
     val favorites by AprsRepository.favorites.collectAsState()
-    var favoritesOnly by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
-    var query by rememberSaveable { mutableStateOf("") }
-    val types = listOf("all", "Digipeater", "iGate", "Estação meteorológica", "Móvel", "Estação")
-    val orders = listOf("nearest", "recent", "callsign")
-    var type by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_type", "all")) }
-    var order by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_order", "nearest")) }
-    val list = stations.values.filter {
-        (query.isBlank() || it.call.contains(query.trim(), ignoreCase = true)) &&
-            (type == "all" || it.role == type) &&
-            (!favoritesOnly || it.call in favorites)
-    }.let { items ->
-        when (order) {
-            "recent" -> items.sortedByDescending { it.lastHeard }
-            "callsign" -> items.sortedBy { it.call }
-            else -> {
-                if (status.lat == null || status.lon == null) items.sortedByDescending { it.lastHeard }
-                else items.sortedBy { haversineKm(status.lat!!, status.lon!!, it.lat, it.lon) }
-            }
-        }
+    var filterOpen by remember { mutableStateOf(false) }
+    var query by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_search", "")) }
+    var sort by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_sort_v2", "distance")) }
+    var descending by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_desc_v2", "false") == "true") }
+    var roles by remember {
+        mutableStateOf(Settings.readOption(context, "station_roles_v2", "").split("|").filter { it.isNotBlank() }.toSet())
+    }
+    var source by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_source_v2", "all")) }
+    var favoritesOnly by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_favorites_v2", "false") == "true") }
+    var receivedFrom by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_received_from", "")) }
+    var receivedUntil by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_received_until", "")) }
+    var firstFrom by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_first_from", "")) }
+    var firstUntil by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_first_until", "")) }
+    var minDistance by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_min_distance", "")) }
+    var maxDistance by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_max_distance", "")) }
+
+    val activeFilters = query.isNotBlank() || roles.isNotEmpty() || source != "all" || favoritesOnly ||
+        receivedFrom.isNotBlank() || receivedUntil.isNotBlank() || firstFrom.isNotBlank() ||
+        firstUntil.isNotBlank() || minDistance.isNotBlank() || maxDistance.isNotBlank()
+    val list = selectStations(
+        stations.values, StationCriteria(
+            callsign = query, sort = sort, descending = descending, roleNames = roles,
+            source = source, favoritesOnly = favoritesOnly,
+            receivedFrom = receivedFrom, receivedUntil = receivedUntil,
+            firstFrom = firstFrom, firstUntil = firstUntil,
+            minDistanceKm = minDistance.replace(',', '.').toDoubleOrNull()?.takeIf { it >= 0 },
+            maxDistanceKm = maxDistance.replace(',', '.').toDoubleOrNull()?.takeIf { it >= 0 },
+        ), status.lat, status.lon, favorites,
+    )
+    fun saveFilters() {
+        mapOf(
+            "station_search" to query,
+            "station_sort_v2" to sort, "station_desc_v2" to descending.toString(),
+            "station_roles_v2" to roles.sorted().joinToString("|"),
+            "station_source_v2" to source, "station_favorites_v2" to favoritesOnly.toString(),
+            "station_received_from" to receivedFrom, "station_received_until" to receivedUntil,
+            "station_first_from" to firstFrom, "station_first_until" to firstUntil,
+            "station_min_distance" to minDistance, "station_max_distance" to maxDistance,
+        ).forEach { (key, value) -> Settings.saveOption(context, key, value) }
     }
     Column(Modifier.fillMaxSize()) {
-        OutlinedTextField(query, { query = it }, label = { Text(UiText.text(R.string.search_callsign)) }, singleLine = true,
-            modifier = Modifier.fillMaxWidth().padding(12.dp))
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceEvenly) {
-            TextButton(onClick = {
-                order = orders[(orders.indexOf(order) + 1) % orders.size]
-                Settings.saveOption(context, "station_order", order)
-            }) { Text(UiText.text(when (order) {
-                "recent" -> R.string.sort_recent; "callsign" -> R.string.sort_callsign; else -> R.string.sort_nearest
-            })) }
-            TextButton(onClick = {
-                type = types[(types.indexOf(type) + 1) % types.size]
-                Settings.saveOption(context, "station_type", type)
-            }) { Text(if (type == "all") UiText.text(R.string.filter_all) else UiText.role(type)) }
-            TextButton(onClick = { favoritesOnly = !favoritesOnly }) {
-                Text(if (favoritesOnly) UiText.text(R.string.favorites_only) else "☆")
+        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(query, { query = it }, label = { Text(UiText.text(R.string.search_callsign)) },
+                singleLine = true, modifier = Modifier.weight(1f))
+            TextButton(onClick = { filterOpen = true }) {
+                Text("☷ " + UiText.text(R.string.station_filter_action) + if (activeFilters) " ●" else "")
             }
         }
+        Text(UiText.text(R.string.station_showing, list.size, stations.size),
+            modifier = Modifier.padding(horizontal = 16.dp), color = Pal.muted, fontSize = 12.sp)
         if (list.isEmpty()) Empty(UiText.text(R.string.no_stations))
         LazyColumn {
-            items(list, key = { it.call }) { s ->
-                Row(Modifier.fillMaxWidth().clickable { onStation(s.call) }.padding(16.dp, 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            items(list, key = { it.call }) { station ->
+                Row(Modifier.fillMaxWidth().clickable { onStation(station.call) }.padding(16.dp, 10.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(s.call + if (s.call in favorites) " ★" else "", fontWeight = FontWeight.Bold)
-                        Text("${UiText.role(s.role)} · ${s.medium.label} · ${ago(s.lastHeard)}", color = Pal.muted, fontSize = 12.sp)
+                        Text(station.call + if (station.call in favorites) " ★" else "", fontWeight = FontWeight.Bold)
+                        Text(UiText.role(station.role) + " · " + station.medium.label + " · " + ago(station.lastHeard),
+                            color = Pal.muted, fontSize = 12.sp)
                     }
-                    val lat = status.lat; val lon = status.lon
-                    if (lat != null && lon != null) Text("%.1f km".format(haversineKm(lat, lon, s.lat, s.lon)), color = Pal.muted)
+                    if (status.lat != null && status.lon != null)
+                        Text("%.1f km".format(haversineKm(status.lat!!, status.lon!!,
+                            station.lat, station.lon)), color = Pal.muted)
                 }
             }
         }
+    }
+    if (filterOpen) {
+        val choices = listOf(
+            "distance" to R.string.station_sort_distance,
+            "heard" to R.string.station_sort_last,
+            "first" to R.string.station_sort_first,
+            "callsign" to R.string.station_sort_name,
+        )
+        val roleChoices = listOf("Estação", "Móvel", "Digipeater", "iGate", "Estação meteorológica")
+        AlertDialog(
+            onDismissRequest = { filterOpen = false },
+            containerColor = Pal.bar,
+            title = { Text(UiText.text(R.string.station_filter_action)) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(UiText.text(R.string.station_sort_label), fontWeight = FontWeight.Bold)
+                    choices.forEach { (id, label) ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = sort == id, onCheckedChange = { if (it) sort = id })
+                            Text(UiText.text(label), modifier = Modifier.clickable { sort = id })
+                        }
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = descending, onCheckedChange = { descending = it })
+                        Text(UiText.text(if (descending) R.string.station_descending else R.string.station_ascending),
+                            modifier = Modifier.clickable { descending = !descending })
+                    }
+                    Text(UiText.text(R.string.station_filter_types), fontWeight = FontWeight.Bold)
+                    roleChoices.forEach { role ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = role in roles, onCheckedChange = { checked ->
+                                roles = if (checked) roles + role else roles - role
+                            })
+                            Text(UiText.role(role), modifier = Modifier.clickable {
+                                roles = if (role in roles) roles - role else roles + role
+                            })
+                        }
+                    }
+                    Text(UiText.text(R.string.station_filter_source), fontWeight = FontWeight.Bold)
+                    listOf("all" to R.string.filter_all, "rf" to R.string.rf_direct,
+                        "internet" to R.string.station_source_internet).forEach { (key, id) ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = source == key, onCheckedChange = { if (it) source = key })
+                            Text(UiText.text(id), modifier = Modifier.clickable { source = key })
+                        }
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = favoritesOnly, onCheckedChange = { favoritesOnly = it })
+                        Text(UiText.text(R.string.favorites_only), modifier = Modifier.clickable {
+                            favoritesOnly = !favoritesOnly
+                        })
+                    }
+                    OutlinedTextField(receivedFrom, { receivedFrom = it }, singleLine = true,
+                        label = { Text(UiText.text(R.string.station_received_from)) }, placeholder = { Text("AAAA-MM-DD") })
+                    OutlinedTextField(receivedUntil, { receivedUntil = it }, singleLine = true,
+                        label = { Text(UiText.text(R.string.station_received_until)) }, placeholder = { Text("AAAA-MM-DD") })
+                    OutlinedTextField(firstFrom, { firstFrom = it }, singleLine = true,
+                        label = { Text(UiText.text(R.string.station_first_from)) }, placeholder = { Text("AAAA-MM-DD") })
+                    OutlinedTextField(firstUntil, { firstUntil = it }, singleLine = true,
+                        label = { Text(UiText.text(R.string.station_first_until)) }, placeholder = { Text("AAAA-MM-DD") })
+                    OutlinedTextField(minDistance, { minDistance = it }, singleLine = true,
+                        label = { Text(UiText.text(R.string.station_distance_min)) })
+                    OutlinedTextField(maxDistance, { maxDistance = it }, singleLine = true,
+                        label = { Text(UiText.text(R.string.station_distance_max)) })
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { saveFilters(); filterOpen = false }) {
+                    Text(UiText.text(R.string.station_filter_apply))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    query = ""; sort = "distance"; descending = false; roles = emptySet()
+                    source = "all"; favoritesOnly = false; receivedFrom = ""; receivedUntil = ""
+                    firstFrom = ""; firstUntil = ""; minDistance = ""; maxDistance = ""
+                    saveFilters(); filterOpen = false
+                }) { Text(UiText.text(R.string.station_filter_clear)) }
+            },
+        )
     }
 }
 
