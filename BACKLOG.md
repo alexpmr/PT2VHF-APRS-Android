@@ -13,7 +13,7 @@ Itens registrados para as próximas versões. Não implementar até o pedido de 
 
 Aprovada a implementação integral, mas **não confundir código no PR com funcionalidade homologada**.
 A release **v0.1.3** foi gerada e assinada no GitHub ([tag v0.1.3](../../releases/tag/v0.1.3)) e disponibilizada no site.
-O backlog permanece parcialmente implementado, com homologação física pendente. Não afirmar que os 24 itens foram concluídos. Os critérios, roteiros e evidências ficam no
+O backlog permanece parcialmente implementado, com homologação física pendente. Não afirmar que os 25 itens foram concluídos. Os critérios, roteiros e evidências ficam no
 [HOMOLOGACAO.md](HOMOLOGACAO.md).
 
 | Item | Estado atual | Evidência necessária para baixa |
@@ -36,12 +36,13 @@ O backlog permanece parcialmente implementado, com homologação física pendent
 | 16 | **Pendente**: confirmar fechamento do aplicativo | Diálogo ao sair pela navegação Android, cancelar/sair e tratamento explícito de tracker/TX em segundo plano |
 | 17 | **Pendente**: restaurar mapa na abertura | Persistir centro e zoom do último acesso; ícone para localização atual; não sobrescrever a vista restaurada por GPS automático |
 | 18 | **Implementado no PR #8; CI e teste físico pendentes**: versão instalada no aviso do site oficial | Ao abrir, popup com versão real da instalação e link www.PT2VHF.com, uma vez por abertura |
-| 19 | **FALHA FUNCIONAL RELATADA NA v0.1.3 — ABA ESTAÇÕES**: após selecionar estação, usuário não consegue enviar mensagem diretamente | Comando Enviar mensagem claramente visível e acionável; conversa privada aberta com indicativo/SSID exato e envio efetivo sob confirmação, verificado no Android real |
+| 19 | **P1 — FALHA VISUAL CONFIRMADA NA v0.1.4**: em detalhes da estação, ações Favoritos/Seguir/Navegar/Fechar aparecem, mas Enviar mensagem não aparece; comando está comprimido na Row do AlertDialog | Botão principal Enviar mensagem em área fixa e visível, separado das ações secundárias; conversa privada abre com indicativo/SSID exato sem TX automático; teste em aparelho real |
 | 20 | **Pendente — v0.1.3**: pressão longa na mensagem com duas ações distintas | Menu **Responder à mensagem** (com contexto) ou **Mensagem direta ao remetente** (privada sem citação), SSID exato e nenhum TX automático |
 | 21 | **Pendente — v0.1.3**: procurar indicativos para iniciar conversa nova | Busca por indicativo completo/parcial em estações e contatos recentes, seleção de SSID exato e abertura da conversa sem TX automático |
 | 22 | **Pendente — v0.1.3**: controle de brilho do mapa inexistente | Ícone de sol com ajuste independente das configurações globais do Android, intensidade persistente, padrão neutro e teste de camadas/legibilidade |
 | 23 | **Pendente — v0.1.3**: ordenar cada mensagem pessoal ou geral pelo horário de recepção | Linha do tempo cronológica (antigas acima, recentes abaixo), desempate estável e atualização reativa; independente da ordem da lista de Conversas (#2) |
 | 24 | **Pendente — v0.1.3**: balões estreitos, com espaço horizontal não aproveitado | Largura responsiva até ~90% da área útil, mensagens curtas compactas, longas com quebra correta, alinhamento enviado/recebido e legibilidade de metadados |
+| 25 | **P1 — FALHA REPORTADA NA v0.1.4**: APRS-IS indica conexão verificada, porém usuário não consegue enviar mensagem | Diagnosticar habilitação TX Internet/RF, serviço, chamada ao envio, retorno de aprsIs.send/tnc.send, status real e ACK; feedback claro ao usuário, sem falso sucesso, teste físico com TX autorizado |
 
 
 **Baixa definitiva:** marcar `Concluído` somente após CI aprovado,
@@ -535,15 +536,15 @@ _Solicitado em 31/10/2026 durante o desenvolvimento da v0.1.3._
 - **Implementação** adicionada no PR [#8](../../pull/8); **não baixar** até CI aprovado e teste no aparelho.
 
 ### 19. Aba Estações: envio direto de mensagem à estação selecionada
-_Solicitado em 31/10/2026; falha reproduzida pelo relato do usuário na v0.1.3._
+_Solicitado em 31/10/2026; falha persistente e ilustrada por captura do usuário na v0.1.4._
 
-**Falha funcional observada em aparelho real:** após selecionar uma estação
+**Falha funcional observada em aparelho real (v0.1.4):** após selecionar uma estação
 na aba **Estações** e abrir seus detalhes, **não é possível enviar
 uma mensagem àquela estação**. Tratar como **defeito prioritário P1 de
 fluxo de interação**, e não apenas como sugestão estética. Ainda não há
 reprodução instrumentada nem causa-raiz comprovada.
 
-**Evidência de código:** `StationDialog()` em `ui/Screens.kt` possui
+**Evidência visual nova:** a captura da estação PT2VHF (tela Android) apresenta apenas **Remover favorito**, **Seguir estação**, **Navegar até** e **Fechar**; a ação **Enviar mensagem não aparece**, mesmo havendo espaço vazio na parte inferior do diálogo. Isso corrobora a hipótese de limitação dos botões pela Row/AlertDialog; não significa que o callback funcione ao toque.\n\n**Evidência de código:** `StationDialog()` em `ui/Screens.kt` possui
 `TextButton(onClick = onMessage)` com rótulo `Mensagem`, no mesmo
 `Row` horizontal de Favoritos e Seguir, e o `AlertDialog` inclui
 também outros botões de Navegar/Fechar. `App.kt` passa o callback que
@@ -559,7 +560,7 @@ estado da conversa; não afirmar que o problema foi corrigido sem teste.
 - Em **Estações → selecionar uma estação → detalhes**, oferecer uma
   ação primária **Enviar mensagem**, destacada, com ícone e área de
   toque adequada, totalmente visível mesmo em tela pequena, zoom
-  de fonte e orientações diferentes. Não posicionar junto a botões
+  de fonte e orientações diferentes. **Posicionar na área fixa inferior do diálogo, em linha exclusiva e acima/ao lado de Fechar, independente da largura das outras ações.** Não posicionar junto a botões
   que possam comprimi-la ou ocultá-la. Repetir o comportamento a
   partir de **Mapa → estação → detalhes**.
 - Tocar no botão deve fechar os detalhes e abrir **Mensagens →
@@ -583,7 +584,7 @@ estado da conversa; não afirmar que o problema foi corrigido sem teste.
   retorno/fechamento do diálogo, múltiplas estações consecutivas
   e ausência de TX antes do toque em Enviar. Registrar evidência
   visual e de tráfego.
-- **Status:** FALHA FUNCIONAL ABERTA, P1, ainda não corrigida,
+- **Status:** FALHA FUNCIONAL ABERTA, P1, agora comprovada por captura da v0.1.4; ainda não corrigida,
   não homologada e sem novo APK. Não baixar pelo mero fato de existir
   `onMessage` no código.
 
@@ -828,6 +829,72 @@ alinhando as mensagens próprias à direita e as recebidas à esquerda.
   conversa privada, teclado aberto e lista rolando.
 - **Status:** especificação registrada, implementação e teste
   físico pendentes. Nenhuma versão gerada nesta solicitação.
+
+### 25. Mensagens: APRS-IS conectado/verificado, mas não consegue transmitir
+_Solicitado em 31/10/2026; usuário forneceu captura relatando que está conectado e não consegue enviar no Android v0.1.4._
+
+**Severidade P1 — falha funcional reportada, causa raiz ainda não identificada.**
+Investigar sem confundir **não haver botão Enviar mensagem nos detalhes
+(item #19)** com **abrir a conversa e o comando Enviar falhar**.
+O teste tem de reproduzir os dois caminhos; conexão de recepção não
+comprova autorização e sucesso de TX.
+
+**Diagnóstico inicial do código atual:**
+
+- Cabeçalho em `ui/App.kt` mostra `Chip("APRS-IS", status.aprsIsVerified)`,
+  ou seja, verde significa sessão verificada, **não que TX Internet
+  esteja autorizado**.
+- `data/Settings.kt` tem `txViaInternet` e `txViaRf` (ambos true
+  por padrão, mas persistidos pelo usuário). `AprsService.transmit()`
+  só chama `aprsIs.send(...)` quando `txViaInternet` **e**
+  `status.aprsIsVerified`; se TX estiver desligado, pode retornar
+  `null`, mesmo com APRS-IS verde. TNC segue condições próprias.
+- `Composer()` em `ui/Screens.kt` limpa o texto depois de chamar
+  `AprsService.send()` **antes de comprovar TX efetivo**.
+  `sendMessage()` cria o item local como "Enviando" e
+  `sendWithRetry()` marca "Sem conexão para enviar" quando
+  `transmit()` retorna null, mas essa condição não fornece
+  um **motivo claro** (TX Internet desabilitado, sessão, RF,
+  serviço indisponível ou falha de socket). Falta retorno confiável
+  e visível de sucesso/falha na própria tela.
+- `AprsIsClient.send` pode falhar ou retornar false; é necessário
+  instrumentar retorno, erro, estado/identidade da sessão e logs
+  sem expor passcode, coordenadas privadas ou dados sensíveis.
+  **Sem ACK** não é o mesmo que **sem envio**: distinguir pacote
+  entregue à rede APRS-IS, confirmação do destinatário e
+  indisponibilidade do meio.
+
+**Correção exigida:**
+
+- No compositor, expor status **"APRS-IS verificado"** e
+  **"Transmissão via APRS-IS habilitada/desabilitada"** separadamente,
+  com feedback de RF/TNC. Se não houver meio autorizado e apto,
+  bloquear envio com motivo específico e atalho para Configurações.
+- Ao pressionar Enviar, validar o destinatário (inclusive SSID),
+  passcode/sessão, TX permitido, conexão, serviço e transporte
+  selecionado, relatando a causa sem limpar o texto do rascunho
+  quando não houver submissão real.
+- Registrar no histórico de forma coerente: **não enviado**,
+  **transmitido via APRS-IS**, **transmitido via RF**, **aguardando ACK**,
+  **ACK recebido**, **sem ACK** ou **falhou**, de acordo com
+  evidência; não apresentar "Enviada" ou sucesso quando a API
+  de transporte não confirmou a transmissão.
+- Preservar os limites APRS de 9 caracteres para o destinatário,
+  partes de até 67 caracteres na mensagem, retry e deduplicação,
+  sem TX indevido. Nada deve ser transmitido ao apenas abrir a tela.
+- **T25 (obrigatório):** sessão APRS-IS verificada verde com TX
+  Internet ativo e desativado; conectada mas não verificada;
+  sessão desconectada; TNC ligado/desligado; RF-only e Internet-only;
+  ao menos um teste de envio para outro indicativo com SSID,
+  confirmando log TX bruto/recepção independente quando autorizado.
+  Testar envio com o aplicativo em foreground, restauração
+  pós-interrupção do serviço, falha de socket, timeout/ACK,
+  erro visível e **rascunho preservado** na falha.
+  Comparar usar botão Enviar nas Conversas e envio iniciado a
+  partir de Estações/Mapa (item #19). Documentar as configurações
+  de TX e os estados de conexão no momento da falha.
+- **Status:** backlog P1 aberto para diagnóstico e correção
+  física; **não resolvido apenas por APK compilado**.
 
 ## Consolidação das sugestões aprovadas com itens já existentes
 
