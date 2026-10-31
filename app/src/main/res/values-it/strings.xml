@@ -192,4 +192,5 @@
     <string name="exit_app">Esci</string>
     <string name="exit_stop_tracker">Esci e arresta tracker</string>
     <string name="exit_keep_tracker">Esci e mantieni tracker</string>
+    <string name="current_installed_version">Versione installata: %1$s</string>
 </resources>
