@@ -193,4 +193,6 @@
     <string name="exit_stop_tracker">Exit and stop tracker</string>
     <string name="exit_keep_tracker">Exit; keep tracker running</string>
     <string name="current_installed_version">Installed version: %1$s</string>
+    <string name="tracker_auto_start">Start tracking automatically</string>
+    <string name="tracker_auto_start_notice">When enabled, transmit your position through authorized APRS links after a GPS fix. You can stop tracking at any time.</string>
 </resources>
