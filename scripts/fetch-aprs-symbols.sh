@@ -6,7 +6,8 @@ upstream="f2286a9cd43eb6ba4501250b4c39fff111e3796c"
 target="app/src/main/assets/aprs"
 mkdir -p "$target"
 download() {
-  local table="$1" blob="$2" file="$target/aprs-symbols-48-$table.png"
+  local table="$1" blob="$2"
+  local file="$target/aprs-symbols-48-$table.png"
   if [[ -f "$file" && "$(git hash-object "$file")" == "$blob" ]]; then return; fi
   curl --fail --location --silent --show-error --retry 3 \
     "https://raw.githubusercontent.com/hessu/aprs-symbols/$upstream/png/aprs-symbols-48-$table.png" -o "$file"
