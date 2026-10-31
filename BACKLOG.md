@@ -21,7 +21,7 @@ seu APK real; há homologação física pendente. Não afirmar que os 15 itens f
 |---|---|---|
 | 1 | **FALHA CONFIRMADA NA v0.1.2**: símbolos do mapa genéricos/incorretos; comentário padrão alterado | Renderização real de símbolos APRS, tabela primária/alternativa, overlays, ícone próprio e testes físicos |
 | 2 | Implementado no PR; **teste físico pendente** | Filtro, ordem e persistência no Android |
-| 3 | Implementado no PR; **teste pendente** | Proximidade, tipo, ordenação e persistência |
+| 3 | **FALHA RELATADA NA v0.1.2**: lista não atualiza imediatamente após novos pacotes/estações; seleção de classificação/filtro por botões cíclicos inadequada | Atualização reativa em tempo real + ícone de classificação/filtros com seleções explícitas; teste APRS-IS e TNC |
 | 4 | Parcial: origem de RX RF corrigida | Evidência no TNC e apresentação dos meus enlaces |
 | 5 | Parcial: tracklog SQLite/mapa | Uso real, estilo completo, retenção e GPX |
 | 6 | Parcial: beacon manual/periódico/Smart | Teste GPS e parâmetros; demais opções pendentes |
@@ -94,6 +94,55 @@ _Registrado em 31/10/2026._
 
 ### 3. Estações: ordenação e filtro por tipo
 _Registrado em 31/10/2026._
+
+**Falha relatada pelo usuário na v0.1.2 (31/10/2026):** a aba **Estações não
+se atualiza em tempo real**, inclusive quando chega uma estação nova ou um pacote
+com atualização de uma estação já listada. Solicitação adicional: criar **ícone
+visível de classificação/filtro** que abre um painel de opções explícitas, evitando
+o mecanismo atual de botões que apenas alternam ciclicamente entre as opções.
+**Status: aberto, prioridade alta; nenhuma baixa sem validação no aparelho.**
+
+- **Atualização imediata:** a lista deve refletir, sem recarregar tela, trocar de aba
+  ou reiniciar o aplicativo, toda inserção e alteração relevante recebida por
+  APRS-IS ou TNC RF: indicativo, tipo, última recepção, posição, distância,
+  velocidade, rumo, comentário, transporte e histórico associado quando aplicável.
+  Se um pacote não tiver posição, manter a estação identificada de modo apropriado
+  (ex.: "sem posição"), em vez de descartá-la silenciosamente; não inventar posição.
+- **Reatividade real:** investigar de ponta a ponta o processamento de pacotes,
+  atualização de `AprsRepository.stations`/`StateFlow`, coleta no Compose,
+  emissão de mudanças de registros existentes e renderização de `LazyColumn`.
+  O código já chama `collectAsState()`, o que **não comprova** que a chegada de
+  cada pacote esteja produzindo os dados/estados corretos. Evitar listas
+  memorizadas ou mutações que não emitam novo estado. Diferenciar não receber
+  pacotes de receber sem refletir alterações na interface.
+- **Ordenação instantânea:** após inserção ou mudança de posição/horário,
+  recalcular a ordem selecionada (proximidade, última recepção e indicativo)
+  sem ação manual, mantendo filtros, favoritos e estado da tela. Atualizar
+  o indicador de tempo decorrido mesmo quando não chegam pacotes novos.
+- **Ícone próprio de classificar/filtrar** (ex.: `list-filter` ou `sliders-horizontal`)
+  na barra da aba Estações, com nome acessível. Ao tocar, abrir um popup/painel
+  com controles **explícitos** e opção de aplicar, limpar/restaurar padrão:
+  - **Classificar por:** distância (padrão quando há localização válida),
+    última recepção (mais recentes primeiro), indicativo (A–Z/Z–A);
+    indicar qual opção está ativa.
+  - **Filtrar tipos:** estações, móvel/tracker, iGate, digipeater, estação
+    meteorológica, objetos e itens, com seleção múltipla e "Todos".
+  - **Filtros adicionais úteis:** favoritos, origem APRS-IS ou TNC RF,
+    estações recentes/ativas e busca por indicativo; explicar quando um
+    filtro esconde uma estação recém-chegada.
+  - Persistir as opções de classificação e filtro entre sessões, mostrar
+    visualmente quando algum filtro está ativo e oferecer "Limpar filtros".
+- **Critérios de aceite:** (1) manter aba Estações aberta, gerar/injetar
+  novos pacotes APRS por APRS-IS e TNC e ver novos indicativos surgirem sem
+  interação; (2) atualizar a posição e última recepção de um indicativo
+  existente e verificar dados e reordenação imediatamente; (3) abrir o
+  ícone, escolher diretamente qualquer classificação e combinação de
+  tipos, aplicar e desfazer; (4) fechar/reabrir o app e conferir persistência;
+  (5) comparar contagens RX do diagnóstico com estações elegíveis e verificar
+  ausência de duplicatas, perda de atualizações, travamentos ou uso excessivo
+  de CPU durante fluxo intenso. Registrar prints/vídeo e origem dos pacotes.
+- **Escopo:** apenas registrar no backlog; implementar e testar na próxima
+  versão explicitamente solicitada.
 
 - **Ordenação** na aba Estações, configurável pelo usuário. Padrão: por proximidade (distância da minha posição).
   Outras opções sugeridas: ouvida por último, indicativo (A-Z).
