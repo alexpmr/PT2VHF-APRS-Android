@@ -5,8 +5,9 @@ plugins {
 }
 
 // Versão única do app; o site (updates.json) e o aviso de atualização usam este valor.
-val appVersionName = "0.1.0"
-val appVersionCode = 1
+// Versão de homologação: NÃO publicar no site antes dos testes e release final.
+val appVersionName = "0.2.0-rc1"
+val appVersionCode = 2
 
 android {
     namespace = "com.pt2vhf.aprs"
