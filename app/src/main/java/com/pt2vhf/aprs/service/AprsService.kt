@@ -172,6 +172,10 @@ class AprsService : Service(), LocationListener {
                 speedKmh = speed, gpsFixTimeMs = System.currentTimeMillis(),
                 course = if (location.hasBearing()) location.bearing.toInt() else it.course)
         }
+        if (AprsRepository.status.value.trackerOn &&
+            Settings.readOption(this, "tracklog_enabled", "true") == "true") {
+            AprsRepository.recordTrack(location.latitude, location.longitude)
+        }
         if (firstFix && settings.filter.contains("r/")) connectAprsIs()  // filtro r/4000 precisa da posição
         checkTracker()
     }
