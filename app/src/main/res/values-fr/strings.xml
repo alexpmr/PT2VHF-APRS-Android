@@ -214,4 +214,5 @@
     <string name="beacon_sending">Envoi…</string>
     <string name="beacon_failed">Échec de l’envoi</string>
     <string name="days_ago">il y a %1$d j</string>
+    <string name="search_callsign_short">Indicatif</string>
 </resources>
