@@ -109,6 +109,11 @@ private fun ago(t: Long): String {
 
 private fun hhmm(t: Long) = java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT, UiText.locale()).format(Date(t))
 
+private fun stationAge(t: Long): String {
+    val age = ((System.currentTimeMillis() - t).coerceAtLeast(0L)) / 1000
+    return if (age >= 86400) UiText.text(R.string.days_ago, age / 86400) else ago(t)
+}
+
 // ---------- Mapa ----------
 
 @Composable
@@ -274,7 +279,7 @@ fun MessagesScreen(settings: Settings, chatWith: String?, onOpenChat: (String?) 
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             OutlinedTextField(filter, { filter = it }, placeholder = {
                 Text(UiText.text(R.string.messages_filter), fontSize = 12.sp, maxLines = 1)
-            }, modifier = Modifier.weight(1f).heightIn(min = 48.dp), singleLine = true)
+            }, modifier = Modifier.weight(1f).height(48.dp), singleLine = true)
             Box {
                 TextButton(onClick = { sortMenuOpen = true }) { Text("☷", fontSize = 22.sp) }
                 DropdownMenu(expanded = sortMenuOpen, onDismissRequest = { sortMenuOpen = false }) {
@@ -511,7 +516,7 @@ fun StationsScreen(onStation: (String) -> Unit) {
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             OutlinedTextField(query, { query = it; Settings.saveOption(context, "station_search", it) },
                 placeholder = { Text(UiText.text(R.string.search_callsign), fontSize = 12.sp, maxLines = 1) },
-                singleLine = true, modifier = Modifier.weight(1f).heightIn(min = 48.dp))
+                singleLine = true, modifier = Modifier.weight(1f).height(48.dp))
             TextButton(onClick = { filterOpen = true }) {
                 Text("☷" + if (activeFilters) " ●" else "", fontSize = 20.sp)
             }
@@ -537,7 +542,7 @@ fun StationsScreen(onStation: (String) -> Unit) {
                     Text(station.call, fontWeight = FontWeight.Bold, fontSize = 13.sp,
                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                     if (station.call in favorites) Text("★", color = Pal.yellow, fontSize = 15.sp)
-                    Text(ago(station.lastHeard), fontSize = 11.sp, color = Pal.muted, maxLines = 1)
+                    Text(stationAge(station.lastHeard), fontSize = 11.sp, color = Pal.muted, maxLines = 1)
                     Text(if (status.lat != null && status.lon != null)
                         "%.1f km".format(haversineKm(status.lat!!, status.lon!!, station.lat, station.lon))
                         else "—", color = Pal.muted, fontSize = 11.sp, maxLines = 1)
