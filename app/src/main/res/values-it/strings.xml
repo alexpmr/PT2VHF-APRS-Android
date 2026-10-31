@@ -211,4 +211,6 @@
     <string name="clear_local_data_success">Dati locali eliminati correttamente.</string>
     <string name="clear_local_data_error">Impossibile eliminare completamente i dati locali. Controllare la memoria e riprovare.</string>
     <string name="clear_data_confirm">Elimina</string>
+    <string name="beacon_sending">Invio…</string>
+    <string name="beacon_failed">Invio fallito</string>
 </resources>
