@@ -86,26 +86,45 @@ teste físico obrigatório. Não baixar este item apenas por compilação.**
   símbolo alternativo) devem mostrar o caractere por cima do ícone. Vale também para a posição própria ("Você"),
   com o símbolo configurado nas preferências, e para o indicativo exibido ao lado do ícone, como no APRSdroid.
   Precisa de um sprite set de símbolos APRS com licença compatível (ex.: conjunto aprs-symbols de hessu/aprs.fi).
-- **URL do projeto no campo Informação do APRS:** as capturas comparativas mostram o APRSdroid
-  anunciando `https://aprsdroid.org/`, enquanto PT2VHF-3 envia apenas
-  `PT2VHF APRS Client`. O campo **Informação** vem do comentário de posição
-  recebido no pacote APRS, não do layout do popup. Para o Android,
-  anunciar por padrão a URL completa **`https://www.pt2vhf.com/aprs-android`**
-  (com protocolo HTTPS; dentro do limite de 43 caracteres de `positionInfo`).
-  A URL do cliente desktop é **`https://www.pt2vhf.com/aprs`**: não
-  confundir as páginas dos dois produtos.
-- **Diagnóstico e migração:** o valor de fábrica atual do Android em
-  `data/Settings.kt` é `PT2VHF APRS www.PT2VHF.com`, mas as instalações
-  já configuradas podem reter o antigo comentário em SharedPreferences.
-  Migrar **somente valores de fábrica legados exatos** para a nova URL,
-  sem sobrescrever textos personalizados. Manter o campo editável e não
-  adicionar propaganda a todos os comentários indiscriminadamente.
-- **Teste de aceitação:** conferir em um receptor independente o payload
-  bruto e a URL exibida em Informação para beacons manuais, periódicos e
-  SmartBeaconing, tanto APRS-IS como TNC/RF, sem transmissão adicional ao
-  abrir/atualizar o app. Confirmar comentário personalizado preservado e
-  instalação antiga migrada sem apagar configurações. Links HTTPS recebidos
-  de terceiros devem ser exibidos fielmente e só ser clicáveis de forma segura.
+- **Marca única no campo Informação dos nossos beacons:** por orientação explícita
+  do mantenedor (31/10/2026), **sempre** incluir exatamente
+  **`www.PT2VHF.com`** (sem `https://` e sem caminho `/aprs` ou
+  `/aprs-android`) no **comentário transmitido** de cada pacote de
+  posição, tanto no Android quanto no cliente desktop. Isso vale para
+  beacon manual, periódico, SmartBeaconing e qualquer outra rotina de
+  posição permitida, por APRS-IS ou TNC/RF. O texto não deve depender
+  de abertura do popup no mapa nem do tipo/SSID da estação.
+- **Comentário personalizado + URL obrigatória:** preservar o valor original
+  que o usuário digitou em Configurações. **Na montagem do pacote**, e
+  somente nela, compor `<comentário útil> www.PT2VHF.com`, sem repetir
+  o domínio caso já apareça no comentário e com `www.PT2VHF.com` no
+  final. O campo de comentário do beacon transmitido tem teto de
+  **43 caracteres** no caminho `positionInfo()`: reservar os
+  14 caracteres do domínio e, quando houver descrição, 1 espaço; permitir
+  no máximo 28 caracteres de descrição, com truncamento informado na
+  interface/pré-visualização se necessário. **Nunca** cortar ou omitir o
+  domínio por aplicar `.take(43)` ao final indiscriminadamente.
+  Se a descrição estiver vazia, transmitir apenas `www.PT2VHF.com`.
+  Não truncar ou sobrescrever o comentário salvo permanentemente.
+- **Compatibilidade de configurações existentes:** o default Android atual
+  é `PT2VHF APRS www.PT2VHF.com` (`data/Settings.kt`). Preservar
+  comentário customizado e evitar duplicar o domínio em perfis legados.
+  O comentário transmitido deve ser montado em **ponto central comum**
+  às rotas de TX, sem produzir beacons novos apenas por iniciar ou
+  atualizar o aplicativo.
+- **Exibição fiel de estações recebidas:** o campo Informação do popup de
+  qualquer estação apresenta **o comentário realmente recebido por APRS**,
+  inclusive URLs de terceiros, sem inserir `www.PT2VHF.com` nas
+  informações de rádios/programas alheios. O requisito de sempre mostrar
+  o domínio se refere à transmissão de **nossos** beacons.
+- **Critérios de aceite:** capturar payload bruto de ambos os aplicativos,
+  em APRS-IS e RF/TNC, com descrição padrão, vazia, personalizada curta,
+  personalizada longa e já contendo o domínio (maiúsculas/minúsculas);
+  comprovar `www.PT2VHF.com` **uma vez e integralmente** em cada
+  beacon, tamanho dentro do limite, mensagem de truncamento na UI e
+  comentário persistido intacto. Comparar no receptor independente
+  PT2VHF/APRSdroid sem depender de renderização local.
+  Não transmitir posição por causa de migração ou simples abertura.
 
 ### 2. Mensagens: filtro e ordenação
 _Registrado em 31/10/2026._
