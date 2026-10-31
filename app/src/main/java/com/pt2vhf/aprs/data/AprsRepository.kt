@@ -64,6 +64,7 @@ data class LinkStatus(
     val tncName: String = "",
     val tncError: String = "",
     val gpsAccuracyM: Float? = null,
+    val gpsFixTimeMs: Long = 0L,
     val lat: Double? = null,
     val lon: Double? = null,
     val speedKmh: Double = 0.0,
