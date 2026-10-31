@@ -1,0 +1,26 @@
+name: Consolidate signed Android 0.1.3 transport for website
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/consolidate-aprs-013.yml']
+permissions:
+  contents: write
+jobs:
+  consolidate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: transport/aprs-android-013
+      - name: Assemble canonical base64 transport file
+        run: |
+          set -euo pipefail
+          cat transport/aprs-android-013/chunk-* > transport/aprs-android-013/whole-apk.b64
+          test "$(stat -c '%s' transport/aprs-android-013/whole-apk.b64)" = 9904260
+          (base64 -d transport/aprs-android-013/whole-apk.b64) | sha256sum \
+            | grep -q '^f2d2b765aeaa5fa906d60f7644d5c2e1a835633e42c990f8a8906d8ecea7d711 '
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add transport/aprs-android-013/whole-apk.b64
+          git commit -m "transport: lossless 0.1.3 signed APK base64 verified"
+          git push origin HEAD:transport/aprs-android-013
