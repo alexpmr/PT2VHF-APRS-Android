@@ -48,6 +48,7 @@ O backlog permanece parcialmente implementado, com homologação física pendent
 | 28 | **P2, v0.1.4** — tela de mensagens fica espremida ao digitar | Compositor fixo acima do teclado, barra superior compacta, filtros recolhíveis, navegação inferior adaptável, histórico rolável, Enviar acessível em telas pequenas |
 | 29 | **P1, v0.1.4** — incluir `www.PT2VHF.com` no texto de Informação transmitido/exibido das estações PT2VHF | Preservar comentário útil e acrescentar domínio canônico sem duplicá-lo; validar no beacon bruto e no receptor; não adulterar informações recebidas de terceiros |
 | 30 | **Pendente — v0.1.4**: rastreador está desligado a cada inicialização, embora o padrão de beacon seja SmartBeaconing | Ativar tracker automaticamente por padrão **após configuração/autorização**, persistir escolha manual de desligar, respeitar GPS/TX/privacidade e estado do serviço; testar reinício e background |
+| 31 | **P2 — Pendente (31/10/2026):** caixa "Filtrar indicativo ou texto" ocupa altura/largura excessivas e opção "Mais antigas primeiro" ocupa espaço horizontal desnecessário | Tornar pesquisa compacta (altura mínima adequada ao toque, densidade responsiva), substituir botão textual de ordenação por ícone de filtro/ordenação; tocar abre painel/popover com busca, filtros e ordenação Mais recentes/Mais antigas, persistindo seleção, com labels acessíveis e funcionamento com teclado, telas pequenas e rotação |
 
 
 **Baixa definitiva:** marcar `Concluído` somente após CI aprovado,
