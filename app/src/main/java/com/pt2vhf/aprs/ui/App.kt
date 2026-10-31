@@ -8,6 +8,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -53,6 +55,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -104,6 +107,7 @@ fun App(onExit: () -> Unit) {
     var siteNotice by rememberSaveable { mutableStateOf(true) }
     var exitDialog by rememberSaveable { mutableStateOf(false) }
     val serviceStatus by AprsRepository.status.collectAsState()
+    val keyboardVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     BackHandler {
         when {
             selectedStation != null -> selectedStation = null
@@ -120,9 +124,9 @@ fun App(onExit: () -> Unit) {
     MaterialTheme(colorScheme = scheme) {
         Scaffold(
             containerColor = Pal.ground,
-            topBar = { TopBar(settings, onSettings = { showSettings = true }) },
+            topBar = { if (!keyboardVisible) TopBar(settings, onSettings = { showSettings = true }) },
             bottomBar = {
-                NavigationBar(containerColor = Pal.bar) {
+                if (!keyboardVisible) NavigationBar(containerColor = Pal.bar) {
                     Tab.entries.forEach { t ->
                         NavigationBarItem(
                             selected = tab == t,
