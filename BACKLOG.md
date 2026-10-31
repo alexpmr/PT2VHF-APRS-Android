@@ -86,11 +86,26 @@ teste físico obrigatório. Não baixar este item apenas por compilação.**
   símbolo alternativo) devem mostrar o caractere por cima do ícone. Vale também para a posição própria ("Você"),
   com o símbolo configurado nas preferências, e para o indicativo exibido ao lado do ícone, como no APRSdroid.
   Precisa de um sprite set de símbolos APRS com licença compatível (ex.: conjunto aprs-symbols de hessu/aprs.fi).
-- **Site PT2VHF no comentário:** no APRSdroid o comentário da posição sai com `https://aprsdroid.org/`. No nosso
-  app o texto padrão enviado deve mostrar `www.PT2VHF.com`. Hoje o padrão é `"PT2VHF APRS Client for Android"`
-  (`data/Settings.kt`). Ajustar o padrão para incluir `www.PT2VHF.com` dentro do limite de 43 caracteres
-  (ex.: `PT2VHF APRS Android www.PT2VHF.com`) e decidir se o site é anexado sempre, mesmo quando o usuário
-  edita o comentário.
+- **URL do projeto no campo Informação do APRS:** as capturas comparativas mostram o APRSdroid
+  anunciando `https://aprsdroid.org/`, enquanto PT2VHF-3 envia apenas
+  `PT2VHF APRS Client`. O campo **Informação** vem do comentário de posição
+  recebido no pacote APRS, não do layout do popup. Para o Android,
+  anunciar por padrão a URL completa **`https://www.pt2vhf.com/aprs-android`**
+  (com protocolo HTTPS; dentro do limite de 43 caracteres de `positionInfo`).
+  A URL do cliente desktop é **`https://www.pt2vhf.com/aprs`**: não
+  confundir as páginas dos dois produtos.
+- **Diagnóstico e migração:** o valor de fábrica atual do Android em
+  `data/Settings.kt` é `PT2VHF APRS www.PT2VHF.com`, mas as instalações
+  já configuradas podem reter o antigo comentário em SharedPreferences.
+  Migrar **somente valores de fábrica legados exatos** para a nova URL,
+  sem sobrescrever textos personalizados. Manter o campo editável e não
+  adicionar propaganda a todos os comentários indiscriminadamente.
+- **Teste de aceitação:** conferir em um receptor independente o payload
+  bruto e a URL exibida em Informação para beacons manuais, periódicos e
+  SmartBeaconing, tanto APRS-IS como TNC/RF, sem transmissão adicional ao
+  abrir/atualizar o app. Confirmar comentário personalizado preservado e
+  instalação antiga migrada sem apagar configurações. Links HTTPS recebidos
+  de terceiros devem ser exibidos fielmente e só ser clicáveis de forma segura.
 
 ### 2. Mensagens: filtro e ordenação
 _Registrado em 31/10/2026._
