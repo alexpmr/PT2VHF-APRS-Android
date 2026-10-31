@@ -57,6 +57,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.pt2vhf.aprs.BuildConfig
 import com.pt2vhf.aprs.R
 import com.pt2vhf.aprs.UiText
 import com.pt2vhf.aprs.data.AprsRepository
@@ -274,6 +275,8 @@ private fun OfficialSiteNotice(onClose: () -> Unit) {
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(UiText.text(R.string.official_notice))
+                Text(UiText.text(R.string.current_installed_version, BuildConfig.VERSION_NAME),
+                    color = Pal.accent, fontWeight = FontWeight.SemiBold)
                 Text("www.PT2VHF.com", color = Color(0xFF72D2FF), fontWeight = FontWeight.Bold,
                     textDecoration = TextDecoration.Underline,
                     modifier = Modifier.padding(vertical = 4.dp)
