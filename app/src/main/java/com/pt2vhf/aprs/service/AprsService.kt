@@ -45,7 +45,13 @@ import kotlin.math.abs
 class AprsService : Service(), LocationListener {
     private lateinit var settings: Settings
     private val handler = Handler(Looper.getMainLooper())
-    private val smart = SmartBeaconing()
+    private var smart = SmartBeaconing()
+    private fun configuredSmartBeaconing(s: Settings): SmartBeaconing = SmartBeaconing(
+        slowSpeed = s.smartSlowSpeedKmh.toDouble(),
+        slowRateSec = s.smartSlowIntervalSec,
+        fastSpeed = maxOf(s.smartFastSpeedKmh, s.smartSlowSpeedKmh + 1).toDouble(),
+        fastRateSec = s.smartFastIntervalSec,
+    )
     private var lastBeaconAt = 0L
     private var lastBeaconCourse: Int? = null
     private var lastLocation: Location? = null
@@ -79,6 +85,7 @@ class AprsService : Service(), LocationListener {
         super.onCreate()
         AprsRepository.init(this)
         settings = Settings.load(this)
+        smart = configuredSmartBeaconing(settings)
         createChannels()
         startForegroundCompat()
         connectAprsIs()
@@ -92,6 +99,7 @@ class AprsService : Service(), LocationListener {
         when (intent?.action) {
             ACTION_RELOAD -> {
                 settings = Settings.load(this)
+                smart = configuredSmartBeaconing(settings)
                 if (settings.connectAprsIs) connectAprsIs() else {
                     aprsIs.stop()
                     AprsRepository.updateStatus { it.copy(aprsIsConnected = false, aprsIsVerified = false, aprsIsError = "") }
@@ -99,7 +107,7 @@ class AprsService : Service(), LocationListener {
                 refreshNotification()
             }
             ACTION_BEACON -> sendBeacon()
-            ACTION_TRACKER_ON -> { AprsRepository.updateStatus { it.copy(trackerOn = true) }; sendBeacon() }
+            ACTION_TRACKER_ON -> { AprsRepository.updateStatus { it.copy(trackerOn = true) }; if (settings.beaconMode != "manual") sendBeacon() }
             ACTION_TRACKER_OFF -> AprsRepository.updateStatus { it.copy(trackerOn = false, nextBeaconSec = null) }
             ACTION_MESSAGE -> intent.getStringExtra(EXTRA_TO)?.let { to ->
                 sendMessage(to, intent.getStringExtra(EXTRA_TEXT).orEmpty())
@@ -182,13 +190,20 @@ class AprsService : Service(), LocationListener {
 
     private fun checkTracker() {
         val s = AprsRepository.status.value
-        if (!s.trackerOn || s.lat == null) return
+        if (!s.trackerOn || s.lat == null || settings.beaconMode == "manual") return
         val since = (System.currentTimeMillis() - lastBeaconAt) / 1000
         val course = s.course
         val change = if (course != null && lastBeaconCourse != null)
             ((course - lastBeaconCourse!! + 540) % 360 - 180).toDouble() else 0.0
-        if (smart.shouldBeacon(since, s.speedKmh, abs(change))) sendBeacon()
-        AprsRepository.updateStatus { it.copy(nextBeaconSec = smart.nextBeaconSeconds((System.currentTimeMillis() - lastBeaconAt) / 1000, it.speedKmh)) }
+        val interval = settings.periodicIntervalSec.toLong()
+        val due = if (settings.beaconMode == "periodic") since >= interval
+            else smart.shouldBeacon(since, s.speedKmh, abs(change))
+        if (due) sendBeacon()
+        AprsRepository.updateStatus {
+            it.copy(nextBeaconSec = if (settings.beaconMode == "periodic")
+                (interval - (System.currentTimeMillis() - lastBeaconAt) / 1000).coerceAtLeast(0)
+                else smart.nextBeaconSeconds((System.currentTimeMillis() - lastBeaconAt) / 1000, it.speedKmh))
+        }
     }
 
     private val ticker = object : Runnable {
