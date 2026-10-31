@@ -157,4 +157,13 @@
     <string name="rf_link_count">RF link records</string>
     <string name="aprs_error">APRS-IS error</string>
     <string name="tnc_error">TNC error</string>
+    <string name="beacon_mode">Beacon mode</string>
+    <string name="mode_smart">SmartBeaconing</string>
+    <string name="mode_periodic">Periodic</string>
+    <string name="mode_manual">Manual</string>
+    <string name="beacon_interval">Periodic interval (seconds)</string>
+    <string name="smart_slow_speed">Slow speed (km/h)</string>
+    <string name="smart_fast_speed">Fast speed (km/h)</string>
+    <string name="smart_slow_rate">Slow interval (seconds)</string>
+    <string name="smart_fast_rate">Fast interval (seconds)</string>
 </resources>
