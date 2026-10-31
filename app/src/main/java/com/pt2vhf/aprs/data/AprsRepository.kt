@@ -30,6 +30,7 @@ data class Station(
     val speedKmh: Double?,
     val course: Int?,
     val heardBy: Set<String> = emptySet(),
+    val firstSeen: Long = lastHeard,
 ) {
     val role: String
         get() = when {
@@ -193,16 +194,37 @@ object AprsRepository {
         parsePosition(packet.info)?.let { pos ->
             var persisted: Station? = null
             _stations.update { map ->
-                val heardBy = (map[packet.source]?.heardBy ?: emptySet()) +
+                val existing = map[packet.source]
+                val heardBy = (existing?.heardBy ?: emptySet()) +
                     (if (medium == Medium.RF) digis.take(1) else emptyList())
                 val station = Station(
                     packet.source, pos.lat, pos.lon, pos.symbolTable, pos.symbol, pos.comment, now, medium,
                     packet.path.joinToString(","), pos.speedKmh, pos.course, heardBy,
+                    firstSeen = existing?.firstSeen ?: now,
                 )
                 persisted = station
                 map + (packet.source to station)
             }
             persisted?.let { station -> diskWorker.execute { runCatching { stationStore?.saveStation(station) } } }
+        } ?: run {
+            // A station can send a message/status without new coordinates.
+            // Keep its last known position but refresh reception metadata.
+            // Unknown stations without position are not plotted at (0,0).
+            var refreshed: Station? = null
+            _stations.update { existing ->
+                val previous = existing[packet.source]
+                if (previous == null || now <= previous.lastHeard) existing
+                else {
+                    previous.copy(lastHeard = now, medium = medium,
+                        via = packet.path.joinToString(",")).let {
+                        refreshed = it
+                        existing + (packet.source to it)
+                    }
+                }
+            }
+            refreshed?.let { station ->
+                diskWorker.execute { runCatching { stationStore?.saveStation(station) } }
+            }
         }
         val msg = parseMessage(packet.info) ?: return null
         return when (msg.kind) {

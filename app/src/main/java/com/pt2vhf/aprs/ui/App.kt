@@ -1,6 +1,7 @@
 package com.pt2vhf.aprs.ui
 
 import android.content.Intent
+import androidx.activity.compose.BackHandler
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -56,6 +57,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.pt2vhf.aprs.BuildConfig
 import com.pt2vhf.aprs.R
 import com.pt2vhf.aprs.UiText
 import com.pt2vhf.aprs.data.AprsRepository
@@ -91,7 +93,7 @@ private val scheme = darkColorScheme(
 enum class Tab(val labelId: Int) { MAP(R.string.nav_map), MESSAGES(R.string.nav_messages), STATIONS(R.string.nav_stations), RADIO(R.string.nav_radio), TRACKER(R.string.nav_tracker) }
 
 @Composable
-fun App() {
+fun App(onExit: () -> Unit) {
     val context = LocalContext.current
     var settings by remember { mutableStateOf(Settings.load(context)) }
     var tab by rememberSaveable { mutableStateOf(Tab.MAP) }
@@ -100,6 +102,18 @@ fun App() {
     var chatWith by rememberSaveable { mutableStateOf<String?>(null) }
     var update by remember { mutableStateOf<UpdateInfo?>(null) }
     var siteNotice by rememberSaveable { mutableStateOf(true) }
+    var exitDialog by rememberSaveable { mutableStateOf(false) }
+    val serviceStatus by AprsRepository.status.collectAsState()
+    BackHandler {
+        when {
+            selectedStation != null -> selectedStation = null
+            chatWith != null -> chatWith = null
+            showSettings && settings.configured -> showSettings = false
+            siteNotice && !showSettings -> siteNotice = false
+            update != null -> update = null
+            else -> exitDialog = true
+        }
+    }
 
     LaunchedEffect(Unit) { update = withContext(Dispatchers.IO) { runCatching { UpdateCheck.fetch() }.getOrNull() } }
 
@@ -153,6 +167,36 @@ fun App() {
                 Settings.save(context, it); settings = Settings.load(context); showSettings = false
                 AprsService.send(context, AprsService.ACTION_RELOAD)
             })
+        }
+        if (exitDialog) {
+            AlertDialog(
+                onDismissRequest = { exitDialog = false },
+                containerColor = Pal.bar,
+                title = { Text(UiText.text(R.string.exit_confirm_title)) },
+                text = { Text(UiText.text(if (serviceStatus.trackerOn)
+                    R.string.exit_tracker_active else R.string.exit_confirm_body)) },
+                confirmButton = {
+                    TextButton(onClick = {
+                        AprsService.send(context, AprsService.ACTION_STOP)
+                        exitDialog = false
+                        onExit()
+                    }) {
+                        Text(UiText.text(if (serviceStatus.trackerOn)
+                            R.string.exit_stop_tracker else R.string.exit_app))
+                    }
+                },
+                dismissButton = {
+                    Row {
+                        if (serviceStatus.trackerOn) TextButton(onClick = {
+                            exitDialog = false
+                            onExit()
+                        }) { Text(UiText.text(R.string.exit_keep_tracker)) }
+                        TextButton(onClick = { exitDialog = false }) {
+                            Text(UiText.text(R.string.cancel))
+                        }
+                    }
+                },
+            )
         }
         val pending = update
         if (!showSettings && siteNotice) {
@@ -231,6 +275,8 @@ private fun OfficialSiteNotice(onClose: () -> Unit) {
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(UiText.text(R.string.official_notice))
+                Text(UiText.text(R.string.current_installed_version, BuildConfig.VERSION_NAME),
+                    color = Pal.accent, fontWeight = FontWeight.SemiBold)
                 Text("www.PT2VHF.com", color = Color(0xFF72D2FF), fontWeight = FontWeight.Bold,
                     textDecoration = TextDecoration.Underline,
                     modifier = Modifier.padding(vertical = 4.dp)

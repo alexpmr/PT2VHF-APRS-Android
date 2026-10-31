@@ -24,6 +24,9 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Download and verify APRS symbol sprites
+        run: bash scripts/fetch-aprs-symbols.sh
+
       - name: Unit tests and debug APK
         run: ./gradlew --no-daemon testDebugUnitTest assembleDebug
 
@@ -46,6 +49,9 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - name: Download and verify APRS symbol sprites
+        run: bash scripts/fetch-aprs-symbols.sh
+
       - name: Build and validate signed QA APK
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -62,15 +68,15 @@ jobs:
           export ANDROID_KEYSTORE_FILE="$RUNNER_TEMP/qa.jks"
           ./gradlew --no-daemon assembleRelease
           mkdir -p dist
-          version=$(grep -oP 'val appVersionName = "\\K[^"]+' app/build.gradle.kts)
+          version=$(grep -oP 'val appVersionName = "\K[^"]+' app/build.gradle.kts)
           cp app/build/outputs/apk/release/app-release.apk "dist/PT2VHF_APRS_Client_Android_v${version}_QA.apk"
           apksigner="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner"
-          "$apksigner" verify dist/PT2VHF_APRS_Android_0.2.0-rc1_QA.apk
+          "$apksigner" verify "dist/PT2VHF_APRS_Client_Android_v${version}_QA.apk"
           sha256sum dist/*.apk > dist/SHA256SUMS.txt
           rm -f "$RUNNER_TEMP/qa.jks"
       - uses: actions/upload-artifact@v4
         with:
-          name: android-signed-qa-rc1
+          name: android-signed-qa
           path: dist/
           retention-days: 14
 
@@ -85,6 +91,9 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+
+      - name: Download and verify APRS symbol sprites
+        run: bash scripts/fetch-aprs-symbols.sh
 
       - name: Signed release APK
         env:
@@ -137,5 +146,5 @@ jobs:
             gh release upload "$tag" dist/*.apk --clobber
           else
             gh release create "$tag" dist/*.apk --target "$GITHUB_SHA" --title "PT2VHF APRS Client for Android $tag" \
-              --notes "Atualização 0.1.2: estações e enlaces persistentes, filtros, rastreamento, diagnóstico e opção APRS-IS. Recursos avançados do backlog continuam pendentes. Downloads oficiais em https://www.pt2vhf.com/aprs-android"
+              --notes "Atualização ${VERSION}: símbolos APRS reais, filtros de estações, restauração do mapa e confirmação de saída. Outras pendências seguem no BACKLOG.md. Downloads oficiais em https://www.pt2vhf.com/aprs-android"
           fi

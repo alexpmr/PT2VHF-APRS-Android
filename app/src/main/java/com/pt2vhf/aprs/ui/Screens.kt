@@ -71,6 +71,8 @@ import com.pt2vhf.aprs.data.ChatMessage
 import com.pt2vhf.aprs.data.Medium
 import com.pt2vhf.aprs.data.Settings
 import com.pt2vhf.aprs.data.Station
+import com.pt2vhf.aprs.data.StationCriteria
+import com.pt2vhf.aprs.data.selectStations
 import com.pt2vhf.aprs.service.AprsService
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -104,7 +106,13 @@ fun MapScreen(onStation: (String) -> Unit) {
     val activeFollow by androidx.compose.runtime.rememberUpdatedState(followedCall)
     var followPaused by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(followedCall) { followPaused = false }
-    var centered by remember { mutableStateOf(false) }
+    val savedLat = remember { Settings.readOption(context, "map_view_lat", "").toDoubleOrNull() }
+    val savedLon = remember { Settings.readOption(context, "map_view_lon", "").toDoubleOrNull() }
+    val savedZoom = remember { Settings.readOption(context, "map_view_zoom", "").toDoubleOrNull() }
+    val hasValidViewport = savedLat != null && savedLon != null &&
+        savedLat in -90.0..90.0 && savedLon in -180.0..180.0
+    var centered by remember { mutableStateOf(hasValidViewport) }
+    val mapRef = remember { arrayOfNulls<MapView>(1) }
     Box(Modifier.fillMaxSize()) {
     AndroidView(
         modifier = Modifier.fillMaxSize(),
@@ -112,13 +120,33 @@ fun MapScreen(onStation: (String) -> Unit) {
             MapView(ctx).apply {
                 setTileSource(TileSourceFactory.MAPNIK)
                 setMultiTouchControls(true)
-                setOnTouchListener { _, event ->
+                mapRef[0] = this
+                setOnTouchListener { view, event ->
                     if (activeFollow != null && event.actionMasked == android.view.MotionEvent.ACTION_MOVE)
                         followPaused = true
+                    if (event.actionMasked == android.view.MotionEvent.ACTION_UP) {
+                        // Persist after osmdroid has finished the gesture / kinetic movement.
+                        (view as? MapView)?.postDelayed({
+                            val map = view as? MapView
+                            val point = map?.mapCenter
+                            if (map != null && point != null &&
+                                point.latitude in -90.0..90.0 && point.longitude in -180.0..180.0) {
+                                centered = true // manual viewport wins over a late GPS fix.
+                                Settings.saveOption(context, "map_view_lat", point.latitude.toString())
+                                Settings.saveOption(context, "map_view_lon", point.longitude.toString())
+                                Settings.saveOption(context, "map_view_zoom", map.zoomLevelDouble.toString())
+                            }
+                        }, 750L)
+                    }
                     false
                 }
-                controller.setZoom(9.0)
-                controller.setCenter(GeoPoint(-15.78, -47.93))
+                controller.setZoom((savedZoom ?: if (hasValidViewport) 9.0 else 3.0).coerceIn(2.0, 19.0))
+                val initial = if (hasValidViewport) GeoPoint(savedLat!!, savedLon!!)
+                    else if (status.lat != null && status.lon != null) GeoPoint(status.lat!!, status.lon!!)
+                    else GeoPoint(0.0, 0.0)
+                controller.setCenter(initial)
+                if (!hasValidViewport && status.lat != null && status.lon != null)
+                    centered = true
             }
         },
         update = { map ->
@@ -151,6 +179,7 @@ fun MapScreen(onStation: (String) -> Unit) {
                 map.overlays.add(Marker(map).apply {
                     position = GeoPoint(s.lat, s.lon)
                     title = s.call
+                    AprsSymbolIcons.icon(context, s.symbolTable, s.symbol)?.let { icon = it }
                     snippet = "${UiText.role(s.role)} · ${ago(s.lastHeard)}"
                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
                     setOnMarkerClickListener { _, _ -> onStation(s.call); true }
@@ -162,6 +191,8 @@ fun MapScreen(onStation: (String) -> Unit) {
                 map.overlays.add(Marker(map).apply {
                     position = GeoPoint(lat, lon)
                     title = UiText.text(R.string.me)
+                    val currentSettings = Settings.load(context)
+                    AprsSymbolIcons.icon(context, currentSettings.symbolTable, currentSettings.symbol)?.let { icon = it }
                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                 })
                 if (!centered && followedCall == null) {
@@ -174,6 +205,23 @@ fun MapScreen(onStation: (String) -> Unit) {
             map.invalidate()
         },
     )
+    TextButton(
+        modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)
+            .background(Pal.bar, RoundedCornerShape(10.dp)),
+        onClick = {
+            val lat = status.lat
+            val lon = status.lon
+            val map = mapRef[0]
+            if (map != null && lat != null && lon != null) {
+                AprsRepository.followStation(null)
+                centered = true
+                map.controller.setCenter(GeoPoint(lat, lon))
+                Settings.saveOption(context, "map_view_lat", lat.toString())
+                Settings.saveOption(context, "map_view_lon", lon.toString())
+                Settings.saveOption(context, "map_view_zoom", map.zoomLevelDouble.toString())
+            }
+        },
+    ) { Text("◎ " + UiText.text(R.string.me)) }
     if (followedCall != null) {
         Row(Modifier.align(Alignment.BottomCenter).background(Pal.bar, RoundedCornerShape(12.dp))) {
             TextButton(onClick = { followPaused = !followPaused }) {
@@ -343,59 +391,154 @@ fun StationsScreen(onStation: (String) -> Unit) {
     val stations by AprsRepository.stations.collectAsState()
     val status by AprsRepository.status.collectAsState()
     val favorites by AprsRepository.favorites.collectAsState()
-    var favoritesOnly by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
-    var query by rememberSaveable { mutableStateOf("") }
-    val types = listOf("all", "Digipeater", "iGate", "Estação meteorológica", "Móvel", "Estação")
-    val orders = listOf("nearest", "recent", "callsign")
-    var type by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_type", "all")) }
-    var order by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_order", "nearest")) }
-    val list = stations.values.filter {
-        (query.isBlank() || it.call.contains(query.trim(), ignoreCase = true)) &&
-            (type == "all" || it.role == type) &&
-            (!favoritesOnly || it.call in favorites)
-    }.let { items ->
-        when (order) {
-            "recent" -> items.sortedByDescending { it.lastHeard }
-            "callsign" -> items.sortedBy { it.call }
-            else -> {
-                if (status.lat == null || status.lon == null) items.sortedByDescending { it.lastHeard }
-                else items.sortedBy { haversineKm(status.lat!!, status.lon!!, it.lat, it.lon) }
-            }
-        }
+    var filterOpen by remember { mutableStateOf(false) }
+    var query by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_search", "")) }
+    var sort by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_sort_v2", "distance")) }
+    var descending by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_desc_v2", "false") == "true") }
+    var roles by remember {
+        mutableStateOf(Settings.readOption(context, "station_roles_v2", "").split("|").filter { it.isNotBlank() }.toSet())
+    }
+    var source by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_source_v2", "all")) }
+    var favoritesOnly by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_favorites_v2", "false") == "true") }
+    var receivedFrom by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_received_from", "")) }
+    var receivedUntil by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_received_until", "")) }
+    var firstFrom by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_first_from", "")) }
+    var firstUntil by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_first_until", "")) }
+    var minDistance by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_min_distance", "")) }
+    var maxDistance by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_max_distance", "")) }
+
+    val activeFilters = query.isNotBlank() || roles.isNotEmpty() || source != "all" || favoritesOnly ||
+        receivedFrom.isNotBlank() || receivedUntil.isNotBlank() || firstFrom.isNotBlank() ||
+        firstUntil.isNotBlank() || minDistance.isNotBlank() || maxDistance.isNotBlank()
+    val list = selectStations(
+        stations.values, StationCriteria(
+            callsign = query, sort = sort, descending = descending, roleNames = roles,
+            source = source, favoritesOnly = favoritesOnly,
+            receivedFrom = receivedFrom, receivedUntil = receivedUntil,
+            firstFrom = firstFrom, firstUntil = firstUntil,
+            minDistanceKm = minDistance.replace(',', '.').toDoubleOrNull()?.takeIf { it >= 0 },
+            maxDistanceKm = maxDistance.replace(',', '.').toDoubleOrNull()?.takeIf { it >= 0 },
+        ), status.lat, status.lon, favorites,
+    )
+    fun saveFilters() {
+        mapOf(
+            "station_search" to query,
+            "station_sort_v2" to sort, "station_desc_v2" to descending.toString(),
+            "station_roles_v2" to roles.sorted().joinToString("|"),
+            "station_source_v2" to source, "station_favorites_v2" to favoritesOnly.toString(),
+            "station_received_from" to receivedFrom, "station_received_until" to receivedUntil,
+            "station_first_from" to firstFrom, "station_first_until" to firstUntil,
+            "station_min_distance" to minDistance, "station_max_distance" to maxDistance,
+        ).forEach { (key, value) -> Settings.saveOption(context, key, value) }
     }
     Column(Modifier.fillMaxSize()) {
-        OutlinedTextField(query, { query = it }, label = { Text(UiText.text(R.string.search_callsign)) }, singleLine = true,
-            modifier = Modifier.fillMaxWidth().padding(12.dp))
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceEvenly) {
-            TextButton(onClick = {
-                order = orders[(orders.indexOf(order) + 1) % orders.size]
-                Settings.saveOption(context, "station_order", order)
-            }) { Text(UiText.text(when (order) {
-                "recent" -> R.string.sort_recent; "callsign" -> R.string.sort_callsign; else -> R.string.sort_nearest
-            })) }
-            TextButton(onClick = {
-                type = types[(types.indexOf(type) + 1) % types.size]
-                Settings.saveOption(context, "station_type", type)
-            }) { Text(if (type == "all") UiText.text(R.string.filter_all) else UiText.role(type)) }
-            TextButton(onClick = { favoritesOnly = !favoritesOnly }) {
-                Text(if (favoritesOnly) UiText.text(R.string.favorites_only) else "☆")
+        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(query, { query = it }, label = { Text(UiText.text(R.string.search_callsign)) },
+                singleLine = true, modifier = Modifier.weight(1f))
+            TextButton(onClick = { filterOpen = true }) {
+                Text("☷ " + UiText.text(R.string.station_filter_action) + if (activeFilters) " ●" else "")
             }
         }
+        Text(UiText.text(R.string.station_showing, list.size, stations.size),
+            modifier = Modifier.padding(horizontal = 16.dp), color = Pal.muted, fontSize = 12.sp)
         if (list.isEmpty()) Empty(UiText.text(R.string.no_stations))
         LazyColumn {
-            items(list, key = { it.call }) { s ->
-                Row(Modifier.fillMaxWidth().clickable { onStation(s.call) }.padding(16.dp, 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            items(list, key = { it.call }) { station ->
+                Row(Modifier.fillMaxWidth().clickable { onStation(station.call) }.padding(16.dp, 10.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(s.call + if (s.call in favorites) " ★" else "", fontWeight = FontWeight.Bold)
-                        Text("${UiText.role(s.role)} · ${s.medium.label} · ${ago(s.lastHeard)}", color = Pal.muted, fontSize = 12.sp)
+                        Text(station.call + if (station.call in favorites) " ★" else "", fontWeight = FontWeight.Bold)
+                        Text(UiText.role(station.role) + " · " + station.medium.label + " · " + ago(station.lastHeard),
+                            color = Pal.muted, fontSize = 12.sp)
                     }
-                    val lat = status.lat; val lon = status.lon
-                    if (lat != null && lon != null) Text("%.1f km".format(haversineKm(lat, lon, s.lat, s.lon)), color = Pal.muted)
+                    if (status.lat != null && status.lon != null)
+                        Text("%.1f km".format(haversineKm(status.lat!!, status.lon!!,
+                            station.lat, station.lon)), color = Pal.muted)
                 }
             }
         }
+    }
+    if (filterOpen) {
+        val choices = listOf(
+            "distance" to R.string.station_sort_distance,
+            "heard" to R.string.station_sort_last,
+            "first" to R.string.station_sort_first,
+            "callsign" to R.string.station_sort_name,
+        )
+        val roleChoices = listOf("Estação", "Móvel", "Digipeater", "iGate", "Estação meteorológica")
+        AlertDialog(
+            onDismissRequest = { filterOpen = false },
+            containerColor = Pal.bar,
+            title = { Text(UiText.text(R.string.station_filter_action)) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(UiText.text(R.string.station_sort_label), fontWeight = FontWeight.Bold)
+                    choices.forEach { (id, label) ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = sort == id, onCheckedChange = { if (it) sort = id })
+                            Text(UiText.text(label), modifier = Modifier.clickable { sort = id })
+                        }
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = descending, onCheckedChange = { descending = it })
+                        Text(UiText.text(if (descending) R.string.station_descending else R.string.station_ascending),
+                            modifier = Modifier.clickable { descending = !descending })
+                    }
+                    Text(UiText.text(R.string.station_filter_types), fontWeight = FontWeight.Bold)
+                    roleChoices.forEach { role ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = role in roles, onCheckedChange = { checked ->
+                                roles = if (checked) roles + role else roles - role
+                            })
+                            Text(UiText.role(role), modifier = Modifier.clickable {
+                                roles = if (role in roles) roles - role else roles + role
+                            })
+                        }
+                    }
+                    Text(UiText.text(R.string.station_filter_source), fontWeight = FontWeight.Bold)
+                    listOf("all" to R.string.filter_all, "rf" to R.string.rf_direct,
+                        "internet" to R.string.station_source_internet).forEach { (key, id) ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = source == key, onCheckedChange = { if (it) source = key })
+                            Text(UiText.text(id), modifier = Modifier.clickable { source = key })
+                        }
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = favoritesOnly, onCheckedChange = { favoritesOnly = it })
+                        Text(UiText.text(R.string.favorites_only), modifier = Modifier.clickable {
+                            favoritesOnly = !favoritesOnly
+                        })
+                    }
+                    OutlinedTextField(receivedFrom, { receivedFrom = it }, singleLine = true,
+                        label = { Text(UiText.text(R.string.station_received_from)) }, placeholder = { Text("AAAA-MM-DD") })
+                    OutlinedTextField(receivedUntil, { receivedUntil = it }, singleLine = true,
+                        label = { Text(UiText.text(R.string.station_received_until)) }, placeholder = { Text("AAAA-MM-DD") })
+                    OutlinedTextField(firstFrom, { firstFrom = it }, singleLine = true,
+                        label = { Text(UiText.text(R.string.station_first_from)) }, placeholder = { Text("AAAA-MM-DD") })
+                    OutlinedTextField(firstUntil, { firstUntil = it }, singleLine = true,
+                        label = { Text(UiText.text(R.string.station_first_until)) }, placeholder = { Text("AAAA-MM-DD") })
+                    OutlinedTextField(minDistance, { minDistance = it }, singleLine = true,
+                        label = { Text(UiText.text(R.string.station_distance_min)) })
+                    OutlinedTextField(maxDistance, { maxDistance = it }, singleLine = true,
+                        label = { Text(UiText.text(R.string.station_distance_max)) })
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { saveFilters(); filterOpen = false }) {
+                    Text(UiText.text(R.string.station_filter_apply))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    query = ""; sort = "distance"; descending = false; roles = emptySet()
+                    source = "all"; favoritesOnly = false; receivedFrom = ""; receivedUntil = ""
+                    firstFrom = ""; firstUntil = ""; minDistance = ""; maxDistance = ""
+                    saveFilters(); filterOpen = false
+                }) { Text(UiText.text(R.string.station_filter_clear)) }
+            },
+        )
     }
 }
 

@@ -11,7 +11,7 @@ import org.json.JSONArray
  * All writes are dispatched from AprsRepository's single-thread executor.
  * Raw APRS packets, passwords and passcodes are deliberately not stored here.
  */
-internal class StationStore(context: Context) : SQLiteOpenHelper(context, "stations.db", null, 1) {
+internal class StationStore(context: Context) : SQLiteOpenHelper(context, "stations.db", null, 2) {
     override fun onConfigure(db: SQLiteDatabase) {
         super.onConfigure(db)
         db.enableWriteAheadLogging()
@@ -22,7 +22,7 @@ internal class StationStore(context: Context) : SQLiteOpenHelper(context, "stati
             call TEXT PRIMARY KEY NOT NULL,
             lat REAL NOT NULL, lon REAL NOT NULL,
             symbol_table TEXT NOT NULL, symbol TEXT NOT NULL,
-            comment TEXT NOT NULL, heard INTEGER NOT NULL,
+            comment TEXT NOT NULL, heard INTEGER NOT NULL, first_seen INTEGER NOT NULL,
             medium TEXT NOT NULL, via TEXT NOT NULL,
             speed REAL, course INTEGER, heard_by TEXT NOT NULL
         )""")
@@ -40,8 +40,13 @@ internal class StationStore(context: Context) : SQLiteOpenHelper(context, "stati
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        // Future schema migrations must preserve station and RF history.
-        check(oldVersion == newVersion) { "Missing StationStore migration $oldVersion to $newVersion" }
+        // Older stations did not record first reception. The existing "heard" timestamp
+        // is an estimated upper bound; preserve history instead of wiping the database.
+        if (oldVersion < 2) {
+            db.execSQL("ALTER TABLE stations ADD COLUMN first_seen INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("UPDATE stations SET first_seen = heard WHERE first_seen = 0")
+        }
+        check(newVersion == 2) { "Missing StationStore migration $oldVersion to $newVersion" }
     }
 
     fun readStations(since: Long): Map<String, Station> {
@@ -70,7 +75,8 @@ internal class StationStore(context: Context) : SQLiteOpenHelper(context, "stati
                     str("symbol_table").firstOrNull() ?: '/',
                     str("symbol").firstOrNull() ?: '>',
                     str("comment"), cursor.getLong(cursor.getColumnIndexOrThrow("heard")),
-                    medium, str("via"), nullableDouble("speed"), nullableInt("course"), heardBy
+                    medium, str("via"), nullableDouble("speed"), nullableInt("course"), heardBy,
+                    cursor.getLong(cursor.getColumnIndexOrThrow("first_seen")),
                 )
             }
         }
@@ -95,6 +101,7 @@ internal class StationStore(context: Context) : SQLiteOpenHelper(context, "stati
             put("symbol_table", station.symbolTable.toString())
             put("symbol", station.symbol.toString())
             put("comment", station.comment); put("heard", station.lastHeard)
+            put("first_seen", station.firstSeen)
             put("medium", station.medium.name); put("via", station.via)
             if (station.speedKmh != null) put("speed", station.speedKmh) else putNull("speed")
             if (station.course != null) put("course", station.course) else putNull("course")
@@ -103,10 +110,14 @@ internal class StationStore(context: Context) : SQLiteOpenHelper(context, "stati
         val db = writableDatabase
         db.beginTransaction()
         try {
-            val latest = db.rawQuery("SELECT heard FROM stations WHERE call = ?", arrayOf(station.call)).use {
-                if (it.moveToFirst()) it.getLong(0) else 0L
+            val latest = db.rawQuery("SELECT heard, first_seen FROM stations WHERE call = ?", arrayOf(station.call)).use {
+                if (it.moveToFirst()) Pair(it.getLong(0), it.getLong(1))
+                else Pair(0L, station.firstSeen)
             }
-            if (station.lastHeard >= latest) db.insertWithOnConflict("stations", null, c, SQLiteDatabase.CONFLICT_REPLACE)
+            if (station.lastHeard >= latest.first) {
+                c.put("first_seen", minOf(station.firstSeen, latest.second))
+                db.insertWithOnConflict("stations", null, c, SQLiteDatabase.CONFLICT_REPLACE)
+            }
             db.setTransactionSuccessful()
         } finally { db.endTransaction() }
     }
