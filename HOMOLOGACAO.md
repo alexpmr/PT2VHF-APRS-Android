@@ -15,7 +15,7 @@ Atualizado em 31/10/2026. **Esta matriz não é um release.**
 |---|---|---|---|
 | 1 | Símbolos APRS e comentário padrão | **Falha observada pelo usuário na v0.1.2**: mapa ainda apresenta ícones genéricos/incorretos | Renderizar símbolos APRS de ambas as tabelas e overlays; comparar em aparelho real com referência APRSdroid e registrar prints |
 | 2 | Filtro/ordenação de mensagens | Código para QA | Verificar filtros e persistência após reiniciar |
-| 3 | Filtro/ordenação de estações | Código para QA | Proximidade, indicativo, recência e tipos |
+| 3 | Estações: reatividade, classificação e filtros | **Falha relatada pelo usuário na v0.1.2; correção pendente** | Novos pacotes APRS-IS/TNC inserem e atualizam linhas sem recarregar; ícone abre seleção direta de classificação/filtros; persistência |
 | 4 | Meus enlaces RF | Parcial: origem RF por TNC corrigida e teste unitário | Validar pacote TNC versus APRS-IS; interface própria de enlaces pendente |
 | 5 | Tracklog e estilo | Parcial: GPS/SQLite/linha e controles básicos | Verificar gravação, pausa, permanência, estilo e limpeza; GPX/ajustes avançados pendentes |
 | 6 | Configurações APRSdroid | Parcial: modo manual/periódico/Smart com parâmetros | Testar intervalos em movimento/parado; demais recursos permanecem pendentes |
@@ -43,7 +43,7 @@ Atualizado em 31/10/2026. **Esta matriz não é um release.**
 
 **T06 — Persistência offline:** receber ao menos cinco estações e um enlace RF real; fechar completamente o processo; desativar internet e reabrir. Conferir estações, horários antigos, favoritos e histórico; atualizar depois da reconexão sem duplicar.
 
-**T07 — Mensagens/estações:** testar ordenação e filtros (distância, último contato, indicativo, tipos, texto e hora) e se as escolhas persistem após reiniciar.
+**T07 — Mensagens/estações:** testar ordenação e filtros (distância, último contato, indicativo, tipos, texto e hora), seleção por ícone/painel de classificação e filtro com múltiplas categorias, e se escolhas persistem após reiniciar. Durante a aba Estações aberta, verificar inserção automática de novas estações e atualização de estações já presentes sem qualquer refresh; comparar APRS-IS e TNC RF. Registrar vídeo com a lista e o contador RX para evidenciar a chegada de pacotes.
 
 **T08 — Tracker/tracklog:** deslocar-se em local seguro com tracker ligado e áudio/radio verificado; gravar trecho curto; verificar linha, limpeza e retenção após reiniciar. Conferir modos manual, periódico e SmartBeaconing evitando transmissão excessiva.
 
@@ -54,6 +54,9 @@ Atualizado em 31/10/2026. **Esta matriz não é um release.**
 **T11 — Favoritos/diagnóstico:** marcar favoritas, fechar e reabrir, filtrar, conferir contadores separados de APRS-IS/TNC e o monitor.
 
 **T12 — Publicação OTA:** após o APK v0.1.2 real estar hospedado, comparar versão/manifesto, atualização in-app, URL e contador cumulativo `android-apk` na Hostinger.
+
+
+**T13 — Reatividade de estações (falha observada v0.1.2):** com a aba Estações aberta e filtros em "Todos", receber pelo menos três novos indicativos, sem tocar na tela; todos devem aparecer automaticamente. Receber novas posições/horários dos mesmos indicativos e conferir atualização dos detalhes e reordenação (mais recente/proximidade) sem trocar de aba. Abrir o ícone de classificação/filtro, escolher explicitamente categoria(s), favoritos e ordenação, aplicar, limpar, persistir após reinicializar e conferir que estações filtradas não foram apagadas. Comparar os pacotes recebidos no monitor/diagnóstico e distinguir falha de recepção da falha de exibição. Anexar evidências de RX/APRS-IS e de TNC RF quando disponível.
 
 ## Como informar o resultado
 
