@@ -1,0 +1,47 @@
+name: Export signed APRS Android v0.1.3 for website synchronization
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/export-aprs-android-013.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  export:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch the official signed APK from this repository release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release download v0.1.3 \
+            --pattern 'PT2VHF_APRS_Client_Android_v0.1.3.apk' --dir "$RUNNER_TEMP"
+          echo 'f2d2b765aeaa5fa906d60f7644d5c2e1a835633e42c990f8a8906d8ecea7d711  ' "$RUNNER_TEMP/PT2VHF_APRS_Client_Android_v0.1.3.apk" > /dev/null
+          test "$(sha256sum "$RUNNER_TEMP/PT2VHF_APRS_Client_Android_v0.1.3.apk" | cut -d' ' -f1)" =             'f2d2b765aeaa5fa906d60f7644d5c2e1a835633e42c990f8a8906d8ecea7d711'
+          test "$(stat -c '%s' "$RUNNER_TEMP/PT2VHF_APRS_Client_Android_v0.1.3.apk")" = 7428195
+      - name: Split canonical APK into lossless ASCII transport segments
+        run: |
+          set -euo pipefail
+          mkdir -p transport/aprs-android-013
+          base64 -w0 "$RUNNER_TEMP/PT2VHF_APRS_Client_Android_v0.1.3.apk" \
+            | split -b 250000 -d -a 3 - transport/aprs-android-013/chunk-
+          (cat transport/aprs-android-013/chunk-* | base64 --decode) \
+            | sha256sum | grep -q '^f2d2b765aeaa5fa906d60f7644d5c2e1a835633e42c990f8a8906d8ecea7d711 '
+          ls transport/aprs-android-013/chunk-* | wc -l
+          printf '%s\n' 'f2d2b765aeaa5fa906d60f7644d5c2e1a835633e42c990f8a8906d8ecea7d711' \
+            > transport/aprs-android-013/SHA256.txt
+      - name: Push transport segments to a temporary private branch
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c transport/aprs-android-013
+          git add transport/aprs-android-013
+          git commit -m "transport: signed APK v0.1.3 SHA-256 pinned for public website"
+          git push origin HEAD:transport/aprs-android-013
