@@ -178,8 +178,9 @@ object AprsRepository {
     fun ingest(packet: AprsPacket, medium: Medium, ownCall: String, now: Long = System.currentTimeMillis()): ChatMessage? {
         _status.update { it.copy(rxPackets = it.rxPackets + 1) }
         val digis = packet.rfDigipeaters
-        // Sem RF comprovado não há enlace (internet, DMR e outras redes digitais ficam de fora).
-        if (digis.isNotEmpty()) {
+        // A trilha de um pacote APRS-IS descreve um caminho anunciado, não uma recepção RF
+        // feita pelo telefone. Somente o TNC físico pode registrar evidência RF local.
+        if (medium == Medium.RF && digis.isNotEmpty()) {
             val chain = listOf(packet.source) + digis
             val newLinks = chain.zipWithNext().map { (a, b) -> RfLink(a, b, now) }
             _links.update { old ->
@@ -189,10 +190,10 @@ object AprsRepository {
             if (packet.source == ownCall) _status.update { it.copy(beaconsDigipeated = it.beaconsDigipeated + 1) }
         }
         parsePosition(packet.info)?.let { pos ->
-            val m = if (medium == Medium.RF || digis.isNotEmpty()) Medium.RF else Medium.INTERNET
             var persisted: Station? = null
             _stations.update { map ->
-                val heardBy = (map[packet.source]?.heardBy ?: emptySet()) + digis.take(1)
+                val heardBy = (map[packet.source]?.heardBy ?: emptySet()) +
+                    (if (medium == Medium.RF) digis.take(1) else emptyList())
                 val station = Station(
                     packet.source, pos.lat, pos.lon, pos.symbolTable, pos.symbol, pos.comment, now, medium,
                     packet.path.joinToString(","), pos.speedKmh, pos.course, heardBy,
@@ -213,8 +214,9 @@ object AprsRepository {
                 val general = msg.kind == AprsMessage.Kind.BULLETIN || msg.addressee == "CQ" ||
                     msg.addressee.startsWith("CQ")
                 if (!forUs && !general) return null
-                val via = packet.rfDigipeaters.firstOrNull()?.let { "RF via $it" }
-                    ?: if (medium == Medium.RF) "RF direto" else "APRS-IS"
+                val via = if (medium == Medium.RF)
+                    packet.rfDigipeaters.firstOrNull()?.let { "RF via $it" } ?: "RF direto"
+                else "APRS-IS"
                 val duplicate = _messages.value.any {
                     !it.outgoing && it.from == packet.source && it.msgId != null && it.msgId == msg.id && it.text == msg.text
                 }
