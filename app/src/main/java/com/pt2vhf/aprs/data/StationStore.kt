@@ -160,6 +160,17 @@ internal class StationStore(context: Context) : SQLiteOpenHelper(context, "stati
             (SELECT id FROM own_track ORDER BY recorded DESC LIMIT 10000)""")
     }
 
+    /** Removes the station cache and its derived RF links, preserving the own GPS track. */
+    fun clearStationsAndLinks() {
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            db.delete("stations", null, null)
+            db.delete("rf_links", null, null)
+            db.setTransactionSuccessful()
+        } finally { db.endTransaction() }
+    }
+
     fun clearTrack() { writableDatabase.delete("own_track", null, null) }
 
     fun prune(olderThan: Long) {

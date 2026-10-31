@@ -196,4 +196,13 @@
     <string name="tracker_auto_start">Démarrer le suivi automatiquement</string>
     <string name="tracker_auto_start_notice">Une fois activé, votre position est transmise par les liaisons APRS autorisées après acquisition GPS. Vous pouvez arrêter le suivi à tout moment.</string>
     <string name="tx_route_unavailable">Aucune voie de transmission autorisée. Vérifiez TX APRS-IS, RF/TNC et la connexion dans Paramètres.</string>
+    <string name="local_data_section">Données locales</string>
+    <string name="clear_all_stations">Supprimer toutes les stations</string>
+    <string name="clear_all_messages">Supprimer tous les messages</string>
+    <string name="clear_stations_confirmation">Supprimer les stations locales et leurs liaisons RF ? Les traces GPS, les indicatifs favoris et les paramètres seront conservés. De nouvelles stations pourront réapparaître à la réception de paquets. Cette action est irréversible.</string>
+    <string name="clear_messages_confirmation">Supprimer les messages privés, CQ, bulletins et messages en attente ? Les retransmissions en attente seront annulées. Les stations et paramètres seront conservés. Cette action est irréversible.</string>
+    <string name="clear_local_data_busy">Suppression des données locales…</string>
+    <string name="clear_local_data_success">Données locales supprimées.</string>
+    <string name="clear_local_data_error">Impossible de supprimer toutes les données locales. Vérifiez le stockage et réessayez.</string>
+    <string name="clear_data_confirm">Supprimer</string>
 </resources>

@@ -45,6 +45,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -84,6 +85,7 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
 import java.util.Date
+import kotlinx.coroutines.launch
 
 private fun ago(t: Long): String {
     val s = (System.currentTimeMillis() - t) / 1000
@@ -793,6 +795,10 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
     var expanded by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf("") }
     var confirmEmptyFilter by remember { mutableStateOf(false) }
+    var clearTarget by remember { mutableStateOf<Int?>(null) } // 1 = stations, 2 = messages
+    var clearBusy by remember { mutableStateOf(false) }
+    var clearResult by remember { mutableStateOf<String?>(null) }
+    val clearScope = rememberCoroutineScope()
 
     val base = call.trim().uppercase().substringBefore('-')
     val passcode = if (base.isNotEmpty()) com.pt2vhf.aprs.core.aprsPasscode(base).toString() else "—"
@@ -898,6 +904,17 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
                             modifier = Modifier.fillMaxWidth())
                     }
                 }
+                Text(UiText.text(R.string.local_data_section), color = Pal.muted, fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold)
+                OutlinedButton(onClick = { clearTarget = 1; clearResult = null },
+                    enabled = !clearBusy, modifier = Modifier.fillMaxWidth()) {
+                    Text(UiText.text(R.string.clear_all_stations), color = Pal.orange)
+                }
+                OutlinedButton(onClick = { clearTarget = 2; clearResult = null },
+                    enabled = !clearBusy, modifier = Modifier.fillMaxWidth()) {
+                    Text(UiText.text(R.string.clear_all_messages), color = Pal.orange)
+                }
+                clearResult?.let { Text(it, color = Pal.muted, fontSize = 13.sp) }
                 if (error.isNotEmpty()) Text(error, color = Pal.orange, fontSize = 13.sp)
             }
         },
@@ -910,4 +927,41 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
         },
         dismissButton = { if (current.configured) TextButton(onClick = onDismiss) { Text(UiText.text(R.string.cancel)) } },
     )
+
+    clearTarget?.let { target ->
+        AlertDialog(
+            onDismissRequest = { if (!clearBusy) clearTarget = null },
+            containerColor = Pal.bar,
+            title = { Text(UiText.text(if (target == 1) R.string.clear_all_stations else R.string.clear_all_messages)) },
+            text = {
+                Text(UiText.text(when {
+                    clearBusy -> R.string.clear_local_data_busy
+                    target == 1 -> R.string.clear_stations_confirmation
+                    else -> R.string.clear_messages_confirmation
+                }))
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (!clearBusy) {
+                        clearBusy = true
+                        clearScope.launch {
+                            val succeeded = try {
+                                if (target == 1) AprsRepository.clearStations()
+                                else AprsRepository.clearMessages()
+                            } catch (_: Exception) { false }
+                            clearBusy = false
+                            clearTarget = null
+                            clearResult = UiText.text(if (succeeded) R.string.clear_local_data_success
+                                else R.string.clear_local_data_error)
+                        }
+                    }
+                }, enabled = !clearBusy) { Text(UiText.text(R.string.clear_data_confirm), color = Pal.orange) }
+            },
+            dismissButton = {
+                TextButton(onClick = { clearTarget = null }, enabled = !clearBusy) {
+                    Text(UiText.text(R.string.cancel))
+                }
+            },
+        )
+    }
 }
