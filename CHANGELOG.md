@@ -1,5 +1,14 @@
 # Changelog
 
+## Em desenvolvimento — limpeza dos dados locais (não publicada)
+
+- Configurações → Dados locais: ações separadas para apagar todas as estações e todas as mensagens, cada uma com confirmação e avisos sobre irreversibilidade.
+- Excluir estações e enlaces RF em transação SQLite, preservando tracklog GPS, favoritos, configurações de conexão e filtros.
+- Apagar histórico privado/CQ/boletins e estados de ACK em `messages.json`, impedindo retransmissões programadas de mensagens excluídas.
+- Interface traduzida para português, inglês, espanhol, francês e italiano.
+- Exige CI aprovado e homologação em aparelho Android antes de publicar APK.
+
+
 ## 0.1.5 — 2026-10-31
 
 - Botão Enviar mensagem com área própria nos detalhes da estação (Mapa ou Estações).
