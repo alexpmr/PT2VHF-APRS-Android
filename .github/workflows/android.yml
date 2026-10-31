@@ -68,7 +68,7 @@ jobs:
           export ANDROID_KEYSTORE_FILE="$RUNNER_TEMP/qa.jks"
           ./gradlew --no-daemon assembleRelease
           mkdir -p dist
-          version=$(grep -oP 'val appVersionName = "\\K[^"]+' app/build.gradle.kts)
+          version=$(grep -oP 'val appVersionName = "\K[^"]+' app/build.gradle.kts)
           cp app/build/outputs/apk/release/app-release.apk "dist/PT2VHF_APRS_Client_Android_v${version}_QA.apk"
           apksigner="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner"
           "$apksigner" verify "dist/PT2VHF_APRS_Client_Android_v${version}_QA.apk"
