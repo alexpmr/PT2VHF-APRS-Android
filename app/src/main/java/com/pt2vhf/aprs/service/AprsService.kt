@@ -40,6 +40,7 @@ import com.pt2vhf.aprs.data.AprsRepository
 import com.pt2vhf.aprs.data.ChatMessage
 import com.pt2vhf.aprs.data.Medium
 import com.pt2vhf.aprs.data.OutboundSendResult
+import com.pt2vhf.aprs.data.OutboundBeaconResult
 import com.pt2vhf.aprs.data.Settings
 import kotlin.math.abs
 
@@ -103,7 +104,7 @@ class AprsService : Service(), LocationListener {
         connectAprsIs()
         startLocation()
         watchNetwork()
-        if (settings.btAddress.isNotEmpty()) connectBluetooth(settings.btAddress)
+        if (settings.btAddress.isNotEmpty() && !Settings.flag(this, "tnc_manual_pause")) connectBluetooth(settings.btAddress)
         handler.post(ticker)
     }
 
@@ -113,13 +114,30 @@ class AprsService : Service(), LocationListener {
                 settings = Settings.load(this)
                 smart = configuredSmartBeaconing(settings)
                 restoreTrackerPreference()
-                if (settings.connectAprsIs) connectAprsIs() else {
+                if (settings.connectAprsIs && !Settings.flag(this, "aprs_manual_pause")) connectAprsIs() else {
                     aprsIs.stop()
                     AprsRepository.updateStatus { it.copy(aprsIsConnected = false, aprsIsVerified = false, aprsIsError = "") }
                 }
                 refreshNotification()
             }
-            ACTION_BEACON -> sendBeacon()
+            ACTION_APRS_CONNECT -> {
+                Settings.setFlag(this, "aprs_manual_pause", false)
+                connectAprsIs(force = true)
+            }
+            ACTION_APRS_DISCONNECT -> {
+                Settings.setFlag(this, "aprs_manual_pause", true)
+                aprsIs.stop()
+                AprsRepository.updateStatus {
+                    it.copy(aprsIsConnected = false, aprsIsVerified = false, aprsIsError = "")
+                }
+            }
+            ACTION_BEACON -> {
+                val requestId = intent.getStringExtra(EXTRA_REQUEST_ID)
+                val transmitted = sendBeacon()
+                if (!requestId.isNullOrBlank()) {
+                    AprsRepository.reportBeaconResult(OutboundBeaconResult(requestId, transmitted))
+                }
+            }
             ACTION_TRACKER_ON -> {
                 Settings.setFlag(this, "tracker_explicit_off", false)
                 AprsRepository.updateStatus { it.copy(trackerOn = true) }
@@ -140,7 +158,17 @@ class AprsService : Service(), LocationListener {
                 }
             }
             ACTION_BT_CONNECT -> intent.getStringExtra(EXTRA_ADDRESS)?.let {
+                Settings.setFlag(this, "tnc_manual_pause", false)
                 settings = settings.copy(btAddress = it); Settings.save(this, settings); connectBluetooth(it)
+            }
+            ACTION_BT_PAUSE -> {
+                Settings.setFlag(this, "tnc_manual_pause", true)
+                tnc.disconnect()
+                AprsRepository.updateStatus { it.copy(tncConnected = false, tncName = "") }
+            }
+            ACTION_BT_RESUME -> {
+                Settings.setFlag(this, "tnc_manual_pause", false)
+                settings.btAddress.takeIf { it.isNotBlank() }?.let { connectBluetooth(it) }
             }
             ACTION_BT_DISCONNECT -> {
                 settings = settings.copy(btAddress = ""); Settings.save(this, settings); tnc.disconnect()
@@ -166,8 +194,8 @@ class AprsService : Service(), LocationListener {
         super.onDestroy()
     }
 
-    private fun connectAprsIs() {
-        if (!settings.configured || !settings.connectAprsIs) return
+    private fun connectAprsIs(force: Boolean = false) {
+        if (!settings.configured || (!force && (!settings.connectAprsIs || Settings.flag(this, "aprs_manual_pause")))) return
         val s = AprsRepository.status.value
         aprsIs.start(settings.server, settings.port, settings.fullCall, settings.passcode,
             expandFilter(settings.filter, s.lat, s.lon))
@@ -185,7 +213,7 @@ class AprsService : Service(), LocationListener {
         val cm = getSystemService(ConnectivityManager::class.java) ?: return
         val cb = object : ConnectivityManager.NetworkCallback() {
             // Wi-Fi ↔ dados móveis: reconecta em vez de esperar o timeout do socket antigo.
-            override fun onAvailable(network: Network) { handler.postDelayed({ if (settings.connectAprsIs) aprsIs.reconnectNow() }, 1500) }
+            override fun onAvailable(network: Network) { handler.postDelayed({ if (settings.connectAprsIs && !Settings.flag(this@AprsService, "aprs_manual_pause")) aprsIs.reconnectNow() }, 1500) }
         }
         runCatching { cm.registerDefaultNetworkCallback(cb) }
         networkCallback = cb
@@ -248,18 +276,19 @@ class AprsService : Service(), LocationListener {
         }
     }
 
-    private fun sendBeacon() {
-        if (!settings.configured) return
+    private fun sendBeacon(): Boolean {
+        if (!settings.configured) return false
         val s = AprsRepository.status.value
-        val lat = s.lat ?: return
-        val lon = s.lon ?: return
+        val lat = s.lat ?: return false
+        val lon = s.lon ?: return false
         val moving = s.speedKmh >= 5.0
         val info = positionInfo(lat, lon, settings.symbolTable, settings.symbol, beaconCommentWithSite(settings.comment),
             if (moving) s.course else null, if (moving) s.speedKmh else null)
-        if (transmit(info) == null) return
+        if (transmit(info) == null) return false
         lastBeaconAt = System.currentTimeMillis()
         lastBeaconCourse = s.course
         AprsRepository.updateStatus { it.copy(beaconsSent = it.beaconsSent + 1) }
+        return true
     }
 
     /** Envia pelo(s) meio(s) ativo(s) e autorizado(s): RF (TNC) e/ou APRS-IS. Retorna o meio usado. */
@@ -300,7 +329,7 @@ class AprsService : Service(), LocationListener {
 
     /** true means written to at least one authorized transport, not remotely delivered. */
     private fun sendWithRetry(local: ChatMessage, dest: String, text: String, msgId: String?, attempt: Int): Boolean {
-        if (AprsRepository.isAcked(local.id)) return true
+        if (!AprsRepository.containsMessage(local.id) || AprsRepository.isAcked(local.id)) return true
         val medium = transmit(messageInfo(dest, text, msgId))
         when {
             medium == null -> AprsRepository.setStatus(local.id, "Sem conexão para enviar")
@@ -422,11 +451,15 @@ class AprsService : Service(), LocationListener {
         private const val NOTIF_SERVICE = 1
         const val ACTION_RELOAD = "reload"
         const val ACTION_BEACON = "beacon"
+        const val ACTION_APRS_CONNECT = "aprs_connect"
+        const val ACTION_APRS_DISCONNECT = "aprs_disconnect"
         const val ACTION_TRACKER_ON = "tracker_on"
         const val ACTION_TRACKER_OFF = "tracker_off"
         const val ACTION_MESSAGE = "message"
         const val ACTION_BT_CONNECT = "bt_connect"
         const val ACTION_BT_DISCONNECT = "bt_disconnect"
+        const val ACTION_BT_PAUSE = "bt_pause"
+        const val ACTION_BT_RESUME = "bt_resume"
         const val ACTION_STOP = "stop"
         const val EXTRA_TO = "to"
         const val EXTRA_TEXT = "text"

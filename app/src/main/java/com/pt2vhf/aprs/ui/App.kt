@@ -69,6 +69,8 @@ import com.pt2vhf.aprs.data.UpdateCheck
 import com.pt2vhf.aprs.data.UpdateInfo
 import com.pt2vhf.aprs.service.AprsService
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import java.util.UUID
 import kotlinx.coroutines.withContext
 
 object Pal {
@@ -124,7 +126,7 @@ fun App(onExit: () -> Unit) {
     MaterialTheme(colorScheme = scheme) {
         Scaffold(
             containerColor = Pal.ground,
-            topBar = { if (!keyboardVisible) TopBar(settings, onSettings = { showSettings = true }) },
+            topBar = { if (!keyboardVisible) TopBar(settings, onSettings = { showSettings = true }, onRadio = { tab = Tab.RADIO }) },
             bottomBar = {
                 if (!keyboardVisible) NavigationBar(containerColor = Pal.bar) {
                     Tab.entries.forEach { t ->
@@ -224,9 +226,31 @@ fun App(onExit: () -> Unit) {
 }
 
 @Composable
-private fun TopBar(settings: Settings, onSettings: () -> Unit) {
+private fun TopBar(settings: Settings, onSettings: () -> Unit, onRadio: () -> Unit) {
     val context = LocalContext.current
     val status by AprsRepository.status.collectAsState()
+    val beaconResults by AprsRepository.beaconResults.collectAsState()
+    var pendingBeaconId by rememberSaveable { mutableStateOf<String?>(null) }
+    var beaconFailed by remember { mutableStateOf(false) }
+    LaunchedEffect(beaconResults, pendingBeaconId) {
+        val id = pendingBeaconId
+        if (id != null) {
+            beaconResults[id]?.let {
+                pendingBeaconId = null
+                beaconFailed = !it.submitted
+            }
+        }
+    }
+    LaunchedEffect(pendingBeaconId) {
+        val id = pendingBeaconId
+        if (id != null) {
+            delay(15_000)
+            if (pendingBeaconId == id) {
+                pendingBeaconId = null
+                beaconFailed = true
+            }
+        }
+    }
     Column(
         Modifier.fillMaxWidth().background(Pal.bar).statusBarsPadding().padding(horizontal = 16.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -237,17 +261,48 @@ private fun TopBar(settings: Settings, onSettings: () -> Unit) {
                     fontWeight = FontWeight.Bold, fontSize = 17.sp, color = Pal.text)
                 Text("PT2VHF APRS Client for Android", fontSize = 12.sp, color = Pal.muted)
             }
+            val beaconColor = when {
+                pendingBeaconId != null -> Pal.blue
+                beaconFailed -> Color(0xFFF26F70)
+                else -> Pal.yellow
+            }
             OutlinedButton(
-                onClick = { AprsService.send(context, AprsService.ACTION_BEACON) },
-                enabled = settings.configured && status.lat != null,
-                border = androidx.compose.foundation.BorderStroke(2.dp, Pal.yellow),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Pal.yellow),
-            ) { Text(UiText.text(R.string.send_beacon), fontWeight = FontWeight.SemiBold) }
+                onClick = {
+                    val id = UUID.randomUUID().toString()
+                    beaconFailed = false
+                    pendingBeaconId = id
+                    runCatching {
+                        AprsService.send(context, AprsService.ACTION_BEACON,
+                            mapOf(AprsService.EXTRA_REQUEST_ID to id))
+                    }.onFailure {
+                        pendingBeaconId = null
+                        beaconFailed = true
+                    }
+                },
+                enabled = settings.configured && status.lat != null && pendingBeaconId == null,
+                border = androidx.compose.foundation.BorderStroke(2.dp, beaconColor),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = beaconColor),
+            ) {
+                Text(UiText.text(when {
+                    pendingBeaconId != null -> R.string.beacon_sending
+                    beaconFailed -> R.string.beacon_failed
+                    else -> R.string.send_beacon
+                }), fontWeight = FontWeight.SemiBold)
+            }
             IconButton(onClick = onSettings) { Icon(Icons.Filled.Settings, contentDescription = UiText.text(R.string.settings), tint = Pal.text) }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Chip("APRS-IS", status.aprsIsVerified)
-            Chip("TNC", status.tncConnected)
+            Chip("APRS-IS", status.aprsIsVerified, onClick = {
+                AprsService.send(context, if (status.aprsIsConnected)
+                    AprsService.ACTION_APRS_DISCONNECT else AprsService.ACTION_APRS_CONNECT)
+            })
+            Chip("TNC", status.tncConnected, onClick = {
+                when {
+                    status.tncConnected -> AprsService.send(context, AprsService.ACTION_BT_PAUSE)
+                    settings.btAddress.isNotBlank() -> AprsService.send(context, AprsService.ACTION_BT_RESUME)
+                    else -> onRadio()
+                }
+            })
             Chip("GPS", status.gpsAccuracyM != null &&
                 status.gpsFixTimeMs > 0 && System.currentTimeMillis() - status.gpsFixTimeMs <= 120_000L)
         }
@@ -255,11 +310,12 @@ private fun TopBar(settings: Settings, onSettings: () -> Unit) {
 }
 
 @Composable
-fun Chip(text: String, ok: Boolean) {
+fun Chip(text: String, ok: Boolean, onClick: (() -> Unit)? = null) {
     Row(
         Modifier.background(if (ok) Pal.greenBg else Color(0xFF3A1A23), RoundedCornerShape(14.dp))
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .semantics { contentDescription = "$text: ${if (ok) "connected" else "disconnected"}" }
-            .padding(horizontal = 10.dp, vertical = 5.dp),
+            .padding(horizontal = 10.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(8.dp).background(if (ok) Color(0xFF3CCF7C) else Color(0xFFF26F70), CircleShape))

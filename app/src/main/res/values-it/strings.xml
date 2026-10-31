@@ -202,4 +202,17 @@
     <string name="tx_aprs_unavailable">APRS-IS disconnesso. Riconnettiti prima di inviare.</string>
     <string name="tx_send_failed">Trasmissione non riuscita nonostante un percorso autorizzato. Controlla la connessione e riprova. Testo conservato.</string>
     <string name="tx_dispatch_failed">Impossibile avviare il servizio messaggi. Testo conservato.</string>
+    <string name="local_data_section">Dati locali</string>
+    <string name="clear_all_stations">Elimina tutte le stazioni</string>
+    <string name="clear_all_messages">Elimina tutti i messaggi</string>
+    <string name="clear_stations_confirmation">Eliminare tutte le stazioni salvate e i relativi collegamenti RF? Le tracce GPS, i nominativi preferiti e le impostazioni saranno conservati. Nuove stazioni potranno riapparire con nuovi pacchetti. L\'operazione è irreversibile.</string>
+    <string name="clear_messages_confirmation">Eliminare tutti i messaggi privati, CQ, bollettini e messaggi in sospeso? I tentativi di ritrasmissione pendenti saranno annullati. Le stazioni e le impostazioni saranno conservate. L\'operazione è irreversibile.</string>
+    <string name="clear_local_data_busy">Eliminazione dati locali…</string>
+    <string name="clear_local_data_success">Dati locali eliminati correttamente.</string>
+    <string name="clear_local_data_error">Impossibile eliminare completamente i dati locali. Controllare la memoria e riprovare.</string>
+    <string name="clear_data_confirm">Elimina</string>
+    <string name="beacon_sending">Invio…</string>
+    <string name="beacon_failed">Invio fallito</string>
+    <string name="days_ago">%1$d giorni fa</string>
+    <string name="search_callsign_short">Nominativo</string>
 </resources>
