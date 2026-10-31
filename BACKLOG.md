@@ -34,3 +34,13 @@ _Registrado em 31/10/2026._
 - **Filtro por tipo** de estação: estações, iGates, digipeaters, objetos, itens, meteorológicas etc., reaproveitando
   as categorias de filtro já definidas no PT2VHF APRS Client (desktop). Padrão: tudo ligado. O app já classifica
   cada estação em `role` (`data/AprsRepository.kt`), que pode servir de base. Avaliar aplicar o mesmo filtro no mapa.
+
+### 4. Mostrar os enlaces RF estabelecidos pelo próprio app
+_Registrado em 31/10/2026._
+
+- Hoje o mapa desenha em amarelo todos os enlaces RF deduzidos dos caminhos de qualquer pacote
+  (`RfLink` em `data/AprsRepository.kt`), sem distinguir os meus. Mostrar à parte os enlaces que o app conseguiu
+  estabelecer por RF: meu beacon repetido por digi/iGate (caminho com meu indicativo como origem) e estações
+  ouvidas direto ou via digi pelo TNC.
+- Destacar esses enlaces no mapa com cor própria e opção de exibir só os meus; listar também (estação, via
+  direto/digi, quantidade, última vez, distância), como referência para alcance e recordes RF.
