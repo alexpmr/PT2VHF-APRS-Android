@@ -19,7 +19,7 @@ O backlog permanece parcialmente implementado, com homologação física pendent
 | Item | Estado atual | Evidência necessária para baixa |
 |---|---|---|
 | 1 | **FALHA CONFIRMADA NA v0.1.2**: símbolos do mapa genéricos/incorretos; comentário padrão alterado | Renderização real de símbolos APRS, tabela primária/alternativa, overlays, ícone próprio e testes físicos |
-| 2 | Implementado no PR; **teste físico pendente** | Filtro, ordem e persistência no Android |
+| 2 | **Ampliação pendente (v0.1.3):** filtro de Conversas hoje é só texto livre e a ordenação inicial é do mais antigo para o mais recente | Ordenação padrão por **última atividade decrescente**; ícone/painel de filtros completos, combináveis, persistentes; testes de mensagens novas, SSID e conversas filtradas |
 | 3 | **Pendente (v0.1.2)**: lista sem atualização em tempo real; filtro/ordenação incompletos | Ícone com critérios de ordenação ASC/DESC e filtros efetivos por data, indicativo, primeira/última recepção, distância e tipo, atualizados em tempo real |
 | 4 | Parcial: origem de RX RF corrigida | Evidência no TNC e apresentação dos meus enlaces |
 | 5 | Parcial: tracklog SQLite/mapa | Uso real, estilo completo, retenção e GPX |
@@ -126,11 +126,88 @@ teste físico obrigatório. Não baixar este item apenas por compilação.**
   PT2VHF/APRSdroid sem depender de renderização local.
   Não transmitir posição por causa de migração ou simples abertura.
 
-### 2. Mensagens: filtro e ordenação
-_Registrado em 31/10/2026._
+### 2. Mensagens → Conversas: filtros completos e ordenação por última atividade
+_Registrado em 31/10/2026; ampliado por solicitação expressa em 31/10/2026._
 
-- Adicionar filtro na aba Mensagens. Ordem padrão: por ordem de chegada, com opção de o usuário alterar a ordem
-  (ex.: mais recentes primeiro ou mais antigas primeiro), lembrando a escolha nas preferências.
+**Problema identificado na v0.1.3:** `MessagesScreen()` em
+`app/src/main/java/com/pt2vhf/aprs/ui/Screens.kt` oferece apenas
+`filter` textual e um botão cíclico para ordenar. A opção inicial é
+`Settings.readOption(context, "messages_order", "oldest")`, fazendo
+`newestFirst = false` para instalações sem preferência anterior.
+No modo "oldest" a lista usa `minOf { it.time }` por conversa,
+em vez da **última atividade**. Atualmente, o filtro é aplicado às
+mensagens **antes** do agrupamento por contato, podendo levar a uma
+prévia/hora diferente da mensagem mais recente real da conversa.
+
+**Comportamento exigido:**
+
+- **Padrão de ordenação:** na lista `Mensagens → Conversas`, apresentar
+  sempre **mais recente primeiro**, ordenando por `maxOf(message.time)`
+  de cada contato, considerando **mensagens recebidas e enviadas**.
+  Recepção ou envio novo deve reordenar a lista **imediatamente**, sem
+  recarregar a tela, mesmo se a conversa estiver fora do trecho visível.
+  Empates resolvidos de modo determinístico pelo indicativo completo.
+  O padrão deve valer em instalações novas e nas antigas que nunca
+  escolheram explicitamente uma ordem; **respeitar preferência manual
+  previamente gravada**. Permitir ordem inversa, A→Z/Z→A e outras
+  opções úteis, sempre com direção explícita e persistente.
+- **Painel único de filtros:** substituir a ambiguidade do controle
+  atual por **ícone claro de filtros/ordenação** ao lado da busca, com
+  seletores diretos, indicador de filtro ativo, **Aplicar**, **Limpar**
+  e opção de restaurar o padrão. Não usar botão que muda o critério
+  somente a cada toque sem indicar todas as opções.
+- **Critérios independentes, combináveis (AND):**
+  - **Indicativo/contato**: substring, sem distinguir maiúsculas e
+    minúsculas; considerar o indicativo completo e **SSID** exato.
+  - **Texto da mensagem**: busca por trecho do conteúdo recebido
+    ou enviado, sem eliminar a conversa inteira quando existir
+    correspondência em qualquer mensagem de seu histórico.
+  - **Data e horário**: início/fim inclusivos de atividade ou de
+    mensagens correspondentes, com interpretação no **fuso local**;
+    permitir filtros de atividade recente, por exemplo 24 h, 7 dias,
+    30 dias, além de intervalo personalizado.
+  - **Direção**: todas, recebidas, enviadas; não confundir a origem do
+    pacote com o interlocutor da conversa.
+  - **Transporte de recepção/transmissão**: todos, APRS-IS, RF/TNC,
+    apenas quando `ChatMessage.medium` realmente possuir evidência;
+    mensagens sem meio conhecido não devem ser falsamente classificadas.
+  - **Estado do envio**: pendente/aguardando ACK, confirmado, falho,
+    quando representado em `ChatMessage.status`. Não inventar ACK
+    para mensagens que não o possuem.
+  - **Não lidas**: disponibilizar apenas junto com controle real de
+    leitura persistente; o modelo `ChatMessage` atual não contém
+    indicador `read`/`unread`. Implementar esse controle e sua
+    persistência antes de oferecer o filtro ou ocultá-lo até existir.
+- **Ordenação x filtro são diferentes:** manter ordem padrão pelo
+  carimbo da **última mensagem real da conversa**, e mostrar prévia
+  correspondente; o filtro por texto/direção/data decide quais
+  conversas aparecem, mas não deve fazer uma mensagem antiga parecer
+  a última. Opcionalmente destacar o trecho correspondente como
+  resultado de pesquisa, sem substituir os metadados da última
+  mensagem da conversa.
+- **Operação e persistência:** exibir total de conversas e quantidade
+  filtrada; combinação de filtros não apaga mensagens nem altera
+  estados. Persistir preferências de ordenação e filtros no Android
+  após fechar/abrir o aplicativo. Filtro e ordenação devem reagir às
+  novas mensagens sem atualização manual. Evitar processamento custoso
+  a cada digitação em históricos grandes.
+- **Separação de funções:** pesquisar/consolidar **conversas que já
+  têm mensagens** não substitui `Mensagens → Nova mensagem`, cuja
+  pesquisa de indicativos conhecidos e seleção de destinatário está
+  prevista no **item #21**. Não misturar o filtro do histórico com
+  a busca global de contatos.
+- **Teste T21:** criar três conversas com horários distintos; conferir
+  ordem por última mensagem recebida/enviada, inversão e critério
+  alfabético; enviar/receber pacote com a lista aberta e conferir
+  reordenação imediata; filtrar por parte do indicativo, SSID, texto
+  de mensagem antiga, datas limite, direção, meio RF/APRS-IS e
+  estados existentes; aplicar filtros combinados, limpar e reiniciar
+  o aplicativo; testar valores de campo ausentes, horário local e
+  nenhuma correspondência. Caso habilitado, validar não lidas em
+  banco persistente. Abrir uma conversa filtrada e assegurar que
+  seu histórico completo permaneça acessível.
+- **Status:** melhoria de especificação/backlog, **não implementada
+  nem homologada nesta solicitação**.
 
 ### 3. Estações: ordenação e filtro por tipo
 _Registrado em 31/10/2026._
