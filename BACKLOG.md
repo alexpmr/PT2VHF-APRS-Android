@@ -10,6 +10,37 @@ Itens registrados para as próximas versões. Não implementar até o pedido de 
 - Também pendentes desde a 0.1.0 (ver CHANGELOG): TNC por USB-OTG e KISS TCP, mapa offline, mapa de calor de
   cobertura, modo carro, rotas e recordes RF.
 
+## Acompanhamento de implementação e baixa (31/10/2026)
+
+Aprovada a implementação integral, mas **não confundir código no PR com funcionalidade homologada**.
+A versão pública continua `v0.1.0`. O PR [#7](../../pull/7) contém implementação parcial
+em branch de homologação `0.2.0-rc1`; não atualizar o site até APK assinado, testes
+e release confirmados. Os critérios, roteiros e evidências ficam no
+[HOMOLOGACAO.md](HOMOLOGACAO.md).
+
+| Item | Estado atual | Evidência necessária para baixa |
+|---|---|---|
+| 1 | Parcial: comentário padrão | Símbolos APRS/overlays ainda faltam |
+| 2 | Implementado no PR; **teste pendente** | Filtro, ordem e persistência no Android |
+| 3 | Implementado no PR; **teste pendente** | Proximidade, tipo, ordenação e persistência |
+| 4 | Parcial: origem de RX RF corrigida | Evidência no TNC e apresentação dos meus enlaces |
+| 5 | Parcial: tracklog SQLite/mapa | Uso real, estilo completo, retenção e GPX |
+| 6 | Parcial: beacon manual/periódico/Smart | Teste GPS e parâmetros; demais opções pendentes |
+| 7 | Implementado no PR; **teste pendente** | Reiniciar offline com estações e RF preservados |
+| 8 | Implementado no PR; **teste pendente** | Estados reais APRS-IS/TNC/GPS |
+| 9 | Implementado no PR; **teste pendente** | Desconexão persistente, reconexão e somente RX |
+| 10 | Pendente | Perfis completos Base/Móvel/Portátil/RX |
+| 11 | Parcial: seguir/pausar/retomar | Estação móvel real e trajetória histórica |
+| 12 | Parcial: favoritos persistentes | Notificações por evento faltam |
+| 13 | Parcial: indicadores/monitor | Exportação e diagnóstico detalhado faltam |
+| 14 | Pendente | Estatísticas/recordes RF comprovados |
+| 15 | Pendente | API segura e testes de permissões |
+
+**Baixa definitiva:** marcar `Concluído` somente após CI aprovado,
+teste físico aplicável validado pelo usuário e requisitos da seção correspondente
+integralmente atendidos. Corrigir eventuais falhas e registrar commit específico
+para cada lote de aprovações. Pendências não implementadas **não são baixadas**.
+
 ## Pendentes
 
 ### 1. Mapa: ícones APRS por estação/objeto e site PT2VHF no comentário padrão
