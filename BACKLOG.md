@@ -36,7 +36,7 @@ O backlog permanece parcialmente implementado, com homologação física pendent
 | 16 | **Pendente**: confirmar fechamento do aplicativo | Diálogo ao sair pela navegação Android, cancelar/sair e tratamento explícito de tracker/TX em segundo plano |
 | 17 | **Pendente**: restaurar mapa na abertura | Persistir centro e zoom do último acesso; ícone para localização atual; não sobrescrever a vista restaurada por GPS automático |
 | 18 | **Implementado no PR #8; CI e teste físico pendentes**: versão instalada no aviso do site oficial | Ao abrir, popup com versão real da instalação e link www.PT2VHF.com, uma vez por abertura |
-| 19 | **Falha de usabilidade relatada na v0.1.3**: ação Mensagem já existe no código, mas não está claramente acessível no popup de detalhes da estação | Botão destacado Enviar mensagem, sempre visível, navegação direta à conversa com destinatário preenchido; teste Android real em telas pequenas |
+| 19 | **FALHA FUNCIONAL RELATADA NA v0.1.3 — ABA ESTAÇÕES**: após selecionar estação, usuário não consegue enviar mensagem diretamente | Comando Enviar mensagem claramente visível e acionável; conversa privada aberta com indicativo/SSID exato e envio efetivo sob confirmação, verificado no Android real |
 | 20 | **Pendente — v0.1.3**: pressão longa na mensagem com duas ações distintas | Menu **Responder à mensagem** (com contexto) ou **Mensagem direta ao remetente** (privada sem citação), SSID exato e nenhum TX automático |
 | 21 | **Pendente — v0.1.3**: procurar indicativos para iniciar conversa nova | Busca por indicativo completo/parcial em estações e contatos recentes, seleção de SSID exato e abertura da conversa sem TX automático |
 | 22 | **Pendente — v0.1.3**: controle de brilho do mapa inexistente | Ícone de sol com ajuste independente das configurações globais do Android, intensidade persistente, padrão neutro e teste de camadas/legibilidade |
@@ -534,41 +534,58 @@ _Solicitado em 31/10/2026 durante o desenvolvimento da v0.1.3._
 - **Critério de aceitação:** iniciar com v0.1.3, conferir texto, endereço, versão exata da APK e abertura do link; fechar aviso, trocar de abas (não deve reaparecer), forçar novo lançamento do app (deve aparecer); conferir a separação do aviso OTA, sem duplicidade.
 - **Implementação** adicionada no PR [#8](../../pull/8); **não baixar** até CI aprovado e teste no aparelho.
 
-### 19. Detalhes da estação: ação evidente de enviar mensagem APRS diretamente
-_Solicitado em 31/10/2026 após selecionar uma estação na v0.1.3._
+### 19. Aba Estações: envio direto de mensagem à estação selecionada
+_Solicitado em 31/10/2026; falha reproduzida pelo relato do usuário na v0.1.3._
 
-**Diagnóstico técnico:** `StationDialog` em `ui/Screens.kt` já contém a ação
-`TextButton(onClick = onMessage)` com rótulo **"Mensagem"**, e `App.kt`
-já direciona `onMessage` a `chatWith = call; tab = Tab.MESSAGES`.
-A `Conversation` existente endereça o envio a `contact`. Portanto,
-**não é uma capacidade de transmissão inexistente**: a falha relatada é
-de **descoberta, apresentação e acessibilidade do comando**, possivelmente
-causada por vários botões concorrendo por espaço no `AlertDialog`.
+**Falha funcional observada em aparelho real:** após selecionar uma estação
+na aba **Estações** e abrir seus detalhes, **não é possível enviar
+uma mensagem àquela estação**. Tratar como **defeito prioritário P1 de
+fluxo de interação**, e não apenas como sugestão estética. Ainda não há
+reprodução instrumentada nem causa-raiz comprovada.
 
-**Ajustes necessários:**
+**Evidência de código:** `StationDialog()` em `ui/Screens.kt` possui
+`TextButton(onClick = onMessage)` com rótulo `Mensagem`, no mesmo
+`Row` horizontal de Favoritos e Seguir, e o `AlertDialog` inclui
+também outros botões de Navegar/Fechar. `App.kt` passa o callback que
+define `selectedStation = null; chatWith = call; tab = Tab.MESSAGES`.
+O compositor de `Conversation()` usa `contact` para endereçar a
+mensagem. **Esse encadeamento nominal no código não comprova
+funcionamento no aparelho:** investigar visibilidade/corte do botão,
+comportamento do AlertDialog/Row, eventos de toque, navegação e
+estado da conversa; não afirmar que o problema foi corrigido sem teste.
 
-- No popup de detalhes aberto a partir de **Estações** ou do **mapa**, incluir
-  botão primário, destacado e inequivocamente visível **"Enviar mensagem"**,
-  com ícone de mensagem (por exemplo, balão). Preferir linha de ação com
-  largura útil ou área de ações organizada verticalmente; não comprimir a
-  ação em uma linha de cinco botões.
-- Ao tocar, fechar o popup e abrir diretamente **Mensagens → conversa privada**
-  com o **indicativo completo, inclusive SSID**, da estação selecionada já
-  preenchido como destinatário. Permitir digitar e enviar usando o fluxo
-  APRS existente; preservar o histórico com aquela estação.
-- A simples abertura da conversa **não pode enviar automaticamente** nenhum
-  pacote por RF ou APRS-IS. O TX só deve acontecer quando o usuário tocar
-  em Enviar, observando configuração, conexão e restrições de transmissão.
-- Não confundir com **CQ**, boletins ou mensagens gerais; o destino da
-  mensagem deve ser a estação selecionada, nunca o próprio indicativo.
-- **Teste de aceitação (T17):** selecionar estação na aba Estações e no mapa,
-  abrir detalhes, conferir botão em aparelho pequeno e grande (inclusive
-  fontes ampliadas), tocar e verificar destinatário exato e histórico;
-  testar indicativos com e sem SSID, cancelar/voltar e abrir nova estação,
-  certificar que nada foi transmitido antes de Enviar e comprovar envio via
-  APRS-IS/TNC quando configurados e autorizados. Conferir todos os idiomas.
-- **Status:** item aberto para correção de interface e homologação em
-  celular. Não considerar resolvido apenas porque o callback já existe.
+**Correção exigida:**
+
+- Em **Estações → selecionar uma estação → detalhes**, oferecer uma
+  ação primária **Enviar mensagem**, destacada, com ícone e área de
+  toque adequada, totalmente visível mesmo em tela pequena, zoom
+  de fonte e orientações diferentes. Não posicionar junto a botões
+  que possam comprimi-la ou ocultá-la. Repetir o comportamento a
+  partir de **Mapa → estação → detalhes**.
+- Tocar no botão deve fechar os detalhes e abrir **Mensagens →
+  conversa privada** com `chatWith` igual ao **indicativo exato
+  selecionado, incluindo SSID**. Apresentar destinatário no cabeçalho,
+  histórico correto e campo de digitação + botão **Enviar** realmente
+  utilizáveis. Não abrir CQ nem boletins; não alterar o destinatário.
+- O simples toque em Enviar mensagem (nos detalhes) **não transmite
+  nada**. Somente o botão Enviar do compositor, mediante ação
+  explícita, usa o fluxo de APRS-IS ou TNC/RF permitido. Distinguir
+  falhas de interface de falhas de transporte, permissões ou de
+  conexão; quando o envio não for possível, mostrar uma indicação
+  compreensível do motivo, sem falsa confirmação de entrega.
+- **T17 (obrigatório):** testar com indicativos reais e simulados,
+  incluindo SSIDs distintos, via aba Estações e via Mapa, em
+  aparelho pequeno e com fontes ampliadas. Confirmar que o botão
+  é visível, abre a conversa correta e permite digitar/enviar
+  quando a conexão APRS-IS/TNC está verificada e TX autorizado.
+  Verificar envio no log TX e recepção por estação independente,
+  quando viável; conferir offline/desconectado, somente RX,
+  retorno/fechamento do diálogo, múltiplas estações consecutivas
+  e ausência de TX antes do toque em Enviar. Registrar evidência
+  visual e de tráfego.
+- **Status:** FALHA FUNCIONAL ABERTA, P1, ainda não corrigida,
+  não homologada e sem novo APK. Não baixar pelo mero fato de existir
+  `onMessage` no código.
 
 ### 20. Mensagens: pressão prolongada — responder à mensagem ou diretamente ao remetente
 _Solicitado em 31/10/2026; detalhado novamente pelo usuário na v0.1.3._
