@@ -142,4 +142,10 @@
     <string name="follow_paused">Suivi en pause — touchez pour reprendre</string>
     <string name="favorites_only">Favoris uniquement</string>
     <string name="favorite_alert">La station favorite %1$s émet à nouveau</string>
+    <string name="track_record">Enregistrer le trajet quand le traceur est actif</string>
+    <string name="track_clear">Effacer le trajet</string>
+    <string name="track_line">Ligne du trajet</string>
+    <string name="track_solid">Continue</string>
+    <string name="track_dashed">Pointillée</string>
+    <string name="track_points">Points du trajet : %1$d</string>
 </resources>
