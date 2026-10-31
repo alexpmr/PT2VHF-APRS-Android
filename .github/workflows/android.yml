@@ -53,7 +53,17 @@ jobs:
           test -n "$ANDROID_KEYSTORE_BASE64" || { echo "::error::Segredo ANDROID_KEYSTORE_BASE64 ausente"; exit 1; }
           test -n "$ANDROID_KEYSTORE_PASSWORD" || { echo "::error::Segredo ANDROID_KEYSTORE_PASSWORD ausente"; exit 1; }
           test -n "$ANDROID_KEY_ALIAS" || { echo "::error::Segredo ANDROID_KEY_ALIAS ausente"; exit 1; }
-          echo "$ANDROID_KEYSTORE_BASE64" | tr -d '\r\n ' | base64 -d > "$RUNNER_TEMP/release.jks"
+          # Tolerante a espaços, quebras de linha e BOM do Windows; diagnostica sem mostrar o conteúdo.
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | LC_ALL=C tr -cd 'A-Za-z0-9+/=' > "$RUNNER_TEMP/keystore.b64"
+          len=$(wc -c < "$RUNNER_TEMP/keystore.b64")
+          raw=$(printf '%s' "$ANDROID_KEYSTORE_BASE64" | wc -c)
+          echo "Segredo ANDROID_KEYSTORE_BASE64: $raw caracteres; $len válidos em base64; resto da divisão por 4: $((len % 4))"
+          if [ $((len % 4)) -ne 0 ] || [ "$len" -lt 1000 ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 parece incompleto ($len caracteres base64; esperado múltiplo de 4 e alguns milhares). Copie o arquivo .b64 inteiro de novo."
+            exit 1
+          fi
+          base64 -d "$RUNNER_TEMP/keystore.b64" > "$RUNNER_TEMP/release.jks"
+          rm -f "$RUNNER_TEMP/keystore.b64"
           export ANDROID_KEYSTORE_FILE="$RUNNER_TEMP/release.jks"
           ./gradlew --no-daemon assembleRelease
           version=$(grep -oP 'val appVersionName = "\K[^"]+' app/build.gradle.kts)
