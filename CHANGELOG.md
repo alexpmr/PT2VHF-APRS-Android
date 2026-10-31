@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.5 — 2026-10-31
+
+- Botão Enviar mensagem com área própria nos detalhes da estação (Mapa ou Estações).
+- Mensagens privadas/Geral em ordem cronológica; lista de conversas mais recentes primeiro por padrão.
+- Balões de mensagens responsivos, sem limite fixo de 300 dp, com alinhamento preservado.
+- Interface compacta ao abrir o teclado: cabeçalho e navegação inferior recolhidos e filtro ocultado sem perda de pesquisa.
+- Quando não houver rota TX APRS-IS/TNC autorizada e conectada, preservar rascunho e informar o motivo antes de tentar enviar.
+- Rastreador ativado por padrão após configuração/consentimento informado, com opção nas Configurações e persistência do desligamento manual.
+- Contabilizar beacons como enviados somente quando transmitidos a algum meio.
+- Os demais itens do backlog continuam abertos; transmissão real e interação física precisam de homologação.
+
 ## 0.1.4 — 2026-10-31
 
 - O comentário transmitido nos beacons de posição inclui sempre
