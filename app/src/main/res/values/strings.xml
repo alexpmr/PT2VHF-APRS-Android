@@ -202,4 +202,13 @@
     <string name="tx_aprs_unavailable">APRS-IS is disconnected. Reconnect before sending.</string>
     <string name="tx_send_failed">Transmission failed despite an authorized route. Check the connection and try again; your text was preserved.</string>
     <string name="tx_dispatch_failed">Could not start the messaging service. Your text was preserved.</string>
+    <string name="local_data_section">Local data</string>
+    <string name="clear_all_stations">Delete all stations</string>
+    <string name="clear_all_messages">Delete all messages</string>
+    <string name="clear_stations_confirmation">Delete every locally stored station and its RF links? Your GPS track, favorite callsigns and settings will remain. New stations can appear again as packets arrive. This cannot be undone.</string>
+    <string name="clear_messages_confirmation">Delete all private messages, CQ messages, bulletins and pending message history? Any pending retries will be cancelled. Settings and stations will remain. This cannot be undone.</string>
+    <string name="clear_local_data_busy">Deleting local data…</string>
+    <string name="clear_local_data_success">Local data deleted successfully.</string>
+    <string name="clear_local_data_error">Unable to delete the local data completely. Check storage and try again.</string>
+    <string name="clear_data_confirm">Delete</string>
 </resources>
