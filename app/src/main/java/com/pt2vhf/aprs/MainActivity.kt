@@ -25,7 +25,7 @@ class MainActivity : ComponentActivity() {
         AprsRepository.init(this)
         requestPermissions()
         if (Settings.load(this).configured) AprsService.send(this, AprsService.ACTION_RELOAD)
-        setContent { App() }
+        setContent { App(onExit = { finish() }) }
     }
 
     fun requestPermissions() {
