@@ -142,4 +142,10 @@
     <string name="follow_paused">Follow paused — tap to resume</string>
     <string name="favorites_only">Favorites only</string>
     <string name="favorite_alert">Favorite station %1$s heard again</string>
+    <string name="track_record">Record track while tracker is active</string>
+    <string name="track_clear">Clear track</string>
+    <string name="track_line">Track line</string>
+    <string name="track_solid">Solid</string>
+    <string name="track_dashed">Dashed</string>
+    <string name="track_points">Track points: %1$d</string>
 </resources>
