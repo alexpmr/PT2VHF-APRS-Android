@@ -267,7 +267,7 @@ fun MessagesScreen(settings: Settings, chatWith: String?, onOpenChat: (String?) 
     }
     val messages by AprsRepository.messages.collectAsState()
     val context = LocalContext.current
-    var filter by rememberSaveable { mutableStateOf("") }
+    var filter by rememberSaveable { mutableStateOf(Settings.readOption(context, "messages_filter", "")) }
     var newestFirst by rememberSaveable {
         mutableStateOf(Settings.readOption(context, "messages_order", "newest") == "newest")
     }
@@ -277,7 +277,7 @@ fun MessagesScreen(settings: Settings, chatWith: String?, onOpenChat: (String?) 
     Column(Modifier.fillMaxSize()) {
         if (!keyboardVisible) Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            OutlinedTextField(filter, { filter = it }, placeholder = {
+            OutlinedTextField(filter, { filter = it; Settings.saveOption(context, "messages_filter", it) }, placeholder = {
                 Text(UiText.text(R.string.messages_filter), fontSize = 12.sp, maxLines = 1)
             }, modifier = Modifier.weight(1f).height(48.dp), singleLine = true)
             Box {
@@ -515,7 +515,7 @@ fun StationsScreen(onStation: (String) -> Unit) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             OutlinedTextField(query, { query = it; Settings.saveOption(context, "station_search", it) },
-                placeholder = { Text(UiText.text(R.string.search_callsign), fontSize = 12.sp, maxLines = 1) },
+                placeholder = { Text(UiText.text(R.string.search_callsign_short), fontSize = 12.sp, maxLines = 1) },
                 singleLine = true, modifier = Modifier.weight(1f).height(48.dp))
             TextButton(onClick = { filterOpen = true }) {
                 Text("☷" + if (activeFilters) " ●" else "", fontSize = 20.sp)
