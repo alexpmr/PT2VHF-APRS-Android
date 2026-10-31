@@ -211,4 +211,6 @@
     <string name="clear_local_data_success">Dados locais apagados com sucesso.</string>
     <string name="clear_local_data_error">Não foi possível apagar completamente os dados locais. Verifique o armazenamento e tente novamente.</string>
     <string name="clear_data_confirm">Apagar</string>
+    <string name="beacon_sending">Enviando…</string>
+    <string name="beacon_failed">Falha no envio</string>
 </resources>
