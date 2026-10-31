@@ -186,4 +186,10 @@
     <string name="station_distance_max">Max. distance (km)</string>
     <string name="station_filter_apply">Apply</string>
     <string name="station_filter_clear">Clear filters</string>
+    <string name="exit_confirm_title">Exit PT2VHF APRS Client?</string>
+    <string name="exit_confirm_body">Close the app and stop its connections?</string>
+    <string name="exit_tracker_active">Tracker is active. Choose whether to keep it running in the background or stop it.</string>
+    <string name="exit_app">Exit</string>
+    <string name="exit_stop_tracker">Exit and stop tracker</string>
+    <string name="exit_keep_tracker">Exit; keep tracker running</string>
 </resources>
