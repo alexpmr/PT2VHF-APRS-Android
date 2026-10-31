@@ -5,6 +5,7 @@ import android.bluetooth.BluetoothManager
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,6 +17,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
@@ -30,6 +33,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
@@ -45,6 +49,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -52,6 +57,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.painter.BitmapPainter
+import android.graphics.drawable.BitmapDrawable
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -85,6 +94,7 @@ import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
 import java.util.Date
 import java.util.UUID
+import kotlinx.coroutines.launch
 import com.pt2vhf.aprs.data.OutboundSendResult
 
 private fun ago(t: Long): String {
@@ -257,15 +267,26 @@ fun MessagesScreen(settings: Settings, chatWith: String?, onOpenChat: (String?) 
         mutableStateOf(Settings.readOption(context, "messages_order", "newest") == "newest")
     }
     var tab by rememberSaveable { mutableStateOf(0) }
+    var sortMenuOpen by remember { mutableStateOf(false) }
     val keyboardVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     Column(Modifier.fillMaxSize()) {
-        if (!keyboardVisible) Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(filter, { filter = it }, label = { Text(UiText.text(R.string.messages_filter)) },
-                modifier = Modifier.weight(1f), singleLine = true)
-            TextButton(onClick = {
-                newestFirst = !newestFirst
-                Settings.saveOption(context, "messages_order", if (newestFirst) "newest" else "oldest")
-            }) { Text(UiText.text(if (newestFirst) R.string.sort_newest else R.string.sort_oldest)) }
+        if (!keyboardVisible) Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            OutlinedTextField(filter, { filter = it }, placeholder = {
+                Text(UiText.text(R.string.messages_filter), fontSize = 12.sp, maxLines = 1)
+            }, modifier = Modifier.weight(1f).heightIn(min = 48.dp), singleLine = true)
+            Box {
+                TextButton(onClick = { sortMenuOpen = true }) { Text("☷", fontSize = 22.sp) }
+                DropdownMenu(expanded = sortMenuOpen, onDismissRequest = { sortMenuOpen = false }) {
+                    listOf(true to R.string.sort_newest, false to R.string.sort_oldest).forEach { (value, label) ->
+                        DropdownMenuItem(text = { Text(UiText.text(label)) }, onClick = {
+                            newestFirst = value
+                            Settings.saveOption(context, "messages_order", if (value) "newest" else "oldest")
+                            sortMenuOpen = false
+                        })
+                    }
+                }
+            }
         }
         TabRow(selectedTabIndex = tab, containerColor = Pal.bar, contentColor = Pal.accent) {
             listOf(UiText.text(R.string.chats), UiText.text(R.string.general), UiText.text(R.string.bulletins)).forEachIndexed { i, label ->
@@ -486,12 +507,13 @@ fun StationsScreen(onStation: (String) -> Unit) {
         ).forEach { (key, value) -> Settings.saveOption(context, key, value) }
     }
     Column(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(query, { query = it }, label = { Text(UiText.text(R.string.search_callsign)) },
-                singleLine = true, modifier = Modifier.weight(1f))
+        Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            OutlinedTextField(query, { query = it; Settings.saveOption(context, "station_search", it) },
+                placeholder = { Text(UiText.text(R.string.search_callsign), fontSize = 12.sp, maxLines = 1) },
+                singleLine = true, modifier = Modifier.weight(1f).heightIn(min = 48.dp))
             TextButton(onClick = { filterOpen = true }) {
-                Text("☷ " + UiText.text(R.string.station_filter_action) + if (activeFilters) " ●" else "")
+                Text("☷" + if (activeFilters) " ●" else "", fontSize = 20.sp)
             }
         }
         Text(UiText.text(R.string.station_showing, list.size, stations.size),
@@ -499,16 +521,26 @@ fun StationsScreen(onStation: (String) -> Unit) {
         if (list.isEmpty()) Empty(UiText.text(R.string.no_stations))
         LazyColumn {
             items(list, key = { it.call }) { station ->
-                Row(Modifier.fillMaxWidth().clickable { onStation(station.call) }.padding(16.dp, 10.dp),
+                Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { onStation(station.call) }
+                    .padding(horizontal = 10.dp, vertical = 2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(station.call + if (station.call in favorites) " ★" else "", fontWeight = FontWeight.Bold)
-                        Text(UiText.role(station.role) + " · " + station.medium.label + " · " + ago(station.lastHeard),
-                            color = Pal.muted, fontSize = 12.sp)
+                    val drawable = remember(station.symbolTable, station.symbol) {
+                        AprsSymbolIcons.icon(context, station.symbolTable, station.symbol) as? BitmapDrawable
                     }
-                    if (status.lat != null && status.lon != null)
-                        Text("%.1f km".format(haversineKm(status.lat!!, status.lon!!,
-                            station.lat, station.lon)), color = Pal.muted)
+                    if (drawable != null) {
+                        Image(painter = BitmapPainter(drawable.bitmap.asImageBitmap()),
+                            contentDescription = UiText.role(station.role), modifier = Modifier.size(26.dp))
+                    } else {
+                        Text("•", color = Pal.accent, fontSize = 20.sp)
+                    }
+                    Text(station.call, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                    if (station.call in favorites) Text("★", color = Pal.yellow, fontSize = 15.sp)
+                    Text(ago(station.lastHeard), fontSize = 11.sp, color = Pal.muted, maxLines = 1)
+                    Text(if (status.lat != null && status.lon != null)
+                        "%.1f km".format(haversineKm(status.lat!!, status.lon!!, station.lat, station.lon))
+                        else "—", color = Pal.muted, fontSize = 11.sp, maxLines = 1)
                 }
             }
         }
@@ -817,6 +849,10 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
     var expanded by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf("") }
     var confirmEmptyFilter by remember { mutableStateOf(false) }
+    var clearTarget by remember { mutableStateOf<Int?>(null) }
+    var clearBusy by remember { mutableStateOf(false) }
+    var clearResult by remember { mutableStateOf<String?>(null) }
+    val clearScope = rememberCoroutineScope()
 
     val base = call.trim().uppercase().substringBefore('-')
     val passcode = if (base.isNotEmpty()) com.pt2vhf.aprs.core.aprsPasscode(base).toString() else "—"
@@ -922,6 +958,17 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
                             modifier = Modifier.fillMaxWidth())
                     }
                 }
+                Text(UiText.text(R.string.local_data_section), color = Pal.muted, fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold)
+                OutlinedButton(onClick = { clearTarget = 1; clearResult = null },
+                    enabled = !clearBusy, modifier = Modifier.fillMaxWidth()) {
+                    Text(UiText.text(R.string.clear_all_stations), color = Pal.orange)
+                }
+                OutlinedButton(onClick = { clearTarget = 2; clearResult = null },
+                    enabled = !clearBusy, modifier = Modifier.fillMaxWidth()) {
+                    Text(UiText.text(R.string.clear_all_messages), color = Pal.orange)
+                }
+                clearResult?.let { Text(it, color = Pal.muted, fontSize = 13.sp) }
                 if (error.isNotEmpty()) Text(error, color = Pal.orange, fontSize = 13.sp)
             }
         },
@@ -934,4 +981,39 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
         },
         dismissButton = { if (current.configured) TextButton(onClick = onDismiss) { Text(UiText.text(R.string.cancel)) } },
     )
+    clearTarget?.let { target ->
+        AlertDialog(
+            onDismissRequest = { if (!clearBusy) clearTarget = null },
+            containerColor = Pal.bar,
+            title = { Text(UiText.text(if (target == 1) R.string.clear_all_stations else R.string.clear_all_messages)) },
+            text = { Text(UiText.text(when {
+                clearBusy -> R.string.clear_local_data_busy
+                target == 1 -> R.string.clear_stations_confirmation
+                else -> R.string.clear_messages_confirmation
+            })) },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (!clearBusy) {
+                        clearBusy = true
+                        clearScope.launch {
+                            val succeeded = try {
+                                if (target == 1) AprsRepository.clearStations() else AprsRepository.clearMessages()
+                            } catch (_: Exception) { false }
+                            clearBusy = false
+                            clearTarget = null
+                            clearResult = UiText.text(if (succeeded) R.string.clear_local_data_success
+                                else R.string.clear_local_data_error)
+                        }
+                    }
+                }, enabled = !clearBusy) {
+                    Text(UiText.text(R.string.clear_data_confirm), color = Pal.orange)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { clearTarget = null }, enabled = !clearBusy) {
+                    Text(UiText.text(R.string.cancel))
+                }
+            },
+        )
+    }
 }
