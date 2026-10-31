@@ -196,4 +196,13 @@
     <string name="tracker_auto_start">Start tracking automatically</string>
     <string name="tracker_auto_start_notice">When enabled, transmit your position through authorized APRS links after a GPS fix. You can stop tracking at any time.</string>
     <string name="tx_route_unavailable">No authorized transmission route. Check APRS-IS TX, RF/TNC and connection in Settings.</string>
+    <string name="local_data_section">Local data</string>
+    <string name="clear_all_stations">Delete all stations</string>
+    <string name="clear_all_messages">Delete all messages</string>
+    <string name="clear_stations_confirmation">Delete every locally stored station and its RF links? Your GPS track, favorite callsigns and settings will remain. New stations can appear again as packets arrive. This cannot be undone.</string>
+    <string name="clear_messages_confirmation">Delete all private messages, CQ messages, bulletins and pending message history? Any pending retries will be cancelled. Settings and stations will remain. This cannot be undone.</string>
+    <string name="clear_local_data_busy">Deleting local data…</string>
+    <string name="clear_local_data_success">Local data deleted successfully.</string>
+    <string name="clear_local_data_error">Unable to delete the local data completely. Check storage and try again.</string>
+    <string name="clear_data_confirm">Delete</string>
 </resources>
