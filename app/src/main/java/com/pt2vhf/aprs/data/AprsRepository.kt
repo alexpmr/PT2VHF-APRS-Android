@@ -65,6 +65,8 @@ data class ChatMessage(
 
 /** Result of an explicit send request; a socket write is not an APRS message ACK. */
 data class OutboundSendResult(val requestId: String, val submitted: Boolean, val reason: String = "")
+data class OutboundBeaconResult(val requestId: String, val submitted: Boolean)
+
 
 data class LinkStatus(
     val aprsIsConnected: Boolean = false,
@@ -123,6 +125,14 @@ object AprsRepository {
 
     fun reportSendResult(result: OutboundSendResult) {
         _sendResults.update { (it + (result.requestId to result)).entries.toList().takeLast(64).associate { e -> e.key to e.value } }
+    }
+
+    private val _beaconResults = MutableStateFlow<Map<String, OutboundBeaconResult>>(emptyMap())
+    val beaconResults: StateFlow<Map<String, OutboundBeaconResult>> = _beaconResults.asStateFlow()
+    fun reportBeaconResult(result: OutboundBeaconResult) {
+        _beaconResults.update {
+            (it + (result.requestId to result)).entries.toList().takeLast(32).associate { e -> e.key to e.value }
+        }
     }
 
     private var nextId = System.currentTimeMillis()
