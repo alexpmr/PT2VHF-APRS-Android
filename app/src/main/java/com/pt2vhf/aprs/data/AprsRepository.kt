@@ -81,6 +81,12 @@ data class LinkStatus(
 
 /** Estado do app compartilhado entre o serviço e a interface. */
 object AprsRepository {
+    private val _favorites = MutableStateFlow<Set<String>>(emptySet())
+    val favorites: StateFlow<Set<String>> = _favorites.asStateFlow()
+    private val _followCall = MutableStateFlow<String?>(null)
+    val followCall: StateFlow<String?> = _followCall.asStateFlow()
+    private var preferences: android.content.SharedPreferences? = null
+
     private val _stations = MutableStateFlow<Map<String, Station>>(emptyMap())
     val stations: StateFlow<Map<String, Station>> = _stations.asStateFlow()
 
@@ -104,6 +110,8 @@ object AprsRepository {
 
     @Synchronized fun init(context: Context) {
         if (file != null) return
+        preferences = context.applicationContext.getSharedPreferences("pt2vhf_aprs", Context.MODE_PRIVATE)
+        _favorites.value = preferences?.getStringSet("favorite_stations", emptySet())?.toSet().orEmpty()
         file = File(context.filesDir, "messages.json")
         stationStore = StationStore(context.applicationContext)
         runCatching { load() }
@@ -129,6 +137,13 @@ object AprsRepository {
             }
         }
     }
+
+    fun toggleFavorite(call: String) {
+        _favorites.update { current -> if (call in current) current - call else current + call }
+        preferences?.edit()?.putStringSet("favorite_stations", _favorites.value.toSet())?.apply()
+    }
+
+    fun followStation(call: String?) { _followCall.value = call }
 
     fun updateStatus(change: (LinkStatus) -> LinkStatus) = _status.update(change)
 
