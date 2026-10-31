@@ -44,3 +44,11 @@ _Registrado em 31/10/2026._
   ouvidas direto ou via digi pelo TNC.
 - Destacar esses enlaces no mapa com cor própria e opção de exibir só os meus; listar também (estação, via
   direto/digi, quantidade, última vez, distância), como referência para alcance e recordes RF.
+
+### 5. Tracklog (trajeto) com estilo configurável
+_Registrado em 31/10/2026._
+
+- Gravar o tracklog da minha posição (inclusive com o modo tracker em segundo plano) e desenhá-lo no mapa como linha.
+- Na aba Configurações, permitir configurar o estilo da linha: espessura, cor, opacidade, tipo (contínua/tracejada)
+  e por quanto tempo manter o trajeto. Incluir ligar/desligar a gravação e limpar o tracklog.
+- Avaliar exportar o trajeto (GPX) e mostrar o trajeto das outras estações móveis com o mesmo estilo ou estilo próprio.
