@@ -13,7 +13,7 @@ Itens registrados para as próximas versões. Não implementar até o pedido de 
 
 Aprovada a implementação integral, mas **não confundir código no PR com funcionalidade homologada**.
 A release **v0.1.3** foi gerada e assinada no GitHub ([tag v0.1.3](../../releases/tag/v0.1.3)) e disponibilizada no site.
-O backlog permanece parcialmente implementado, com homologação física pendente. Não afirmar que os 29 itens foram concluídos. Os critérios, roteiros e evidências ficam no
+O backlog permanece parcialmente implementado, com homologação física pendente. Não afirmar que os 30 itens foram concluídos. Os critérios, roteiros e evidências ficam no
 [HOMOLOGACAO.md](HOMOLOGACAO.md).
 
 | Item | Estado atual | Evidência necessária para baixa |
@@ -47,6 +47,7 @@ O backlog permanece parcialmente implementado, com homologação física pendent
 | 27 | **P2, v0.1.4** — mensagens CQ exibem caracteres estranhos | Inspecionar bytes APRS-IS/RF, reconhecer texto UTF-8 válido e texto Latin-1/CP1252 ou binário sem inventar caracteres; prévia legível e testes de regressão |
 | 28 | **P2, v0.1.4** — tela de mensagens fica espremida ao digitar | Compositor fixo acima do teclado, barra superior compacta, filtros recolhíveis, navegação inferior adaptável, histórico rolável, Enviar acessível em telas pequenas |
 | 29 | **P1, v0.1.4** — incluir `www.PT2VHF.com` no texto de Informação transmitido/exibido das estações PT2VHF | Preservar comentário útil e acrescentar domínio canônico sem duplicá-lo; validar no beacon bruto e no receptor; não adulterar informações recebidas de terceiros |
+| 30 | **Pendente — v0.1.4**: rastreador está desligado a cada inicialização, embora o padrão de beacon seja SmartBeaconing | Ativar tracker automaticamente por padrão **após configuração/autorização**, persistir escolha manual de desligar, respeitar GPS/TX/privacidade e estado do serviço; testar reinício e background |
 
 
 **Baixa definitiva:** marcar `Concluído` somente após CI aprovado,
@@ -1089,6 +1090,77 @@ Exemplo desejado: `PT2VHF APRS Client www.PT2VHF.com`.
   outras estações.
 - **Status:** item aberto para homologação e eventual correção
   da exibição; não declarar concluído apenas pelo código.
+
+### 30. Rastreador: iniciar ativado por padrão
+_Solicitado em 31/10/2026: "Backlog: iniciar o rastreamento ligado por default"._
+
+**Diagnóstico no código v0.1.4:**
+- `data/Settings.kt` já usa `beaconMode = "smart"` como modo de beacon
+  padrão; isso **não ativa o tracker**. O estado
+  `LinkStatus.trackerOn` em `data/AprsRepository.kt` inicia
+  **false** e não é persistido.
+- `AprsService.onCreate()` inicia conexão/GPS, mas não restaura
+  `trackerOn`. Apenas `ACTION_TRACKER_ON` marca true; em
+  `ACTION_TRACKER_OFF` ele volta a false. Reiniciar o processo
+  desliga o rastreador mesmo após ativação manual.
+
+**Comportamento exigido:**
+
+- O estado inicial desejado do tracker é **LIGADO** nas instalações
+  já configuradas e autorizadas, **sem necessidade de tocar em
+  "Iniciar rastreamento" a cada abertura**. Com beacon em modo
+  `smart` (padrão), o rastreamento seguirá as regras de
+  SmartBeaconing; preservar modos periódico/manual configurados.
+- Persistir uma preferência de operação **`tracker_enabled`**,
+  com padrão verdadeiro **apenas depois de concluída a configuração
+  e a autorização explícita da transmissão de posição**.
+  Um usuário que desligar manualmente deve continuar com o
+  rastreador **desligado após fechar, reabrir, reiniciar o
+  serviço ou o celular**, até ativá-lo novamente. Não sobrescrever
+  `OFF` explícito com o valor padrão.
+- **Privacidade e primeiro uso:** não transmitir coordenadas
+  automaticamente antes de indicativo válido, consentimento
+  informado para compartilhar localização, permissões de GPS
+  relevantes e ao menos um canal TX permitido e apto. Mostrar
+  indicador claro **Rastreador ligado / aguardando posição ou
+  conexão / desligado**, diferenciando seguir localização
+  local de transmitir beacons em APRS-IS/RF. A permissão
+  de localização Android, isoladamente, não equivale a autorização
+  para publicar localização na rede APRS.
+- A ativação/restauração deve acontecer em **um ponto único do
+  ciclo de vida do serviço**, de forma idempotente, sem gerar
+  beacons duplicados ou TX extra por recriação de Activity,
+  reconexão, notificação, rotação da tela ou mudança de aba.
+  Respeitar o intervalo configurado e o primeiro fix GPS válido.
+  Sem GPS ou conexão, continuar em estado aguardando, sem
+  anunciar coordenadas antigas como atuais.
+- No botão **Parar rastreamento** e na saída do aplicativo
+  (item #16), persistir corretamente o estado e respeitar
+  **"Sair e interromper"** versus **"Sair e manter em
+  segundo plano"**. Reinício do dispositivo: seguir as
+  regras Android sobre inicialização de foreground services,
+  permissões e notificação persistente; não prometer
+  autoarranque após boot se a plataforma o proibir.
+- Não confundir esta opção com o ajuste existente
+  `tracklog_enabled`, que apenas habilita o **registro do
+  percurso**: o usuário pode gravar tracklog sem transmitir,
+  e a política de localização/controle de TX deve continuar
+  explícita.
+- **T30 — Teste de aceite:** em instalação nova ainda não
+  configurada, validar ausência de transmissão; concluir
+  setup/consentimento e verificar tracker inicial ligado,
+  posicionamento e primeiro beacon respeitando regras.
+  Em instalação previamente autorizada sem preferência
+  explícita, testar o padrão ligado; desligar manualmente,
+  fechar/reabrir aplicativo e serviço, reiniciar aparelho e
+  verificar permanência de OFF. Reativar e confirmar retorno.
+  Testar GPS desligado, permissão negada, APRS-IS
+  desconectado, RF/TNC desligado, TX desabilitado, modo
+  manual/periódico/SmartBeaconing, segundo plano, rotação
+  e encerramento com/sem continuidade. Confirmar sem
+  beacons em duplicidade e sem transmissão não autorizada.
+- **Status:** registrado no backlog, **não implementado e
+  não homologado** nesta solicitação. Nenhum APK novo gerado.
 
 ## Consolidação das sugestões aprovadas com itens já existentes
 
