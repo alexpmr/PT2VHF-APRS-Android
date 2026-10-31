@@ -60,6 +60,9 @@ data class ChatMessage(
     val kind: AprsMessage.Kind = AprsMessage.Kind.MESSAGE,
 )
 
+/** Result of an explicit send request; a socket write is not an APRS message ACK. */
+data class OutboundSendResult(val requestId: String, val submitted: Boolean, val reason: String = "")
+
 data class LinkStatus(
     val aprsIsConnected: Boolean = false,
     val aprsIsVerified: Boolean = false,
@@ -110,6 +113,14 @@ object AprsRepository {
 
     private val _monitor = MutableStateFlow<List<String>>(emptyList())
     val monitor: StateFlow<List<String>> = _monitor.asStateFlow()
+
+    // Keep results per request so rapid navigation or two compositors cannot lose an acknowledgement.
+    private val _sendResults = MutableStateFlow<Map<String, OutboundSendResult>>(emptyMap())
+    val sendResults: StateFlow<Map<String, OutboundSendResult>> = _sendResults.asStateFlow()
+
+    fun reportSendResult(result: OutboundSendResult) {
+        _sendResults.update { (it + (result.requestId to result)).entries.takeLast(64).associate { e -> e.key to e.value } }
+    }
 
     private var nextId = System.currentTimeMillis()
     private var file: File? = null
