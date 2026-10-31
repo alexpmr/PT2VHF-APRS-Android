@@ -90,7 +90,14 @@ class AprsService : Service(), LocationListener {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_RELOAD -> { settings = Settings.load(this); connectAprsIs() }
+            ACTION_RELOAD -> {
+                settings = Settings.load(this)
+                if (settings.connectAprsIs) connectAprsIs() else {
+                    aprsIs.stop()
+                    AprsRepository.updateStatus { it.copy(aprsIsConnected = false, aprsIsVerified = false, aprsIsError = "") }
+                }
+                refreshNotification()
+            }
             ACTION_BEACON -> sendBeacon()
             ACTION_TRACKER_ON -> { AprsRepository.updateStatus { it.copy(trackerOn = true) }; sendBeacon() }
             ACTION_TRACKER_OFF -> AprsRepository.updateStatus { it.copy(trackerOn = false, nextBeaconSec = null) }
@@ -121,7 +128,7 @@ class AprsService : Service(), LocationListener {
     }
 
     private fun connectAprsIs() {
-        if (!settings.configured) return
+        if (!settings.configured || !settings.connectAprsIs) return
         val s = AprsRepository.status.value
         aprsIs.start(settings.server, settings.port, settings.fullCall, settings.passcode,
             expandFilter(settings.filter, s.lat, s.lon))
@@ -139,7 +146,7 @@ class AprsService : Service(), LocationListener {
         val cm = getSystemService(ConnectivityManager::class.java) ?: return
         val cb = object : ConnectivityManager.NetworkCallback() {
             // Wi-Fi ↔ dados móveis: reconecta em vez de esperar o timeout do socket antigo.
-            override fun onAvailable(network: Network) { handler.postDelayed({ aprsIs.reconnectNow() }, 1500) }
+            override fun onAvailable(network: Network) { handler.postDelayed({ if (settings.connectAprsIs) aprsIs.reconnectNow() }, 1500) }
         }
         runCatching { cm.registerDefaultNetworkCallback(cb) }
         networkCallback = cb
@@ -162,7 +169,8 @@ class AprsService : Service(), LocationListener {
         val speed = if (location.hasSpeed()) location.speed * 3.6 else 0.0
         AprsRepository.updateStatus {
             it.copy(lat = location.latitude, lon = location.longitude, gpsAccuracyM = location.accuracy,
-                speedKmh = speed, course = if (location.hasBearing()) location.bearing.toInt() else it.course)
+                speedKmh = speed, gpsFixTimeMs = System.currentTimeMillis(),
+                course = if (location.hasBearing()) location.bearing.toInt() else it.course)
         }
         if (firstFix && settings.filter.contains("r/")) connectAprsIs()  // filtro r/4000 precisa da posição
         checkTracker()
@@ -181,6 +189,10 @@ class AprsService : Service(), LocationListener {
 
     private val ticker = object : Runnable {
         override fun run() {
+            AprsRepository.updateStatus { state ->
+                if (state.gpsFixTimeMs > 0 && System.currentTimeMillis() - state.gpsFixTimeMs > 120_000L)
+                    state.copy(gpsAccuracyM = null) else state
+            }
             checkTracker()
             handler.postDelayed(this, 5000)
         }
