@@ -121,4 +121,6 @@
     <string name="server_eu">Europa y África</string>
     <string name="server_asia">Asia</string>
     <string name="server_oceania">Oceanía</string>
+    <string name="retry_ack">Esperando ACK (intento %1$d)</string>
+    <string name="not_sent">no enviado</string>
 </resources>
