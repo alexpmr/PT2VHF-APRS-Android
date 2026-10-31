@@ -176,3 +176,135 @@ _Registrado em 31/10/2026 (solicitação: conectar ao APRS-IS por padrão e perm
   reativação e troca de redes; indicador do cabeçalho coerente com item 8.
 - **Escopo:** somente registro no backlog; sem alteração funcional nem release
   até solicitação explícita de uma nova versão.
+
+### 10. Perfis de operação APRS: Base, Móvel, Portátil e Somente recepção
+_Aprovado em 31/10/2026 após comparação funcional com o APRSdroid._
+
+- Disponibilizar perfis nomeáveis, selecionáveis rapidamente, incluindo predefinições Base,
+  Móvel, Portátil e Somente recepção. Cada perfil conserva indicativo/SSID, símbolo APRS,
+  comentário, frequência de voz quando pertinente, path RF, políticas de beacon,
+  localização (GPS/manual), configurações APRS-IS, filtro, TNC/meio de conexão e
+  autorizações de TX.
+- Trocar de perfil sem reconstruir a configuração manualmente; persistir e restaurar
+  o último perfil ativo após reiniciar. Confirmar alterações com impacto em transmissão
+  antes de aplicá-las; não iniciar TX inesperadamente ao trocar de perfil.
+- Perfil Somente recepção impede beacon e mensagens de saída em *todos* os meios,
+  inclusive RF, sem impedir receber estações e mensagens APRS-IS/TNC.
+- Integrar à opção de conexão automática do item 9 e aos controles SmartBeaconing,
+  posicionamento manual e privacidade do item 6; não duplicar configurações.
+
+### 11. Seguir estação móvel no mapa e acompanhar deslocamentos
+_Aprovado em 31/10/2026._
+
+- Comando "Seguir estação" no mapa, lista e ficha do indicativo; manter a estação
+  escolhida no centro enquanto recebe novas posições e permitir parar de seguir.
+- Exibir deslocamento/trajeto histórico do alvo, velocidade, rumo, distância,
+  última posição e tempo desde último contato, sem confundir dados restaurados do
+  cache com posição nova. Integrar com os itens 5 e 7.
+- Não forçar recentering se o usuário estiver explorando manualmente o mapa; oferecer
+  retomada explícita do seguimento. Mostrar aviso se o alvo perder atualização.
+- Preservar o estado de acompanhamento conforme configuração; operação com mapa
+  offline quando o recurso de mapas offline estiver disponível.
+
+### 12. Estações favoritas e alertas por eventos
+_Aprovado em 31/10/2026._
+
+- Marcar e desmarcar estações como favoritas, persistindo indicativos e preferências.
+- Notificações configuráveis por estação e por tipo de evento: primeira aparição,
+  retorno após período sem contato, nova posição, recepção RF direta comprovada
+  e meu pacote retransmitido por digi/iGate (quando houver evidência suficiente).
+- Limites de frequência/cooldown e horário silencioso; evitar notificações em
+  massa após restauração de cache ou reconexão APRS-IS.
+- Separar claramente eventos de APRS-IS dos observados por RF; integrar aos filtros
+  de estações (item 3), notificações (item 6) e persistência (item 7).
+- Testar consumo de bateria e comportamento em segundo plano.
+
+### 13. Centro de diagnóstico de rádio, conexões, pacotes e mensagens
+_Aprovado em 31/10/2026._
+
+- Tela de diagnóstico com estados detalhados APRS-IS, GPS e TNC: servidor,
+  modo de conexão, tempo conectado, reconexões, erros e transições recentes.
+- Monitor separado RX/TX com horário, origem (APRS-IS/RF), tipo e tamanho de
+  pacote, digipeaters do caminho, origem de recepção, ACK, retransmissões,
+  tentativas sem sucesso e erros KISS/AX.25 quando disponíveis.
+- Métricas por sessão: pacotes recebidos/transmitidos, descartes, duplicatas,
+  mensagens aguardando ACK, sucesso de ACK e atividade direta/via digi;
+  deixar explícito quando a métrica não é observável no transporte escolhido.
+- Histórico local limitado, filtros por indicativo/meio/erro, exportação de
+  diagnóstico com anonimização opcional de indicativos, localização e dados
+  sensíveis. Não exportar passcode ou credenciais.
+- Complementar, sem duplicar, o log detalhado já previsto no item 6 e o
+  histórico de enlaces RF dos itens 4 e 7.
+
+### 14. Análise de alcance e recordes RF comprovados
+_Aprovado em 31/10/2026._
+
+- Estatísticas de alcance RF **direto** e **via digipeater** separadas, com
+  indicativo, distância, data/hora, caminho de recepção e última confirmação.
+- Mostrar recordes RF por período, estação e transporte; permitir ver no mapa
+  o trajeto dos saltos somente quando houver evidência apropriada.
+- Mapa de calor e histórico de cobertura RF calculados exclusivamente a partir
+  de recepções por rádio/TNC, jamais marcando APRS-IS como contato RF direto.
+- Integrar ao item 4 (meus enlaces) e ao histórico do item 7. Retenção,
+  armazenamento e exportação configuráveis; sinalizar limitações das evidências
+  de digipeating e não inferir enlace direto apenas de caminho APRS-IS.
+
+### 15. API de integração Android com outros aplicativos
+_Aprovado em 31/10/2026, inspirado na interface de aplicativos do APRSdroid._
+
+- Oferecer interface documentada para integrações locais no Android (por exemplo,
+  Intents/Broadcasts/serviço protegido), após avaliação de permissões e segurança.
+- Permitir consultar status, estações e eventos de recepção; solicitar ações
+  permitidas como iniciar/parar acompanhamento e, sob autorização explícita,
+  transmitir beacon ou mensagem.
+- Restringir transmissão e leitura de dados sensíveis por permissões e
+  confirmação do usuário; nunca expor passcode APRS-IS ou permitir transmissão
+  silenciosa por aplicativos arbitrários.
+- Versionar contratos, documentar formatos de eventos e criar testes de
+  compatibilidade e segurança. Não copiar código de terceiros sob licença
+  incompatível.
+
+## Consolidação das sugestões aprovadas com itens já existentes
+
+A comparação com o APRSdroid também aprovou os recursos abaixo, que **já estavam
+no backlog** e permanecem com o mesmo número (não criar tickets duplicados):
+
+- **Item 6:** SmartBeaconing com parâmetros editáveis, beacon periódico e
+  posição manual/fixa, configuração de precisão/consumo do GPS, ambiguidade
+  de posição e controle de transmissão de rumo/velocidade/altitude,
+  frequência de voz no beacon, AFSK por áudio, opções de notificações e
+  log detalhado de conexão.
+- **Item 5:** tracklog e estilo configurável; o seguimento de outras estações
+  passa a ter requisitos próprios no item 11.
+- **Item 4:** visualização e distinção dos meus enlaces RF comprovados; a
+  análise de alcance e recordes recebe detalhamento próprio no item 14.
+- **Pendências herdadas da v0.1.0:** TNC por USB-OTG, KISS TCP, mapas offline,
+  mapa de calor de cobertura e modos de operação móvel. AFSK exige testes em
+  dispositivos reais, incluindo áudio e políticas de transmissão.
+- **Itens 7, 8 e 9:** persistência, indicadores de conexão e conexão APRS-IS
+  automática seguem como pré-requisitos fundamentais.
+
+## Sequenciamento sugerido — aprovado como direção de produto
+
+As faixas são **metas de planejamento**, não versões publicadas nem garantias
+de prazo. Não implementar nem gerar APK até a solicitação de nova versão;
+ajustar escopo conforme testes e dependências e não declarar algo entregue
+sem evidência.
+
+- **v0.2 (fundamentos):** persistência local, ícones APRS, indicadores de
+  conexão, opção APRS-IS, filtros, usabilidade e internacionalização
+  PT/EN/ES/FR/IT (preparada em PR específico; confirmar CI/merge antes de
+  considerar concluída).
+- **v0.3 (rastreamento):** perfis de operação, SmartBeaconing configurável,
+  posição manual/periódica, privacidade, tracklog, seguir estação móvel.
+- **v0.4 (rádio/diagnóstico):** USB-OTG, KISS TCP, diagnóstico de conexão e RF,
+  estatísticas/recordes de alcance, avaliação AFSK em hardware real.
+- **v0.5 (offline/integrações):** mapas offline, mapa de calor RF/histórico,
+  favoritos e alertas, API de integração Android; revisar dependências para
+  antecipar itens caso necessário.
+
+**Critério transversal:** manter compatibilidade de preferências existentes,
+não transmitir por RF/APRS-IS sem permissão, otimizar bateria/armazenamento,
+testar com rádio/TNC reais, preservar a separação entre RF comprovado e
+dados APRS-IS e, em cada release, publicar APK assinado + atualização
+coordenada de www.pt2vhf.com/android (incluindo OTA/changelog/contadores).
