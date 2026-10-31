@@ -11,7 +11,7 @@ data class UpdateInfo(val version: String, val notes: String, val downloadUrl: S
 /** Consulta somente o site oficial (mesma API do desktop), produto "aprs-android". */
 object UpdateCheck {
     const val ENDPOINT = "https://www.pt2vhf.com/update.php?product=aprs-android"
-    const val SITE = "https://www.pt2vhf.com/android"
+    const val SITE = "https://www.pt2vhf.com/aprs-android"
 
     fun fetch(): UpdateInfo? {
         val conn = URL(ENDPOINT).openConnection() as HttpURLConnection
