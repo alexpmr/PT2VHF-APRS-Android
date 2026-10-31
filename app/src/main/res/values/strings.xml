@@ -136,4 +136,10 @@
     <string name="favorites">Favorites</string>
     <string name="follow_station">Follow station</string>
     <string name="stop_following">Stop following</string>
+    <string name="favorite_add">Add favorite</string>
+    <string name="favorite_remove">Remove favorite</string>
+    <string name="following">Following %1$s</string>
+    <string name="follow_paused">Follow paused — tap to resume</string>
+    <string name="favorites_only">Favorites only</string>
+    <string name="favorite_alert">Favorite station %1$s heard again</string>
 </resources>
