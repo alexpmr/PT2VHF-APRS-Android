@@ -13,7 +13,7 @@ Itens registrados para as próximas versões. Não implementar até o pedido de 
 
 Aprovada a implementação integral, mas **não confundir código no PR com funcionalidade homologada**.
 A release **v0.1.3** foi gerada e assinada no GitHub ([tag v0.1.3](../../releases/tag/v0.1.3)) e disponibilizada no site.
-O backlog permanece parcialmente implementado, com homologação física pendente. Não afirmar que os 25 itens foram concluídos. Os critérios, roteiros e evidências ficam no
+O backlog permanece parcialmente implementado, com homologação física pendente. Não afirmar que os 26 itens foram concluídos. Os critérios, roteiros e evidências ficam no
 [HOMOLOGACAO.md](HOMOLOGACAO.md).
 
 | Item | Estado atual | Evidência necessária para baixa |
@@ -43,6 +43,7 @@ O backlog permanece parcialmente implementado, com homologação física pendent
 | 23 | **Pendente — v0.1.3**: ordenar cada mensagem pessoal ou geral pelo horário de recepção | Linha do tempo cronológica (antigas acima, recentes abaixo), desempate estável e atualização reativa; independente da ordem da lista de Conversas (#2) |
 | 24 | **Pendente — v0.1.3**: balões estreitos, com espaço horizontal não aproveitado | Largura responsiva até ~90% da área útil, mensagens curtas compactas, longas com quebra correta, alinhamento enviado/recebido e legibilidade de metadados |
 | 25 | **P1 — FALHA REPORTADA NA v0.1.4**: APRS-IS indica conexão verificada, porém usuário não consegue enviar mensagem | Diagnosticar habilitação TX Internet/RF, serviço, chamada ao envio, retorno de aprsIs.send/tnc.send, status real e ACK; feedback claro ao usuário, sem falso sucesso, teste físico com TX autorizado |
+| 26 | **Pendente — v0.1.4**: retenção de mensagens não configurável; histórico limitado a 1.000 em memória e 500 persistidas | Configurações → Mensagens → Retenção: prazo e quantidade por tipo, limpeza previsível, proteção de pendências/ACK, migração segura e testes de persistência | 
 
 
 **Baixa definitiva:** marcar `Concluído` somente após CI aprovado,
@@ -895,6 +896,75 @@ comprova autorização e sucesso de TX.
   de TX e os estados de conexão no momento da falha.
 - **Status:** backlog P1 aberto para diagnóstico e correção
   física; **não resolvido apenas por APK compilado**.
+
+### 26. Configurações: retenção e limpeza de mensagens
+_Solicitado em 31/10/2026: "Backlog: configurações, retenção das mensagens"._
+
+**Diagnóstico confirmado no código:** em
+`data/AprsRepository.kt`, `add()` executa `takeLast(1000)`
+na memória e `save()` grava **somente as últimas 500 mensagens**
+no arquivo `messages.json`. Portanto, mesmo sem controle visível,
+mensagens antigas já são descartadas na operação e ao reiniciar.
+`data/Settings.kt` não oferece preferências de prazo/quantidade.
+**Não prometer recuperação de mensagens já descartadas**.
+
+**Comportamento desejado:**
+
+- Criar seção **Configurações → Mensagens → Retenção de histórico**,
+  com parâmetros independentes, aplicados a **conversas privadas**,
+  **mensagens gerais/CQ** e **boletins**. Oferecer um valor **Igual
+  para todos** e permitir personalização por categoria.
+- **Prazo de retenção:** 7, 30, 90, 180 ou 365 dias e **Sem prazo
+  de expiração**; usar o momento de recebimento/envio registrado,
+  com tratamento consistente de fuso horário, mudança de relógio
+  e timestamps inválidos. **Padrão para instalações existentes:
+  sem exclusão automática por idade**, até escolha explícita do
+  usuário, preservando dados já retidos.
+- **Quantidade máxima de mensagens:** opções claras como 500,
+  1.000, 5.000 ou **sem limite por quantidade**, especificando
+  que a limpeza pode ser por **prazo e/ou quantidade**, com
+  critérios previsíveis (o que vencer primeiro). Exibir estimativa
+  de mensagens armazenadas e espaço ocupado, com alerta quando
+  o histórico ficar muito grande.
+- **Persistência:** remover os limites rígidos atuais `takeLast(1000)`
+  em memória / `takeLast(500)` ao salvar, substituindo por
+  política configurável e armazenamento escalável (preferir SQLite
+  com consultas indexadas por data, contato e categoria, para
+  evitar reescrever todo `messages.json` a cada pacote).
+  Migrar de `messages.json` sem perder nem duplicar o histórico
+  ainda existente, preservando `id`, horários, indicativos/SSID,
+  via RF/APRS-IS, status e identificadores de mensagem/ACK;
+  fazer backup/rollback seguro durante a migração.
+- **Segurança da limpeza:** nunca remover automaticamente mensagens
+  **ainda em envio, retry ou aguardando ACK**; proteger também as
+  mensagens cuja confirmação acabou de chegar até sua gravação
+  persistente. Mensagens finalizadas podem ser descartadas apenas
+  conforme a política. Não alterar lógica de TX, deduplicação,
+  ordem cronológica (item #23) ou contagem de conversas (item #2).
+- **Controles explícitos:** mostrar data prevista da próxima
+  limpeza e quantidade estimada que seria excluída; oferecer
+  **Limpar agora** com prévia e confirmação (separada da limpeza
+  automática), possibilidade de excluir um período ou categoria,
+  sem apagar inadvertidamente estações, configurações, tracklogs
+  ou mensagens pendentes. Mudanças de preferência que causariam
+  exclusão imediata precisam ser confirmadas antes da aplicação.
+- **Execução eficiente:** avaliar retenção ao carregar, ao
+  persistir novos registros e ocasionalmente com aplicativo
+  ativo, sem serviço periódico energético desnecessário; preservar
+  desempenho e evitar corrupção com escrita atômica/transações.
+  Registrar contagens de remoção e erros localmente, sem enviar
+  conteúdo de mensagens a servidores externos.
+- **T26 — Teste de aceitação:** migração de instalação com
+  `messages.json` legado de até 500 entradas; retenção distinta
+  entre privado/CQ/boletim; prazos 7/30/90/180/365/indefinido;
+  tetos 500/1.000/5.000/ilimitado; períodos-limite, fuso,
+  reinício, grande volume de mensagens, saída forçada durante
+  gravação, ACK/retry pendente, preview/confirmar/cancelar limpeza,
+  contagem e espaço em disco. Comprovar preservação de mensagens
+  ainda existentes e que **nenhuma transmissão é provocada pela
+  limpeza**. Explicitar dados antigos não recuperáveis.
+- **Status:** registro no backlog; **não implementado nesta
+  solicitação** e **sem novo APK**.
 
 ## Consolidação das sugestões aprovadas com itens já existentes
 
