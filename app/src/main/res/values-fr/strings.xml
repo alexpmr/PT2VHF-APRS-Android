@@ -211,4 +211,6 @@
     <string name="clear_local_data_success">Données locales supprimées.</string>
     <string name="clear_local_data_error">Impossible de supprimer toutes les données locales. Vérifiez le stockage et réessayez.</string>
     <string name="clear_data_confirm">Supprimer</string>
+    <string name="beacon_sending">Envoi…</string>
+    <string name="beacon_failed">Échec de l’envoi</string>
 </resources>
