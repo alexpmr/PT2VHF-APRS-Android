@@ -227,7 +227,10 @@ class AprsService : Service(), LocationListener {
         }
         val status = AprsRepository.status.value
         if (settings.txViaInternet && status.aprsIsVerified) {
-            if (aprsIs.send("$call>$TOCALL,TCPIP*:$info")) used = used ?: Medium.INTERNET
+            if (aprsIs.send("$call>$TOCALL,TCPIP*:$info")) {
+                used = used ?: Medium.INTERNET
+                AprsRepository.updateStatus { it.copy(aprsTx = it.aprsTx + 1) }
+            }
         }
         AprsRepository.monitorLine("TX ${used?.label ?: UiText.text(R.string.not_sent)} $call>$TOCALL:$info")
         return used
@@ -269,7 +272,9 @@ class AprsService : Service(), LocationListener {
 
     private fun handleLine(line: String, medium: Medium) {
         val packet = AprsPacket.parse(line) ?: return
-        if (medium == Medium.RF) AprsRepository.monitorLine("RX RF $line")
+        if (medium == Medium.INTERNET)
+            AprsRepository.updateStatus { it.copy(aprsRx = it.aprsRx + 1) }
+        AprsRepository.monitorLine("RX ${medium.label} ${line.take(300)}")
         val forUs = AprsRepository.ingest(packet, medium, settings.fullCall) ?: return
         // ACK pelo mesmo meio por onde a mensagem chegou.
         forUs.msgId?.let { id ->
