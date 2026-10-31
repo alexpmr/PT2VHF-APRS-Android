@@ -5,8 +5,8 @@ plugins {
 }
 
 // Versão única do app; o site (updates.json) e o aviso de atualização usam este valor.
-// Versão de homologação: NÃO publicar no site antes dos testes e release final.
-val appVersionName = "0.2.0-rc1"
+// Release solicitada pelo mantenedor. versionCode > v0.1.0 para atualização sem perda de dados.
+val appVersionName = "0.1.2"
 val appVersionCode = 2
 
 android {
