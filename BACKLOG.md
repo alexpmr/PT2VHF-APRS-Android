@@ -13,7 +13,7 @@ Itens registrados para as próximas versões. Não implementar até o pedido de 
 
 Aprovada a implementação integral, mas **não confundir código no PR com funcionalidade homologada**.
 A release **v0.1.3** foi gerada e assinada no GitHub ([tag v0.1.3](../../releases/tag/v0.1.3)) e disponibilizada no site.
-O backlog permanece parcialmente implementado, com homologação física pendente. Não afirmar que os 19 itens foram concluídos. Os critérios, roteiros e evidências ficam no
+O backlog permanece parcialmente implementado, com homologação física pendente. Não afirmar que os 21 itens foram concluídos. Os critérios, roteiros e evidências ficam no
 [HOMOLOGACAO.md](HOMOLOGACAO.md).
 
 | Item | Estado atual | Evidência necessária para baixa |
@@ -37,6 +37,8 @@ O backlog permanece parcialmente implementado, com homologação física pendent
 | 17 | **Pendente**: restaurar mapa na abertura | Persistir centro e zoom do último acesso; ícone para localização atual; não sobrescrever a vista restaurada por GPS automático |
 | 18 | **Implementado no PR #8; CI e teste físico pendentes**: versão instalada no aviso do site oficial | Ao abrir, popup com versão real da instalação e link www.PT2VHF.com, uma vez por abertura |
 | 19 | **Falha de usabilidade relatada na v0.1.3**: ação Mensagem já existe no código, mas não está claramente acessível no popup de detalhes da estação | Botão destacado Enviar mensagem, sempre visível, navegação direta à conversa com destinatário preenchido; teste Android real em telas pequenas |
+| 20 | **Pendente — v0.1.3**: responder a uma mensagem mantendo-a pressionada | Long press em bolha recebida, ação Responder e compositor com contexto/destino correto; não transmitir antes de Enviar |
+| 21 | **Pendente — v0.1.3**: procurar indicativos para iniciar conversa nova | Busca por indicativo completo/parcial em estações e contatos recentes, seleção de SSID exato e abertura da conversa sem TX automático |
 
 
 **Baixa definitiva:** marcar `Concluído` somente após CI aprovado,
@@ -453,6 +455,88 @@ causada por vários botões concorrendo por espaço no `AlertDialog`.
   APRS-IS/TNC quando configurados e autorizados. Conferir todos os idiomas.
 - **Status:** item aberto para correção de interface e homologação em
   celular. Não considerar resolvido apenas porque o callback já existe.
+
+### 20. Mensagens: responder mantendo uma mensagem pressionada
+_Solicitado em 31/10/2026, observação na versão v0.1.3._
+
+**Diagnóstico no código:** o composable `Bubble(m: ChatMessage, ...)` em
+`app/src/main/java/com/pt2vhf/aprs/ui/Screens.kt` mostra as mensagens,
+mas não implementa `onLongClick` ou menu de contexto para responder.
+
+- Permitir **pressionar e segurar** qualquer bolha de mensagem recebida em
+  **conversa privada**, **canal geral (CQ)** ou **boletim**, abrindo menu
+  acessível com ação explícita **Responder**, sem disparar envio imediatamente.
+  Para mensagens próprias, não apresentar "Responder ao próprio indicativo"
+  como se fosse uma mensagem recebida.
+- Em conversa privada, **Responder** abre/focaliza o compositor daquela
+  conversa, com destinatário definido como o **indicativo exato do remetente,
+  incluindo SSID**. Para mensagem recebida em CQ/boletim, oferecer
+  **resposta privada ao remetente** como caminho padrão e não confundir
+  resposta dirigida com transmissão pública a CQ/BLN0.
+- Mostrar no compositor um **contexto visual** da mensagem selecionada
+  (remetente e trecho do texto original), com botão **Cancelar resposta**;
+  preservar o texto que o usuário já estava digitando. A UI pode guardar
+  localmente a associação da resposta ao `ChatMessage.id`, mas **APRS
+  convencional não transporta encadeamento de respostas como o WhatsApp**:
+  não prometer threading remoto. Não incluir citação longa automaticamente
+  no payload e respeitar o limite do formato (até 67 caracteres de texto
+  por mensagem no fluxo atual); se houver opção de citação breve, exigir
+  pré-visualização explícita e dimensionamento correto.
+- Depois de tocar em **Enviar**, usar o mecanismo existente de envio
+  APRS-IS/TNC, ACK, status e histórico; não duplicar pacotes pela ação de
+  pressionar, selecionar ou cancelar.
+- Garantir `combinedClickable`/gesto equivalente de longa duração,
+  acessibilidade, feedback tátil quando disponível, funcionamento com
+  seleção de texto/rolagem e ausência de acionamentos acidentais.
+- **Teste de aceitação T18:** manter pressionada mensagem recebida em
+  conversa privada, CQ e boletim; verificar menu, destinatário, contexto,
+  cancelar, texto pré-existente e envio único; conferir diferentes SSIDs,
+  mensagens próprias, telas pequenas, fontes grandes e modo sem conexão.
+  Comprovar que não há TX até o comando Enviar.
+- **Status:** backlog apenas; ainda não implementado nem homologado.
+
+### 21. Mensagens: pesquisa de indicativos para iniciar conversa direta
+_Solicitado em 31/10/2026, observação na versão v0.1.3._
+
+**Diagnóstico no código:** em `MessagesScreen`, a caixa de filtro existente
+filtra **mensagens/conversas já registradas**. O campo `newCall` exige
+`CALLSIGN_RE.matches(newCall)` para abrir uma conversa, sem lista de
+estações pesquisáveis nem autocomplete. Logo, digitar parte do indicativo
+não permite localizar ou selecionar uma estação conhecida.
+
+- Na aba **Mensagens → Conversas**, destacar entrada **"Nova mensagem"**
+  com campo **"Pesquisar indicativo ou parte dele"**, que apresente uma
+  lista de resultados atualizada enquanto o usuário digita, sem exigir
+  correspondência exata ou pressionar Enter.
+- Pesquisar inicialmente nos **indicativos presentes em
+  `AprsRepository.stations` (incluindo cache local)** e nos
+  **participantes do histórico de conversas**, mesmo que não tenham
+  posição. Permitir buscar pelo indicativo completo ou **substring**
+  (ex.: `PT2`, `VHF`, `-9`), case-insensitive; eliminar duplicidades,
+  mostrar indicativo completo/SSID, último contato e origem APRS-IS/RF
+  somente quando conhecidos. Não anunciar cobertura de **diretório global
+  APRS** nem inventar resultados de estações não observadas.
+- Ao selecionar um resultado, abrir diretamente a **conversa privada**
+  com o indicativo exato selecionado, inclusive SSID, histórico existente
+  e campo pronto para digitar. Nunca escolher automaticamente `-0`
+  no lugar de `-9`, nem trocar destinatário depois da seleção.
+- Manter caminho alternativo **"Digitar indicativo manualmente"**,
+  validado com `CALLSIGN_RE`, para contatar estações ainda não observadas,
+  com mensagem clara quando a pesquisa não encontrar resultados.
+- A pesquisa pode funcionar **offline** sobre o cache; resultados devem
+  reagir às novas estações recebidas. Abrir conversa ou selecionar
+  estação **não transmite**; só a confirmação Enviar aciona APRS-IS/TNC.
+- Ao criar conversa nova, não confundir a busca de destinatário com o
+  filtro do **conteúdo das conversas**; são funções distintas, com
+  indicadores e rótulos claros. A busca não exige a estação ter enviado
+  uma mensagem anteriormente.
+- **Teste de aceitação T19:** procurar indicativo parcial e completo,
+  case-insensitive, com diferentes SSIDs; escolher estação com/sem
+  conversa anterior, recebida apenas por APRS-IS ou TNC, e estação
+  conhecida apenas pelo histórico; verificar ausência de duplicação,
+  correspondência exata após seleção, cache offline, nenhum TX antes
+  de Enviar, fallback manual, campos vazios e resultado sem coincidências.
+- **Status:** backlog apenas; ainda não implementado nem homologado.
 
 ## Consolidação das sugestões aprovadas com itens já existentes
 
