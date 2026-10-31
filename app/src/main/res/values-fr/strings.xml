@@ -148,4 +148,13 @@
     <string name="track_solid">Continue</string>
     <string name="track_dashed">Pointillée</string>
     <string name="track_points">Points du trajet : %1$d</string>
+    <string name="diagnostics">Diagnostic</string>
+    <string name="aprs_received">APRS-IS reçus</string>
+    <string name="aprs_sent">APRS-IS émis</string>
+    <string name="tnc_received">TNC reçus</string>
+    <string name="tnc_sent">TNC émis</string>
+    <string name="station_count">Stations connues</string>
+    <string name="rf_link_count">Liaisons RF enregistrées</string>
+    <string name="aprs_error">Erreur APRS-IS</string>
+    <string name="tnc_error">Erreur TNC</string>
 </resources>
