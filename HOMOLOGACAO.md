@@ -2,9 +2,9 @@
 
 Atualizado em 31/10/2026. **Esta matriz não é um release.**
 
-- Versão pública: **v0.1.0**, ainda distribuída em `www.pt2vhf.com/android`.
-- Branch de desenvolvimento: `feat/android-next-release-core`, PR [#7](../../pull/7).
-- Identificação de teste: **0.2.0-rc1**; instalar somente quando o CI de homologação entregar APK **assinado** e verificado (artefato `android-signed-qa-rc1`).
+- Release **v0.1.2** gerada e assinada no GitHub. O site oficial ainda distribui **v0.1.0** até a transferência e verificação do novo APK.
+- Desenvolvimento integrado à `main` por meio do PR [#7](../../pull/7); release [v0.1.2](../../releases/tag/v0.1.2).
+- Versão para instalação: **0.1.2**, APK de produção assinado e verificado no GitHub Actions. A homologação física pelo usuário permanece obrigatória; não marcar os 15 itens como totalmente concluídos.
 - Status: `Não iniciado` → `Implementação parcial` → `Pronto para teste físico` → `Validado pelo usuário` → `Concluído/baixado`.
 - **Regra de baixa:** nunca baixar um item apenas porque o código compilou; registrar evidência, validar todas as partes exigidas e separar pendências residuais. Atualizar `BACKLOG.md` e registrar commit a cada baixa.
 - **Segurança:** use baixa potência e frequência/canal autorizado; não envie beacons de posição residencial sem querer. O perfil 'somente RX' ainda não está implementado; desligue TX RF e APRS-IS para testes exclusivamente de recepção.
@@ -31,7 +31,7 @@ Atualizado em 31/10/2026. **Esta matriz não é um release.**
 
 ## Roteiro de testes físicos, em ordem
 
-**T01 — Instalação/atualização:** instalar o APK QA assinado sobre v0.1.0, sem desinstalar. Confirmar versão 0.2.0-rc1, configurações antigas e mensagens preservadas. Se a assinatura não corresponder, **não desinstalar para tentar corrigir**; registrar a falha.
+**T01 — Instalação/atualização:** instalar o APK v0.1.2 assinado sobre v0.1.0, sem desinstalar. Confirmar versão 0.1.2, configurações antigas e mensagens preservadas. Se a assinatura não corresponder, **não desinstalar para tentar corrigir**; registrar a falha.
 
 **T02 — GPS/cabeçalho:** com localização autorizada, abrir em área com fix, conferir GPS verde; desativar localização ou perder fix e verificar GPS vermelho; restaurar. Aguardar pelo menos 2 minutos na perda de fix.
 
@@ -53,7 +53,7 @@ Atualizado em 31/10/2026. **Esta matriz não é um release.**
 
 **T11 — Favoritos/diagnóstico:** marcar favoritas, fechar e reabrir, filtrar, conferir contadores separados de APRS-IS/TNC e o monitor.
 
-**T12 — Publicação OTA:** somente após release assinada, comparar versão/manifesto, atualização in-app, URL e contador cumulativo `android-apk` na Hostinger. NÃO executar contra 0.2.0-rc1 como se fosse versão pública.
+**T12 — Publicação OTA:** após o APK v0.1.2 real estar hospedado, comparar versão/manifesto, atualização in-app, URL e contador cumulativo `android-apk` na Hostinger.
 
 ## Como informar o resultado
 
