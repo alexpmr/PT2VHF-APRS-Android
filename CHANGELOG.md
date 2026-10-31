@@ -1,5 +1,13 @@
 # Changelog
 
+## Em desenvolvimento — correção do envio APRS-IS (sem release pública)
+
+- O indicador de APRS-IS é invalidado imediatamente quando a sessão de socket é reiniciada ou encerrada; falhas de escrita solicitam reconexão.
+- A interface de mensagens recebe o resultado do serviço, preserva o rascunho em caso de falha e não confunde solicitação de envio com escrita bem-sucedida.
+- Erros distinguem TX desabilitado, sessão não verificada, TNC desconectado e falha de transmissão, com traduções nos idiomas disponíveis.
+- Necessário CI aprovado, APK QA assinado e homologação física do tráfego APRS-IS/TNC. A escrita no socket **não** significa ACK remoto.
+
+
 ## 0.1.5 — 2026-10-31
 
 - Botão Enviar mensagem com área própria nos detalhes da estação (Mapa ou Estações).
