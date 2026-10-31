@@ -55,6 +55,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.pt2vhf.aprs.R
+import com.pt2vhf.aprs.UiText
 import com.pt2vhf.aprs.core.APRS_SERVERS
 import com.pt2vhf.aprs.core.AprsMessage
 import com.pt2vhf.aprs.core.CALLSIGN_RE
@@ -75,21 +77,19 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
-import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 
 private fun ago(t: Long): String {
     val s = (System.currentTimeMillis() - t) / 1000
     return when {
-        s < 60 -> "agora"
-        s < 3600 -> "há ${s / 60} min"
-        s < 86400 -> "há ${s / 3600} h"
-        else -> SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(Date(t))
+        s < 60 -> UiText.text(R.string.now)
+        s < 3600 -> UiText.text(R.string.minutes_ago, s / 60)
+        s < 86400 -> UiText.text(R.string.hours_ago, s / 3600)
+        else -> java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT, UiText.locale()).format(Date(t))
     }
 }
 
-private fun hhmm(t: Long) = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(t))
+private fun hhmm(t: Long) = java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT, UiText.locale()).format(Date(t))
 
 // ---------- Mapa ----------
 
@@ -125,7 +125,7 @@ fun MapScreen(onStation: (String) -> Unit) {
                 map.overlays.add(Marker(map).apply {
                     position = GeoPoint(s.lat, s.lon)
                     title = s.call
-                    snippet = "${s.role} · ${ago(s.lastHeard)}"
+                    snippet = "${UiText.role(s.role)} · ${ago(s.lastHeard)}"
                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
                     setOnMarkerClickListener { _, _ -> onStation(s.call); true }
                 })
@@ -135,7 +135,7 @@ fun MapScreen(onStation: (String) -> Unit) {
             if (lat != null && lon != null) {
                 map.overlays.add(Marker(map).apply {
                     position = GeoPoint(lat, lon)
-                    title = "Você"
+                    title = UiText.text(R.string.me)
                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                 })
                 if (!centered) { map.controller.setCenter(GeoPoint(lat, lon)); centered = true }
@@ -157,7 +157,7 @@ fun MessagesScreen(settings: Settings, chatWith: String?, onOpenChat: (String?) 
     var tab by rememberSaveable { mutableStateOf(0) }
     Column(Modifier.fillMaxSize()) {
         TabRow(selectedTabIndex = tab, containerColor = Pal.bar, contentColor = Pal.accent) {
-            listOf("Conversas", "Geral", "Boletins").forEachIndexed { i, label ->
+            listOf(UiText.text(R.string.chats), UiText.text(R.string.general), UiText.text(R.string.bulletins)).forEachIndexed { i, label ->
                 Tab(selected = tab == i, onClick = { tab = i }, text = { Text(label) })
             }
         }
@@ -169,12 +169,12 @@ fun MessagesScreen(settings: Settings, chatWith: String?, onOpenChat: (String?) 
                     .toList().sortedByDescending { (_, list) -> list.maxOf { it.time } }
                 var newCall by rememberSaveable { mutableStateOf("") }
                 Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedTextField(newCall, { newCall = it.uppercase().take(9) }, label = { Text("Nova conversa (indicativo)") },
+                    OutlinedTextField(newCall, { newCall = it.uppercase().take(9) }, label = { Text(UiText.text(R.string.new_chat)) },
                         singleLine = true, modifier = Modifier.weight(1f),
                         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters))
-                    TextButton(onClick = { if (CALLSIGN_RE.matches(newCall)) onOpenChat(newCall) }) { Text("Abrir") }
+                    TextButton(onClick = { if (CALLSIGN_RE.matches(newCall)) onOpenChat(newCall) }) { Text(UiText.text(R.string.open)) }
                 }
-                if (byContact.isEmpty()) Empty("Nenhuma conversa ainda. Toque numa estação no mapa ou digite um indicativo.")
+                if (byContact.isEmpty()) Empty(UiText.text(R.string.no_chats))
                 LazyColumn {
                     items(byContact, key = { it.first }) { (contact, list) ->
                         val last = list.maxBy { it.time }
@@ -213,7 +213,7 @@ private fun Bubble(m: ChatMessage, showSender: Boolean, onStation: (String) -> U
             if (showSender && !m.outgoing) Text(m.from, color = Pal.accent, fontWeight = FontWeight.Bold, fontSize = 12.sp,
                 modifier = Modifier.clickable { onStation(m.from) })
             Text(m.text, fontSize = 15.sp)
-            val meta = if (m.outgoing) "${hhmm(m.time)} · ${m.status}" else "${hhmm(m.time)} · ${m.via}"
+            val meta = if (m.outgoing) "${hhmm(m.time)} · ${UiText.messageStatus(m.status)}" else "${hhmm(m.time)} · ${UiText.receptionVia(m.via)}"
             Text(meta, color = if (m.outgoing && m.status.startsWith("Aguardando")) Pal.yellow else Pal.muted, fontSize = 11.sp)
         }
     }
@@ -224,7 +224,7 @@ private fun Composer(placeholder: String, onSend: (String) -> Unit) {
     var text by rememberSaveable { mutableStateOf("") }
     Row(Modifier.fillMaxWidth().background(Pal.bar).padding(10.dp).imePadding(), verticalAlignment = Alignment.CenterVertically) {
         OutlinedTextField(text, { text = it }, placeholder = { Text(placeholder) }, modifier = Modifier.weight(1f), maxLines = 3)
-        Button(onClick = { if (text.isNotBlank()) { onSend(text); text = "" } }, modifier = Modifier.padding(start = 8.dp)) { Text("Enviar") }
+        Button(onClick = { if (text.isNotBlank()) { onSend(text); text = "" } }, modifier = Modifier.padding(start = 8.dp)) { Text(UiText.text(R.string.send)) }
     }
 }
 
@@ -239,7 +239,7 @@ private fun Conversation(settings: Settings, contact: String, onBack: () -> Unit
     LaunchedEffect(list.size) { if (list.isNotEmpty()) state.animateScrollToItem(list.size - 1) }
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().background(Pal.bar).padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onBack) { Text("‹ Voltar") }
+            TextButton(onClick = onBack) { Text(UiText.text(R.string.back)) }
             Column(Modifier.weight(1f).clickable { onStation(contact) }) {
                 Text(contact, fontWeight = FontWeight.Bold)
                 stations[contact]?.let { Text("${it.medium.label} · ${ago(it.lastHeard)}", color = Pal.green, fontSize = 12.sp) }
@@ -248,7 +248,7 @@ private fun Conversation(settings: Settings, contact: String, onBack: () -> Unit
         LazyColumn(Modifier.weight(1f).padding(horizontal = 12.dp), state = state, verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(list, key = { it.id }) { Bubble(it, false, onStation) }
         }
-        Composer("Mensagem para $contact") {
+        Composer(UiText.text(R.string.message_to, contact)) {
             AprsService.send(context, AprsService.ACTION_MESSAGE, mapOf(AprsService.EXTRA_TO to contact, AprsService.EXTRA_TEXT to it))
         }
     }
@@ -260,11 +260,11 @@ private fun GroupChat(list: List<ChatMessage>, settings: Settings, defaultTo: St
     val state = rememberLazyListState()
     LaunchedEffect(list.size) { if (list.isNotEmpty()) state.animateScrollToItem(list.size - 1) }
     Column(Modifier.fillMaxSize()) {
-        if (list.isEmpty()) Empty(if (defaultTo == "CQ") "Nenhuma mensagem geral (CQ) recebida ainda." else "Nenhum boletim recebido ainda.")
+        if (list.isEmpty()) Empty(if (defaultTo == "CQ") UiText.text(R.string.no_general) else UiText.text(R.string.no_bulletins))
         LazyColumn(Modifier.weight(1f).padding(horizontal = 12.dp), state = state, verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(list, key = { it.id }) { Bubble(it, true, onStation) }
         }
-        Composer(if (defaultTo == "CQ") "Mensagem para todos (CQ)" else "Boletim (BLN0)") {
+        Composer(if (defaultTo == "CQ") UiText.text(R.string.message_all) else UiText.text(R.string.bulletin_default)) {
             AprsService.send(context, AprsService.ACTION_MESSAGE, mapOf(AprsService.EXTRA_TO to defaultTo, AprsService.EXTRA_TEXT to it))
         }
     }
@@ -280,15 +280,15 @@ fun StationsScreen(onStation: (String) -> Unit) {
     val list = stations.values.filter { query.isBlank() || it.call.contains(query.trim(), ignoreCase = true) }
         .sortedByDescending { it.lastHeard }
     Column(Modifier.fillMaxSize()) {
-        OutlinedTextField(query, { query = it }, label = { Text("Buscar indicativo") }, singleLine = true,
+        OutlinedTextField(query, { query = it }, label = { Text(UiText.text(R.string.search_callsign)) }, singleLine = true,
             modifier = Modifier.fillMaxWidth().padding(12.dp))
-        if (list.isEmpty()) Empty("Nenhuma estação recebida ainda. Verifique a conexão APRS-IS ou o TNC.")
+        if (list.isEmpty()) Empty(UiText.text(R.string.no_stations))
         LazyColumn {
             items(list, key = { it.call }) { s ->
                 Row(Modifier.fillMaxWidth().clickable { onStation(s.call) }.padding(16.dp, 10.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(s.call, fontWeight = FontWeight.Bold)
-                        Text("${s.role} · ${s.medium.label} · ${ago(s.lastHeard)}", color = Pal.muted, fontSize = 12.sp)
+                        Text("${UiText.role(s.role)} · ${s.medium.label} · ${ago(s.lastHeard)}", color = Pal.muted, fontSize = 12.sp)
                     }
                     val lat = status.lat; val lon = status.lon
                     if (lat != null && lon != null) Text("%.1f km".format(haversineKm(lat, lon, s.lat, s.lon)), color = Pal.muted)
@@ -310,31 +310,31 @@ fun StationDialog(call: String, onDismiss: () -> Unit, onMessage: () -> Unit) {
         title = { Text(call, fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                if (s == null) Text("Sem posição recebida desta estação.", color = Pal.muted)
+                if (s == null) Text(UiText.text(R.string.no_position), color = Pal.muted)
                 else {
-                    Text("${s.role} · ${s.medium.label} · ${ago(s.lastHeard)}", color = Pal.muted, fontSize = 13.sp)
+                    Text("${UiText.role(s.role)} · ${s.medium.label} · ${ago(s.lastHeard)}", color = Pal.muted, fontSize = 13.sp)
                     val lat = status.lat; val lon = status.lon
                     if (lat != null && lon != null) {
                         val d = bearingDeg(lat, lon, s.lat, s.lon)
-                        KeyValue("Distância", "%.1f km".format(haversineKm(lat, lon, s.lat, s.lon)))
-                        KeyValue("Direção", "${compassName(d)} $d°")
+                        KeyValue(UiText.text(R.string.distance), "%.1f km".format(haversineKm(lat, lon, s.lat, s.lon)))
+                        KeyValue(UiText.text(R.string.direction), "${compassName(d)} $d°")
                     }
-                    KeyValue("Posição", "%.4f, %.4f".format(s.lat, s.lon))
+                    KeyValue(UiText.text(R.string.position), "%.4f, %.4f".format(s.lat, s.lon))
                     KeyValue("Grid", maidenhead(s.lat, s.lon))
-                    s.speedKmh?.let { KeyValue("Velocidade", "%.0f km/h".format(it)) }
+                    s.speedKmh?.let { KeyValue(UiText.text(R.string.speed), "%.0f km/h".format(it)) }
                     if (s.comment.isNotBlank()) Text(s.comment, fontSize = 14.sp)
-                    Text("Via: ${s.via.ifBlank { "direto" }}", color = Pal.muted, fontSize = 12.sp)
-                    if (s.heardBy.isNotEmpty()) Text("Ouvido por RF por: ${s.heardBy.joinToString(", ")}", color = Pal.green, fontSize = 12.sp)
+                    Text(UiText.text(R.string.via, s.via.ifBlank { UiText.text(R.string.direct) }), color = Pal.muted, fontSize = 12.sp)
+                    if (s.heardBy.isNotEmpty()) Text(UiText.text(R.string.heard_by_rf, s.heardBy.joinToString(", ")), color = Pal.green, fontSize = 12.sp)
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onMessage) { Text("Mensagem") } },
+        confirmButton = { TextButton(onClick = onMessage) { Text(UiText.text(R.string.message)) } },
         dismissButton = {
             Row {
                 if (s != null) TextButton(onClick = {
                     context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("geo:${s.lat},${s.lon}?q=${s.lat},${s.lon}($call)")))
-                }) { Text("Navegar até") }
-                TextButton(onClick = onDismiss) { Text("Fechar") }
+                }) { Text(UiText.text(R.string.navigate)) }
+                TextButton(onClick = onDismiss) { Text(UiText.text(R.string.close)) }
             }
         },
     )
@@ -353,28 +353,28 @@ fun RadioScreen(settings: Settings) {
             .getOrNull().orEmpty()
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        SectionCard(if (status.tncConnected) "TNC conectado" else "TNC") {
+        SectionCard(if (status.tncConnected) UiText.text(R.string.tnc_connected) else "TNC") {
             Text(if (status.tncConnected) "${status.tncName} · KISS Bluetooth · ${status.tncRx} RX · ${status.tncTx} TX"
-                else status.tncError.ifBlank { "Pareie o rádio/TNC nas configurações de Bluetooth do Android e toque em Conectar." },
+                else UiText.connectionError(status.tncError).ifBlank { UiText.text(R.string.pair_tnc) },
                 color = if (status.tncConnected) Pal.green else Pal.muted, fontSize = 14.sp)
-            if (status.tncConnected) OutlinedButton(onClick = { AprsService.send(context, AprsService.ACTION_BT_DISCONNECT) }) { Text("Desconectar") }
+            if (status.tncConnected) OutlinedButton(onClick = { AprsService.send(context, AprsService.ACTION_BT_DISCONNECT) }) { Text(UiText.text(R.string.disconnect)) }
         }
-        SectionCard("Aparelhos pareados") {
-            if (bonded.isEmpty()) Text("Nenhum aparelho pareado ou permissão de Bluetooth negada.", color = Pal.muted, fontSize = 14.sp)
+        SectionCard(UiText.text(R.string.paired_devices)) {
+            if (bonded.isEmpty()) Text(UiText.text(R.string.no_paired), color = Pal.muted, fontSize = 14.sp)
             for (d in bonded) {
                 val name = runCatching { d.name }.getOrNull() ?: d.address
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(name, modifier = Modifier.weight(1f))
-                    if (status.tncConnected && settings.btAddress == d.address) Text("em uso", color = Pal.green)
+                    if (status.tncConnected && settings.btAddress == d.address) Text(UiText.text(R.string.in_use), color = Pal.green)
                     else TextButton(onClick = {
                         AprsService.send(context, AprsService.ACTION_BT_CONNECT, mapOf(AprsService.EXTRA_ADDRESS to d.address))
-                    }) { Text("Conectar") }
+                    }) { Text(UiText.text(R.string.connect)) }
                 }
             }
-            Text("USB-OTG e KISS TCP chegam numa próxima versão.", color = Pal.muted, fontSize = 12.sp)
+            Text(UiText.text(R.string.future_tnc), color = Pal.muted, fontSize = 12.sp)
         }
-        SectionCard("Monitor ao vivo") {
-            if (monitor.isEmpty()) Text("Aguardando pacotes do TNC…", color = Pal.muted, fontSize = 13.sp)
+        SectionCard(UiText.text(R.string.live_monitor)) {
+            if (monitor.isEmpty()) Text(UiText.text(R.string.await_tnc), color = Pal.muted, fontSize = 13.sp)
             for (line in monitor.takeLast(40).reversed()) Text(line, fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = Pal.text)
         }
     }
@@ -389,31 +389,31 @@ fun TrackerScreen(settings: Settings) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         SectionCard {
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(if (status.trackerOn) "ATIVO · SMARTBEACONING" else "TRACKER DESLIGADO",
+                Text(if (status.trackerOn) UiText.text(R.string.tracker_active) else UiText.text(R.string.tracker_off),
                     color = if (status.trackerOn) Pal.green else Pal.muted, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 Text("%.0f km/h".format(status.speedKmh), fontSize = 44.sp, fontWeight = FontWeight.Bold)
-                status.nextBeaconSec?.let { Text("Próximo beacon em $it s ou na próxima curva", color = Pal.muted, fontSize = 13.sp) }
+                status.nextBeaconSec?.let { Text(UiText.text(R.string.next_beacon, it), color = Pal.muted, fontSize = 13.sp) }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Stat("Enviados", status.beaconsSent.toString(), Modifier.weight(1f))
-                    Stat("Repetidos por digi", status.beaconsDigipeated.toString(), Modifier.weight(1f))
+                    Stat(UiText.text(R.string.sent), status.beaconsSent.toString(), Modifier.weight(1f))
+                    Stat(UiText.text(R.string.digipeated), status.beaconsDigipeated.toString(), Modifier.weight(1f))
                 }
             }
         }
-        SectionCard("Configuração") {
-            KeyValue("Indicativo", settings.fullCall)
-            KeyValue("Símbolo", "${settings.symbolTable}${settings.symbol}")
-            KeyValue("Envio por", listOfNotNull("RF".takeIf { settings.txViaRf }, "APRS-IS".takeIf { settings.txViaInternet }).joinToString(" + "))
-            KeyValue("Path RF", settings.rfPath)
+        SectionCard(UiText.text(R.string.configuration)) {
+            KeyValue(UiText.text(R.string.callsign), settings.fullCall)
+            KeyValue(UiText.text(R.string.symbol), "${settings.symbolTable}${settings.symbol}")
+            KeyValue(UiText.text(R.string.send_via), listOfNotNull("RF".takeIf { settings.txViaRf }, "APRS-IS".takeIf { settings.txViaInternet }).joinToString(" + "))
+            KeyValue(UiText.text(R.string.rf_path), settings.rfPath)
             Text(settings.comment, color = Pal.muted, fontSize = 13.sp)
         }
         if (status.trackerOn) {
             OutlinedButton(onClick = { AprsService.send(context, AprsService.ACTION_TRACKER_OFF) }, modifier = Modifier.fillMaxWidth().height(52.dp),
-                border = androidx.compose.foundation.BorderStroke(2.dp, Pal.orange)) { Text("Parar tracker", color = Pal.orange) }
+                border = androidx.compose.foundation.BorderStroke(2.dp, Pal.orange)) { Text(UiText.text(R.string.stop_tracker), color = Pal.orange) }
         } else {
             Button(onClick = { AprsService.send(context, AprsService.ACTION_TRACKER_ON) }, modifier = Modifier.fillMaxWidth().height(52.dp),
-                enabled = settings.configured && status.lat != null) { Text("Iniciar tracker") }
+                enabled = settings.configured && status.lat != null) { Text(UiText.text(R.string.start_tracker)) }
         }
-        Text("Notificação fixa enquanto ativo; funciona com a tela desligada.", color = Pal.muted, fontSize = 12.sp)
+        Text(UiText.text(R.string.tracker_notice), color = Pal.muted, fontSize = 12.sp)
     }
 }
 
@@ -454,9 +454,9 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
         val portN = port.toIntOrNull() ?: -1
         val full = if (ssidN in 1..15) "$base-$ssidN" else base
         return when {
-            !CALLSIGN_RE.matches(full) || ssidN !in 0..15 -> { error = "Indicativo ou SSID inválido."; null }
-            !validHostPort(server, portN) -> { error = "Servidor ou porta inválidos."; null }
-            symbol.length != 2 -> { error = "Símbolo: tabela + símbolo, ex.: /> (carro)."; null }
+            !CALLSIGN_RE.matches(full) || ssidN !in 0..15 -> { error = UiText.text(R.string.invalid_call); null }
+            !validHostPort(server, portN) -> { error = UiText.text(R.string.invalid_server); null }
+            symbol.length != 2 -> { error = UiText.text(R.string.invalid_symbol); null }
             else -> current.copy(callsign = base, ssid = ssidN, server = server.trim(), port = portN, filter = filter.trim(),
                 comment = comment, symbolTable = symbol[0], symbol = symbol[1], rfPath = path, txViaRf = txRf, txViaInternet = txIs)
         }
@@ -465,51 +465,51 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = Pal.bar,
-        title = { Text("Configurações") },
+        title = { Text(UiText.text(R.string.settings)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(call, { call = it.uppercase().take(6) }, label = { Text("Indicativo") }, singleLine = true,
+                    OutlinedTextField(call, { call = it.uppercase().take(6) }, label = { Text(UiText.text(R.string.callsign)) }, singleLine = true,
                         modifier = Modifier.weight(2f), keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters))
                     OutlinedTextField(ssid, { ssid = it.filter(Char::isDigit).take(2) }, label = { Text("SSID") }, singleLine = true,
                         modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
                 }
-                Text("Passcode APRS-IS: $passcode (calculado automaticamente)", color = Pal.muted, fontSize = 12.sp)
+                Text(UiText.text(R.string.passcode, passcode), color = Pal.muted, fontSize = 12.sp)
                 ExposedDropdownMenuBox(expanded, { expanded = it }) {
                     OutlinedTextField(
-                        value = if (custom) "Outro…" else (APRS_SERVERS.firstOrNull { it.host == server }?.let { "${it.host} — ${it.label}" } ?: server),
-                        onValueChange = {}, readOnly = true, label = { Text("Servidor APRS-IS") },
+                        value = if (custom) UiText.text(R.string.other) else (APRS_SERVERS.firstOrNull { it.host == server }?.let { "${it.host} — ${UiText.serverLabel(it.label)}" } ?: server),
+                        onValueChange = {}, readOnly = true, label = { Text(UiText.text(R.string.aprs_server)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
                         modifier = Modifier.menuAnchor().fillMaxWidth(),
                     )
                     androidx.compose.material3.DropdownMenu(expanded, { expanded = false }) {
                         APRS_SERVERS.forEach { s ->
-                            DropdownMenuItem(text = { Text("${s.host} — ${s.label}") }, onClick = { server = s.host; custom = false; expanded = false })
+                            DropdownMenuItem(text = { Text("${s.host} — ${UiText.serverLabel(s.label)}") }, onClick = { server = s.host; custom = false; expanded = false })
                         }
-                        DropdownMenuItem(text = { Text("Outro… (digitar)") }, onClick = { custom = true; server = ""; expanded = false })
+                        DropdownMenuItem(text = { Text(UiText.text(R.string.other_type)) }, onClick = { custom = true; server = ""; expanded = false })
                     }
                 }
-                if (custom) OutlinedTextField(server, { server = it.trim() }, label = { Text("Servidor") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(port, { port = it.filter(Char::isDigit).take(5) }, label = { Text("Porta") }, singleLine = true,
+                if (custom) OutlinedTextField(server, { server = it.trim() }, label = { Text(UiText.text(R.string.server)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(port, { port = it.filter(Char::isDigit).take(5) }, label = { Text(UiText.text(R.string.port)) }, singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(filter, { filter = it }, label = { Text("Filtro APRS-IS") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                    supportingText = { Text("Padrão $DEFAULT_FILTER: raio de 4.000 km da sua posição. Ex.: m/200, b/PT2*") })
-                OutlinedTextField(comment, { comment = it.take(43) }, label = { Text("Comentário do beacon") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(symbol, { symbol = it.take(2) }, label = { Text("Símbolo (tabela + símbolo)") }, singleLine = true,
-                    supportingText = { Text("/> carro · /[ pedestre · /- casa · /k caminhonete") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(path, { path = it.uppercase() }, label = { Text("Path RF") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(txRf, { txRf = it }); Text("Transmitir por RF (TNC)") }
-                Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(txIs, { txIs = it }); Text("Transmitir pelo APRS-IS") }
+                OutlinedTextField(filter, { filter = it }, label = { Text(UiText.text(R.string.aprs_filter)) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    supportingText = { Text(UiText.text(R.string.filter_hint, DEFAULT_FILTER)) })
+                OutlinedTextField(comment, { comment = it.take(43) }, label = { Text(UiText.text(R.string.beacon_comment)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(symbol, { symbol = it.take(2) }, label = { Text(UiText.text(R.string.symbol_table)) }, singleLine = true,
+                    supportingText = { Text(UiText.text(R.string.symbols_hint)) }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(path, { path = it.uppercase() }, label = { Text(UiText.text(R.string.rf_path)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(txRf, { txRf = it }); Text(UiText.text(R.string.tx_rf)) }
+                Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(txIs, { txIs = it }); Text(UiText.text(R.string.tx_aprs)) }
                 if (error.isNotEmpty()) Text(error, color = Pal.orange, fontSize = 13.sp)
             }
         },
         confirmButton = {
             TextButton(onClick = {
                 val s = build() ?: return@TextButton
-                if (s.filter.isBlank() && !confirmEmptyFilter) { confirmEmptyFilter = true; error = "Filtro vazio pode trazer tráfego demais. Toque em Salvar de novo para confirmar."; return@TextButton }
+                if (s.filter.isBlank() && !confirmEmptyFilter) { confirmEmptyFilter = true; error = UiText.text(R.string.filter_empty); return@TextButton }
                 onSave(s)
-            }) { Text("Salvar") }
+            }) { Text(UiText.text(R.string.save)) }
         },
-        dismissButton = { if (current.configured) TextButton(onClick = onDismiss) { Text("Cancelar") } },
+        dismissButton = { if (current.configured) TextButton(onClick = onDismiss) { Text(UiText.text(R.string.cancel)) } },
     )
 }

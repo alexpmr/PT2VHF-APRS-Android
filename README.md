@@ -40,3 +40,20 @@ com a versão: os downloads manuais e OTA compõem uma contagem acumulada,
 sem duplicação. Verifique o arquivo público e a implantação Hostinger antes de
 considerar a publicação concluída. Uma release no GitHub isoladamente **não**
 constitui uma publicação completa no site.
+
+## Internacionalização (preparada para a próxima versão)
+
+O aplicativo utiliza recursos nativos do Android para os idiomas **português,
+inglês, espanhol, francês e italiano**. Na inicialização, o idioma é escolhido
+automaticamente pelas preferências de idioma do dispositivo. Idiomas não
+suportados usam **inglês**, definido em `res/values/strings.xml`, como padrão.
+
+As traduções estão em `res/values-pt/`, `values-es/`, `values-fr/` e
+`values-it/`. Em Android 13 ou superior, os idiomas são anunciados ao sistema
+por `res/xml/locales_config.xml`, permitindo também a seleção no menu de
+idioma por aplicativo do próprio Android. O conteúdo dos pacotes APRS,
+indicativos, endereços de servidores e constantes do protocolo não é traduzido.
+
+**Atenção:** este suporte faz parte das alterações em desenvolvimento.
+O APK **v0.1.0** já publicado continua com a interface original até que uma
+nova release seja solicitada, compilada e publicada também no site oficial.

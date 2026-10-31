@@ -54,6 +54,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.pt2vhf.aprs.R
+import com.pt2vhf.aprs.UiText
 import com.pt2vhf.aprs.data.AprsRepository
 import com.pt2vhf.aprs.data.Settings
 import com.pt2vhf.aprs.data.UpdateCheck
@@ -84,7 +86,7 @@ private val scheme = darkColorScheme(
     secondary = Pal.yellow,
 )
 
-enum class Tab(val label: String) { MAP("Mapa"), MESSAGES("Mensagens"), STATIONS("Estações"), RADIO("Rádio"), TRACKER("Tracker") }
+enum class Tab(val labelId: Int) { MAP(R.string.nav_map), MESSAGES(R.string.nav_messages), STATIONS(R.string.nav_stations), RADIO(R.string.nav_radio), TRACKER(R.string.nav_tracker) }
 
 @Composable
 fun App() {
@@ -118,7 +120,7 @@ fun App() {
                                     Tab.TRACKER -> Icons.Filled.LocationOn
                                 }, contentDescription = null)
                             },
-                            label = { Text(t.label, fontSize = 11.sp) },
+                            label = { Text(UiText.text(t.labelId), fontSize = 11.sp) },
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = Pal.accent, selectedTextColor = Pal.accent,
                                 unselectedIconColor = Pal.muted, unselectedTextColor = Pal.muted, indicatorColor = Pal.card,
@@ -157,15 +159,15 @@ fun App() {
             AlertDialog(
                 onDismissRequest = { update = null },
                 containerColor = Pal.bar,
-                title = { Text("Nova versão ${pending.version} disponível") },
-                text = { Text(pending.notes.ifBlank { "Uma nova versão do PT2VHF APRS Client for Android está no site oficial." }) },
+                title = { Text(UiText.text(R.string.new_version, pending.version)) },
+                text = { Text(pending.notes.ifBlank { UiText.text(R.string.new_version_notice) }) },
                 confirmButton = {
                     TextButton(onClick = {
                         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(pending.downloadUrl)))
                         update = null
-                    }) { Text("Baixar e instalar") }
+                    }) { Text(UiText.text(R.string.download_install)) }
                 },
-                dismissButton = { TextButton(onClick = { update = null }) { Text("Depois") } },
+                dismissButton = { TextButton(onClick = { update = null }) { Text(UiText.text(R.string.later)) } },
             )
         }
     }
@@ -181,7 +183,7 @@ private fun TopBar(settings: Settings, onSettings: () -> Unit) {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(if (settings.configured) settings.fullCall else "Configure seu indicativo",
+                Text(if (settings.configured) settings.fullCall else UiText.text(R.string.configure_callsign),
                     fontWeight = FontWeight.Bold, fontSize = 17.sp, color = Pal.text)
                 Text("PT2VHF APRS Client for Android", fontSize = 12.sp, color = Pal.muted)
             }
@@ -190,14 +192,14 @@ private fun TopBar(settings: Settings, onSettings: () -> Unit) {
                 enabled = settings.configured && status.lat != null,
                 border = androidx.compose.foundation.BorderStroke(2.dp, Pal.yellow),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Pal.yellow),
-            ) { Text("Enviar beacon", fontWeight = FontWeight.SemiBold) }
-            IconButton(onClick = onSettings) { Icon(Icons.Filled.Settings, contentDescription = "Configurações", tint = Pal.text) }
+            ) { Text(UiText.text(R.string.send_beacon), fontWeight = FontWeight.SemiBold) }
+            IconButton(onClick = onSettings) { Icon(Icons.Filled.Settings, contentDescription = UiText.text(R.string.settings), tint = Pal.text) }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Chip(if (status.aprsIsVerified) "APRS-IS" else if (status.aprsIsConnected) "APRS-IS sem verificação" else "APRS-IS desconectado",
+            Chip(if (status.aprsIsVerified) "APRS-IS" else if (status.aprsIsConnected) UiText.text(R.string.aprs_unverified) else UiText.text(R.string.aprs_disconnected),
                 status.aprsIsVerified)
-            Chip(if (status.tncConnected) "TNC ${status.tncName}" else "TNC desligado", status.tncConnected)
-            Chip(status.gpsAccuracyM?.let { "GPS ±${it.toInt()} m" } ?: "Sem GPS", status.gpsAccuracyM != null)
+            Chip(if (status.tncConnected) "TNC ${status.tncName}" else UiText.text(R.string.tnc_off), status.tncConnected)
+            Chip(status.gpsAccuracyM?.let { "GPS ±${it.toInt()} m" } ?: UiText.text(R.string.no_gps), status.gpsAccuracyM != null)
         }
     }
 }
@@ -221,10 +223,10 @@ private fun OfficialSiteNotice(onClose: () -> Unit) {
     AlertDialog(
         onDismissRequest = onClose,
         containerColor = Color(0xFF2A2C33),
-        title = { Text("Downloads no site oficial", fontWeight = FontWeight.Bold) },
+        title = { Text(UiText.text(R.string.official_downloads), fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("A partir de agora, as novas versões e os instaladores do PT2VHF APRS Client for Android serão distribuídos pelo site oficial.")
+                Text(UiText.text(R.string.official_notice))
                 Text("www.PT2VHF.com", color = Color(0xFF72D2FF), fontWeight = FontWeight.Bold,
                     textDecoration = TextDecoration.Underline,
                     modifier = Modifier.padding(vertical = 4.dp)
@@ -233,7 +235,7 @@ private fun OfficialSiteNotice(onClose: () -> Unit) {
         },
         confirmButton = {
             OutlinedButton(onClick = onClose, border = androidx.compose.foundation.BorderStroke(2.dp, Pal.yellow)) {
-                Text("Entendi", color = Pal.text)
+                Text(UiText.text(R.string.understood), color = Pal.text)
             }
         },
     )

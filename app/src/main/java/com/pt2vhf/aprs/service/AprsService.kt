@@ -25,6 +25,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.pt2vhf.aprs.MainActivity
+import com.pt2vhf.aprs.UiText
 import com.pt2vhf.aprs.R
 import com.pt2vhf.aprs.core.AprsMessage
 import com.pt2vhf.aprs.core.AprsPacket
@@ -212,7 +213,7 @@ class AprsService : Service(), LocationListener {
         if (settings.txViaInternet && status.aprsIsVerified) {
             if (aprsIs.send("$call>$TOCALL,TCPIP*:$info")) used = used ?: Medium.INTERNET
         }
-        AprsRepository.monitorLine("TX ${used?.label ?: "não enviado"} $call>$TOCALL:$info")
+        AprsRepository.monitorLine("TX ${used?.label ?: UiText.text(R.string.not_sent)} $call>$TOCALL:$info")
         return used
     }
 
@@ -268,8 +269,8 @@ class AprsService : Service(), LocationListener {
 
     private fun createChannels() {
         val nm = getSystemService(NotificationManager::class.java)
-        nm.createNotificationChannel(NotificationChannel(CH_SERVICE, "Conexão APRS", NotificationManager.IMPORTANCE_LOW))
-        nm.createNotificationChannel(NotificationChannel(CH_MESSAGES, "Mensagens APRS", NotificationManager.IMPORTANCE_HIGH))
+        nm.createNotificationChannel(NotificationChannel(CH_SERVICE, UiText.text(R.string.connection_channel), NotificationManager.IMPORTANCE_LOW))
+        nm.createNotificationChannel(NotificationChannel(CH_MESSAGES, UiText.text(R.string.messages_channel), NotificationManager.IMPORTANCE_HIGH))
     }
 
     private fun openAppIntent(): PendingIntent = PendingIntent.getActivity(this, 0,
@@ -279,9 +280,9 @@ class AprsService : Service(), LocationListener {
     private fun buildNotification(): Notification {
         val s = AprsRepository.status.value
         val parts = mutableListOf<String>()
-        parts += if (s.aprsIsVerified) "APRS-IS ok" else if (s.aprsIsConnected) "APRS-IS sem verificação" else "APRS-IS desconectado"
+        parts += if (s.aprsIsVerified) UiText.text(R.string.aprs_ok) else if (s.aprsIsConnected) UiText.text(R.string.aprs_unverified) else UiText.text(R.string.aprs_disconnected)
         if (s.tncConnected) parts += "TNC ${s.tncName}"
-        if (s.trackerOn) parts += "Tracker ativo · ${s.beaconsSent} beacons"
+        if (s.trackerOn) parts += UiText.text(R.string.active_tracker_notification, s.beaconsSent)
         return NotificationCompat.Builder(this, CH_SERVICE)
             .setSmallIcon(R.drawable.ic_stat_aprs)
             .setContentTitle(if (settings.configured) settings.fullCall else "PT2VHF APRS Client")
@@ -300,7 +301,7 @@ class AprsService : Service(), LocationListener {
         if (!canNotify()) return
         val n = NotificationCompat.Builder(this, CH_MESSAGES)
             .setSmallIcon(R.drawable.ic_stat_aprs)
-            .setContentTitle("Mensagem de ${m.from}")
+            .setContentTitle(UiText.text(R.string.message_from, m.from))
             .setContentText(m.text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(m.text))
             .setAutoCancel(true)
