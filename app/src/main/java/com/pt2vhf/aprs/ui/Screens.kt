@@ -154,8 +154,21 @@ fun MessagesScreen(settings: Settings, chatWith: String?, onOpenChat: (String?) 
         return
     }
     val messages by AprsRepository.messages.collectAsState()
+    val context = LocalContext.current
+    var filter by rememberSaveable { mutableStateOf("") }
+    var newestFirst by rememberSaveable {
+        mutableStateOf(Settings.readOption(context, "messages_order", "oldest") == "newest")
+    }
     var tab by rememberSaveable { mutableStateOf(0) }
     Column(Modifier.fillMaxSize()) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(filter, { filter = it }, label = { Text(UiText.text(R.string.messages_filter)) },
+                modifier = Modifier.weight(1f), singleLine = true)
+            TextButton(onClick = {
+                newestFirst = !newestFirst
+                Settings.saveOption(context, "messages_order", if (newestFirst) "newest" else "oldest")
+            }) { Text(UiText.text(if (newestFirst) R.string.sort_newest else R.string.sort_oldest)) }
+        }
         TabRow(selectedTabIndex = tab, containerColor = Pal.bar, contentColor = Pal.accent) {
             listOf(UiText.text(R.string.chats), UiText.text(R.string.general), UiText.text(R.string.bulletins)).forEachIndexed { i, label ->
                 Tab(selected = tab == i, onClick = { tab = i }, text = { Text(label) })
@@ -164,9 +177,16 @@ fun MessagesScreen(settings: Settings, chatWith: String?, onOpenChat: (String?) 
         when (tab) {
             0 -> {
                 val own = settings.fullCall
-                val direct = messages.filter { it.kind == AprsMessage.Kind.MESSAGE && it.to != "CQ" && (it.to == own || it.outgoing) }
+                val direct = messages.filter {
+                    it.kind == AprsMessage.Kind.MESSAGE && it.to != "CQ" && (it.to == own || it.outgoing) &&
+                    (filter.isBlank() || it.from.contains(filter, true) ||
+                        it.to.contains(filter, true) || it.text.contains(filter, true))
+                }
                 val byContact = direct.groupBy { if (it.outgoing) it.to else it.from }
-                    .toList().sortedByDescending { (_, list) -> list.maxOf { it.time } }
+                    .toList().let { items ->
+                        if (newestFirst) items.sortedByDescending { (_, list) -> list.maxOf { it.time } }
+                        else items.sortedBy { (_, list) -> list.minOf { it.time } }
+                    }
                 var newCall by rememberSaveable { mutableStateOf("") }
                 Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     OutlinedTextField(newCall, { newCall = it.uppercase().take(9) }, label = { Text(UiText.text(R.string.new_chat)) },
@@ -190,7 +210,10 @@ fun MessagesScreen(settings: Settings, chatWith: String?, onOpenChat: (String?) 
                     if (tab == 1) it.kind == AprsMessage.Kind.MESSAGE && (it.to == "CQ" || it.to.startsWith("CQ"))
                     else it.kind == AprsMessage.Kind.BULLETIN
                 }
-                GroupChat(list, settings, if (tab == 1) "CQ" else "BLN0", onStation)
+                val filtered = list.filter {
+                    filter.isBlank() || it.from.contains(filter, true) || it.text.contains(filter, true)
+                }.let { items -> if (newestFirst) items.sortedByDescending { it.time } else items.sortedBy { it.time } }
+                GroupChat(filtered, settings, if (tab == 1) "CQ" else "BLN0", onStation)
             }
         }
     }
@@ -276,12 +299,41 @@ private fun GroupChat(list: List<ChatMessage>, settings: Settings, defaultTo: St
 fun StationsScreen(onStation: (String) -> Unit) {
     val stations by AprsRepository.stations.collectAsState()
     val status by AprsRepository.status.collectAsState()
+    val context = LocalContext.current
     var query by rememberSaveable { mutableStateOf("") }
-    val list = stations.values.filter { query.isBlank() || it.call.contains(query.trim(), ignoreCase = true) }
-        .sortedByDescending { it.lastHeard }
+    val types = listOf("all", "Digipeater", "iGate", "Estação meteorológica", "Móvel", "Estação")
+    val orders = listOf("nearest", "recent", "callsign")
+    var type by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_type", "all")) }
+    var order by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_order", "nearest")) }
+    val list = stations.values.filter {
+        (query.isBlank() || it.call.contains(query.trim(), ignoreCase = true)) &&
+            (type == "all" || it.role == type)
+    }.let { items ->
+        when (order) {
+            "recent" -> items.sortedByDescending { it.lastHeard }
+            "callsign" -> items.sortedBy { it.call }
+            else -> {
+                if (status.lat == null || status.lon == null) items.sortedByDescending { it.lastHeard }
+                else items.sortedBy { haversineKm(status.lat!!, status.lon!!, it.lat, it.lon) }
+            }
+        }
+    }
     Column(Modifier.fillMaxSize()) {
         OutlinedTextField(query, { query = it }, label = { Text(UiText.text(R.string.search_callsign)) }, singleLine = true,
             modifier = Modifier.fillMaxWidth().padding(12.dp))
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceEvenly) {
+            TextButton(onClick = {
+                order = orders[(orders.indexOf(order) + 1) % orders.size]
+                Settings.saveOption(context, "station_order", order)
+            }) { Text(UiText.text(when (order) {
+                "recent" -> R.string.sort_recent; "callsign" -> R.string.sort_callsign; else -> R.string.sort_nearest
+            })) }
+            TextButton(onClick = {
+                type = types[(types.indexOf(type) + 1) % types.size]
+                Settings.saveOption(context, "station_type", type)
+            }) { Text(if (type == "all") UiText.text(R.string.filter_all) else UiText.role(type)) }
+        }
         if (list.isEmpty()) Empty(UiText.text(R.string.no_stations))
         LazyColumn {
             items(list, key = { it.call }) { s ->
