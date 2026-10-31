@@ -186,4 +186,10 @@
     <string name="station_distance_max">Distancia máxima (km)</string>
     <string name="station_filter_apply">Aplicar</string>
     <string name="station_filter_clear">Limpiar filtros</string>
+    <string name="exit_confirm_title">¿Desea salir de PT2VHF APRS Client?</string>
+    <string name="exit_confirm_body">¿Cerrar la aplicación y sus conexiones?</string>
+    <string name="exit_tracker_active">El rastreador está activo. Elija mantenerlo en segundo plano o detenerlo.</string>
+    <string name="exit_app">Salir</string>
+    <string name="exit_stop_tracker">Salir y detener rastreador</string>
+    <string name="exit_keep_tracker">Salir y mantener rastreador</string>
 </resources>
