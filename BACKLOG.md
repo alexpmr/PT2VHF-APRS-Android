@@ -13,7 +13,7 @@ Itens registrados para as próximas versões. Não implementar até o pedido de 
 
 Aprovada a implementação integral, mas **não confundir código no PR com funcionalidade homologada**.
 A release **v0.1.3** foi gerada e assinada no GitHub ([tag v0.1.3](../../releases/tag/v0.1.3)) e disponibilizada no site.
-O backlog permanece parcialmente implementado, com homologação física pendente. Não afirmar que os 26 itens foram concluídos. Os critérios, roteiros e evidências ficam no
+O backlog permanece parcialmente implementado, com homologação física pendente. Não afirmar que os 29 itens foram concluídos. Os critérios, roteiros e evidências ficam no
 [HOMOLOGACAO.md](HOMOLOGACAO.md).
 
 | Item | Estado atual | Evidência necessária para baixa |
@@ -44,6 +44,9 @@ O backlog permanece parcialmente implementado, com homologação física pendent
 | 24 | **Pendente — v0.1.3**: balões estreitos, com espaço horizontal não aproveitado | Largura responsiva até ~90% da área útil, mensagens curtas compactas, longas com quebra correta, alinhamento enviado/recebido e legibilidade de metadados |
 | 25 | **P1 — FALHA REPORTADA NA v0.1.4**: APRS-IS indica conexão verificada, porém usuário não consegue enviar mensagem | Diagnosticar habilitação TX Internet/RF, serviço, chamada ao envio, retorno de aprsIs.send/tnc.send, status real e ACK; feedback claro ao usuário, sem falso sucesso, teste físico com TX autorizado |
 | 26 | **Pendente — v0.1.4**: retenção de mensagens não configurável; histórico limitado a 1.000 em memória e 500 persistidas | Configurações → Mensagens → Retenção: prazo e quantidade por tipo, limpeza previsível, proteção de pendências/ACK, migração segura e testes de persistência | 
+| 27 | **P2, v0.1.4** — mensagens CQ exibem caracteres estranhos | Inspecionar bytes APRS-IS/RF, reconhecer texto UTF-8 válido e texto Latin-1/CP1252 ou binário sem inventar caracteres; prévia legível e testes de regressão |
+| 28 | **P2, v0.1.4** — tela de mensagens fica espremida ao digitar | Compositor fixo acima do teclado, barra superior compacta, filtros recolhíveis, navegação inferior adaptável, histórico rolável, Enviar acessível em telas pequenas |
+| 29 | **P1, v0.1.4** — incluir `www.PT2VHF.com` no texto de Informação transmitido/exibido das estações PT2VHF | Preservar comentário útil e acrescentar domínio canônico sem duplicá-lo; validar no beacon bruto e no receptor; não adulterar informações recebidas de terceiros |
 
 
 **Baixa definitiva:** marcar `Concluído` somente após CI aprovado,
@@ -60,6 +63,14 @@ _Registrado em 31/10/2026 (referência: print do mapa do APRSdroid)._
 sem exibir os símbolos gráficos correspondentes às estações reais. O ajuste do comentário de
 beacon **não resolve** a renderização dos ícones. **Status: aberto / correção prioritária /
 teste físico obrigatório. Não baixar este item apenas por compilação.**
+
+**Complemento solicitado em 31/10/2026 — campo Informação:** manter o comentário
+descritivo enviado pela aplicação e **acrescentar** `www.PT2VHF.com`
+ao texto APRS de posição, para que o campo **Informação** de outros clientes
+exiba, por exemplo, `PT2VHF APRS Client www.PT2VHF.com` (respeitando o
+limite real do comentário). Não substituir toda a informação apenas pelo
+domínio, nem adicionar o endereço ficticiamente ao comentário recebido de
+uma estação de terceiros. Ver item #29 e teste T29.
 
 **Critérios objetivos de aceite para a próxima implementação:**
 
@@ -965,6 +976,119 @@ mensagens antigas já são descartadas na operação e ao reiniciar.
   limpeza**. Explicitar dados antigos não recuperáveis.
 - **Status:** registro no backlog; **não implementado nesta
   solicitação** e **sem novo APK**.
+
+### 27. Mensagens: caracteres corrompidos e charset no APRS-IS
+_Solicitado em 31/10/2026; captura real da aba Mensagens → Geral/CQ na v0.1.4._
+
+**Evidência:** mensagens recebidas por APRS-IS, incluindo `CE4JWI-10`
+e `XR4MAUI-10`, apresentam sequências estranhas misturadas ao trecho
+"HALLOWEEN". É possível haver UTF-8 interpretado como Latin-1,
+caracteres de controle ou conteúdo não textual na origem; **não é
+possível afirmar a causa exata somente pela captura**.
+
+- No Android, `service/Connections.kt` usa
+  `InputStreamReader(..., Charsets.ISO_8859_1)` para todas as linhas
+  APRS-IS e `core/Kiss.kt` converte AX.25 para String Latin-1.
+  Inspecionar payload **bruto antes de qualquer decodificação**,
+  inclusive hex local de pacote de teste, sem divulgar dados sensíveis.
+- Implementar decodificação consciente de protocolo e meio: reconhecer
+  **sequências UTF-8 válidas** quando realmente presentes; manter
+  caracteres Latin-1/CP1252 quando aplicáveis; sinalizar bytes
+  não imprimíveis/indecodificáveis de forma segura, sem remover a
+  informação original nem inventar acentos. Não transformar
+  indiscriminadamente todo o tráfego APRS em UTF-8.
+- Separar **texto apresentado na interface** de bytes originais,
+  mantendo origem, indicativo, horário, via APRS-IS/RF e payload
+  inspecionável para diagnóstico. Não alterar IDs, ACK, posição,
+  campos de controle ou dados binários/telemetria.
+- Evitar que caracteres de controle corrompam quebras de linha,
+  desalinhem os balões, acionem links inesperados ou prejudiquem
+  buscas. Se o texto transmitido originalmente for inválido,
+  explicar que a conversão não recupera conteúdo inexistente.
+- **T27:** reproduzir mensagens ASCII, UTF-8 com acentos e emojis,
+  ISO-8859-1, CP1252, bytes inválidos, controles e dados não
+  textuais; comparar byte a byte com fonte independente via
+  APRS-IS/RF, conferir tela Geral/CQ, conversa privada, histórico
+  salvo/reaberto, filtros, ACK e nenhum impacto em TX.
+- **Status:** backlog registrado; correção e homologação pendentes.
+
+### 28. Mensagens: otimizar o espaço da tela com teclado aberto
+_Solicitado em 31/10/2026; relato com captura de interface comprimida ao enviar mensagens._
+
+**Diagnóstico do layout atual:** `App.kt` mantém `TopBar()`
+(cabeçalho de duas linhas, Enviar beacon, Configurações e chips),
+além da `NavigationBar`; `Screens.kt` mantém campo de busca,
+botão de ordenação e `TabRow` acima das mensagens.
+O `Composer()` usa um campo e botão na mesma linha com
+`imePadding()`. Com `windowSoftInputMode="adjustResize"`,
+o teclado reduz a área disponível, comprimindo a conversa.
+
+- Reorganizar a aba Mensagens em modo **edição/teclado aberto**:
+  reduzir/recolher o cabeçalho global a uma barra compacta e ocultar
+  ou recolher os controles secundários (busca, filtros e ordenação)
+  **sem apagar seus valores**. Preservar identificação do contato
+  ou categoria (Geral/CQ, Boletins, conversa privada).
+- Considerar **ocultar a navegação inferior somente enquanto o
+  teclado estiver aberto**, garantindo retorno ao modo normal ao
+  fechá-lo; evitar múltiplos `imePadding` que criem espaços vazios
+  ou façam o compositor subir excessivamente.
+- Deixar **campo de texto e botão Enviar sempre acessíveis acima do
+  teclado** (altura mínima de toque, contraste e visualização do
+  conteúdo digitado), sem sobreposição de teclado/navegação.
+  Campo pode crescer até 3–5 linhas com limite definido, com
+  rolagem interna para textos maiores. Em largura reduzida,
+  dimensionar ou reposicionar o botão sem esmagar o campo.
+- O histórico deve ocupar o **espaço restante e continuar
+  rolável**, preservar a posição do leitor e não perder rascunho
+  ou seleção/SSID ao alternar foco, aba, orientação ou fechar
+  teclado. Considerar modo de leitura em tela cheia, sem esconder
+  status de transmissão/falha.
+- **T28:** validar retrato, paisagem, aparelhos de 320/360/412 dp,
+  fonte 150%/200%, teclado Gboard e alternativo, barra de gestos,
+  IME aberto/fechado, teclado físico e acessibilidade. Confirmar
+  campo e Enviar visíveis, nenhum elemento cortado, rascunho
+  preservado, histórico rolável e envio sem perda de texto
+  (ver falha P1 do item #25).
+- **Status:** backlog registrado; não implementado.
+
+### 29. Informação da estação: acrescentar www.PT2VHF.com ao texto existente
+_Solicitado em 31/10/2026, após capturas dos detalhes da estação._
+
+**Requisito explícito:** exibir o endereço **`www.PT2VHF.com`**
+como complemento do conteúdo do campo **Informação** das estações
+que transmitirem beacons pelo **PT2VHF APRS Client Android**.
+Exemplo desejado: `PT2VHF APRS Client www.PT2VHF.com`.
+**Não** substituir toda a descrição por apenas o domínio.
+
+- Esta informação precisa estar **no comentário real do beacon de
+  posição**, transmitido por APRS-IS e RF/TNC com a configuração
+  autorizada. Não apenas decorar o popup local; outros programas
+  devem receber o mesmo conteúdo. O código da v0.1.4 já usa
+  `beaconCommentWithSite` antes de `positionInfo()`, mas o
+  funcionamento real precisa de comprovação.
+- Garantir o sufixo `www.PT2VHF.com` **exatamente uma vez**,
+  mantendo texto de descrição útil à esquerda; conservar
+  preferências pessoais intactas e reservar caracteres para o
+  domínio antes de truncar. Se comentário do usuário for extenso,
+  encurtar **somente a cópia enviada**, dando visibilidade ao
+  limite APRS. Não transmitir beacons adicionais pelo simples
+  fato de abrir detalhes.
+- Nos detalhes da estação e na lista Estações, exibir o
+  **comentário recebido** fielmente, inclusive quando ainda
+  reflete beacon antigo de outra estação PT2VHF; ele somente
+  mudará após aquela instalação transmitir com código atualizado.
+  **Não acrescentar domínio a estações de terceiros** ou a pacotes
+  antigos como se a estação o tivesse anunciado. Quando apropriado,
+  tornar a URL recebida clicável sem alterar seu valor.
+- **T29:** capturar pacote de posição bruto da v0.1.4/versão
+  corrigida, verificar `www.PT2VHF.com` após a descrição,
+  conferir o campo Informação no próprio cliente, no APRSdroid
+  e em outro receptor, tanto RF quanto APRS-IS. Testar comentário
+  vazio, personalizado, longo, padrão e domínio já existente,
+  sem duplicação, sem truncar URL e sem adulterar dados de
+  outras estações.
+- **Status:** item aberto para homologação e eventual correção
+  da exibição; não declarar concluído apenas pelo código.
 
 ## Consolidação das sugestões aprovadas com itens já existentes
 
