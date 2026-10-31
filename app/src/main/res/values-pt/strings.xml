@@ -195,4 +195,5 @@
     <string name="current_installed_version">Versão instalada: %1$s</string>
     <string name="tracker_auto_start">Iniciar rastreamento automaticamente</string>
     <string name="tracker_auto_start_notice">Quando ativado, transmite sua posição pelos meios APRS autorizados após obter GPS. Você pode interromper o rastreamento a qualquer momento.</string>
+    <string name="tx_route_unavailable">Sem rota de transmissão autorizada. Confira TX APRS-IS, RF/TNC e conexão nas Configurações.</string>
 </resources>
