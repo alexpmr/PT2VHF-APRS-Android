@@ -300,7 +300,7 @@ class AprsService : Service(), LocationListener {
 
     /** true means written to at least one authorized transport, not remotely delivered. */
     private fun sendWithRetry(local: ChatMessage, dest: String, text: String, msgId: String?, attempt: Int): Boolean {
-        if (AprsRepository.isAcked(local.id)) return true
+        if (!AprsRepository.containsMessage(local.id) || AprsRepository.isAcked(local.id)) return true
         val medium = transmit(messageInfo(dest, text, msgId))
         when {
             medium == null -> AprsRepository.setStatus(local.id, "Sem conexão para enviar")
