@@ -783,6 +783,7 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
     var txIs by remember { mutableStateOf(current.txViaInternet) }
     var autoAprsIs by remember { mutableStateOf(current.connectAprsIs) }
     var beaconMode by remember { mutableStateOf(current.beaconMode) }
+    var autoTracker by remember { mutableStateOf(current.trackerAutoStart) }
     var periodicSec by remember { mutableStateOf(current.periodicIntervalSec.toString()) }
     var slowSpeed by remember { mutableStateOf(current.smartSlowSpeedKmh.toString()) }
     var fastSpeed by remember { mutableStateOf(current.smartFastSpeedKmh.toString()) }
@@ -806,7 +807,7 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
             else -> current.copy(callsign = base, ssid = ssidN, server = server.trim(), port = portN, filter = filter.trim(),
                 comment = comment, symbolTable = symbol[0], symbol = symbol[1], rfPath = path,
                 txViaRf = txRf, txViaInternet = txIs, connectAprsIs = autoAprsIs,
-                beaconMode = beaconMode,
+                beaconMode = beaconMode, trackerAutoStart = autoTracker,
                 periodicIntervalSec = (periodicSec.toIntOrNull() ?: current.periodicIntervalSec).coerceIn(30, 86400),
                 smartSlowSpeedKmh = (slowSpeed.toIntOrNull() ?: current.smartSlowSpeedKmh).coerceIn(1, 200),
                 smartFastSpeedKmh = (fastSpeed.toIntOrNull() ?: current.smartFastSpeedKmh).coerceIn(5, 300),
@@ -857,6 +858,11 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
                 OutlinedTextField(path, { path = it.uppercase() }, label = { Text(UiText.text(R.string.rf_path)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(txRf, { txRf = it }); Text(UiText.text(R.string.tx_rf)) }
                 Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(txIs, { txIs = it }); Text(UiText.text(R.string.tx_aprs)) }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(autoTracker, { autoTracker = it })
+                    Text(UiText.text(R.string.tracker_auto_start))
+                }
+                Text(UiText.text(R.string.tracker_auto_start_notice), color = Pal.muted, fontSize = 12.sp)
                 Text(UiText.text(R.string.beacon_mode), color = Pal.muted)
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     listOf("smart", "periodic", "manual").forEach { mode ->
