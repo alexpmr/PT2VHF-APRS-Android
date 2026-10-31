@@ -4,7 +4,7 @@ Atualizado em 31/10/2026. **Esta matriz não é um release.**
 
 - Release **v0.1.3** gerada e assinada no GitHub e distribuída pelo site oficial; homologação física de itens do backlog continua pendente.
 - Desenvolvimento integrado à `main` por meio do PR [#7](../../pull/7); release [v0.1.2](../../releases/tag/v0.1.2).
-- Versão para instalação: **0.1.3**, APK de produção assinado e verificado no GitHub Actions. A homologação física pelo usuário permanece obrigatória; não marcar os 29 itens como totalmente concluídos.
+- Versão para instalação: **0.1.3**, APK de produção assinado e verificado no GitHub Actions. A homologação física pelo usuário permanece obrigatória; não marcar os 30 itens como totalmente concluídos.
 - Status: `Não iniciado` → `Implementação parcial` → `Pronto para teste físico` → `Validado pelo usuário` → `Concluído/baixado`.
 - **Regra de baixa:** nunca baixar um item apenas porque o código compilou; registrar evidência, validar todas as partes exigidas e separar pendências residuais. Atualizar `BACKLOG.md` e registrar commit a cada baixa.
 - **Segurança:** use baixa potência e frequência/canal autorizado; não envie beacons de posição residencial sem querer. O perfil 'somente RX' ainda não está implementado; desligue TX RF e APRS-IS para testes exclusivamente de recepção.
@@ -42,6 +42,7 @@ Atualizado em 31/10/2026. **Esta matriz não é um release.**
 | 27 | Caracteres estranhos nas mensagens CQ/APRS-IS | **P2 visual na v0.1.4 — aberto** | T27: bytes originais e charset UTF-8/Latin-1/CP1252, RF, payload malformado, histórico e controles APRS preservados |
 | 28 | Layout de Mensagens comprimido ao abrir teclado | **P2 visual na v0.1.4 — aberto** | T28: compositor e Enviar acima do IME, barra e navegação adaptáveis, rascunho e scroll preservados, telas estreitas |
 | 29 | Domínio PT2VHF no campo Informação das estações PT2VHF | **P1 de homologação — v0.1.4** | T29: URL como sufixo do comentário transmitido e visto por outros clientes, não alterando dados de terceiros |
+| 30 | Rastreador iniciado por padrão depois da configuração/autorização | **Pendente na v0.1.4; backlog #30** | T30: default ON com consentimento, OFF manual persistente, reinício/foreground, GPS, TX, primeiro fix, ausência de beacons extras | 
 
 
 ## Roteiro de testes físicos, em ordem
@@ -104,6 +105,8 @@ Atualizado em 31/10/2026. **Esta matriz não é um release.**
 **T28 — Layout adaptativo ao teclado na tela Mensagens (item #28):** abrir Mensagens → Geral/CQ e conversa privada, focar o compositor com teclado virtual aberto. Em resoluções 320/360/412 dp, paisagem, fonte ampliada e diferentes IMEs, confirmar Enviar e campo sempre acessíveis acima do teclado, área de conversa com rolagem, identificação do contato preservada, cabeçalho e filtro secundário compactados sem perder escolhas, navegação inferior recolhida/reexibida de forma consistente. Testar rascunho, troca de foco, mensagens de várias linhas, navegação Voltar, orientação, status de envio e cenário sem conexão. Nenhum texto deve ser perdido ou enviado automaticamente pelo ajuste visual.
 
 **T29 — Informação APRS com descrição e URL PT2VHF (item #29):** transmitir um beacon autorizado no Android v0.1.4 ou superior com texto padrão e comentário configurado. Confirmar no pacote APRS bruto que o campo de comentário termina com `www.PT2VHF.com` integral e uma única vez, após o texto descritivo possível dentro do teto de caracteres; verificar no popup e na lista de Estações de um receptor independente, APRSdroid e cliente desktop. Repetir via APRS-IS e TNC/RF, com comentário vazio, personalizado, longo e URL já presente. As informações de outras estações e dados recebidos anteriormente não podem ser reescritos. Testar que um beacon transmitido por instalação desatualizada não é fabricado/alterado no receptor; ele deve ser atualizado pela própria estação de origem.
+
+**T30 — Rastreador ligado por padrão (item #30):** instalar o APK em perfil novo sem configuração, confirmar que não publica posição; configurar indicativo, permissões Android e consentimento explícito de TX de localização. Verificar estado inicial **Rastreador ligado** automaticamente, primeiro fix GPS e beacon apenas conforme políticas de SmartBeaconing/periódico/manual, sem TX duplicado. Reabrir o aplicativo após terminar Activity e serviço, reconectar APRS-IS, mudar aba, rotacionar a tela e comprovar estado coerente. Desligar rastreador manualmente, encerrar/reabrir, reiniciar serviço e dispositivo; comprovar OFF persistente até reativação manual. Testar GPS negado/sem fix, nenhum meio TX habilitado, APRS-IS não verificado, TNC/RF indisponível, consentimento não concedido, operação em segundo plano e as duas opções de saída (manter/parar). Conferir notificação e log de TX, com ausência de beacons não autorizados, e diferenciar estado de `tracker_enabled` de `tracklog_enabled`.
 
 ## Como informar o resultado
 
