@@ -106,7 +106,13 @@ fun MapScreen(onStation: (String) -> Unit) {
     val activeFollow by androidx.compose.runtime.rememberUpdatedState(followedCall)
     var followPaused by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(followedCall) { followPaused = false }
-    var centered by remember { mutableStateOf(false) }
+    val savedLat = remember { Settings.readOption(context, "map_view_lat", "").toDoubleOrNull() }
+    val savedLon = remember { Settings.readOption(context, "map_view_lon", "").toDoubleOrNull() }
+    val savedZoom = remember { Settings.readOption(context, "map_view_zoom", "").toDoubleOrNull() }
+    val hasValidViewport = savedLat != null && savedLon != null &&
+        savedLat in -90.0..90.0 && savedLon in -180.0..180.0
+    var centered by remember { mutableStateOf(hasValidViewport) }
+    val mapRef = remember { arrayOfNulls<MapView>(1) }
     Box(Modifier.fillMaxSize()) {
     AndroidView(
         modifier = Modifier.fillMaxSize(),
@@ -114,13 +120,33 @@ fun MapScreen(onStation: (String) -> Unit) {
             MapView(ctx).apply {
                 setTileSource(TileSourceFactory.MAPNIK)
                 setMultiTouchControls(true)
-                setOnTouchListener { _, event ->
+                mapRef[0] = this
+                setOnTouchListener { view, event ->
                     if (activeFollow != null && event.actionMasked == android.view.MotionEvent.ACTION_MOVE)
                         followPaused = true
+                    if (event.actionMasked == android.view.MotionEvent.ACTION_UP) {
+                        // Persist after osmdroid has finished the gesture / kinetic movement.
+                        (view as? MapView)?.postDelayed({
+                            val map = view as? MapView
+                            val point = map?.mapCenter
+                            if (map != null && point != null &&
+                                point.latitude in -90.0..90.0 && point.longitude in -180.0..180.0) {
+                                centered = true // manual viewport wins over a late GPS fix.
+                                Settings.saveOption(context, "map_view_lat", point.latitude.toString())
+                                Settings.saveOption(context, "map_view_lon", point.longitude.toString())
+                                Settings.saveOption(context, "map_view_zoom", map.zoomLevelDouble.toString())
+                            }
+                        }, 750L)
+                    }
                     false
                 }
-                controller.setZoom(9.0)
-                controller.setCenter(GeoPoint(-15.78, -47.93))
+                controller.setZoom((savedZoom ?: if (hasValidViewport) 9.0 else 3.0).coerceIn(2.0, 19.0))
+                val initial = if (hasValidViewport) GeoPoint(savedLat!!, savedLon!!)
+                    else if (status.lat != null && status.lon != null) GeoPoint(status.lat!!, status.lon!!)
+                    else GeoPoint(0.0, 0.0)
+                controller.setCenter(initial)
+                if (!hasValidViewport && status.lat != null && status.lon != null)
+                    centered = true
             }
         },
         update = { map ->
@@ -153,6 +179,7 @@ fun MapScreen(onStation: (String) -> Unit) {
                 map.overlays.add(Marker(map).apply {
                     position = GeoPoint(s.lat, s.lon)
                     title = s.call
+                    AprsSymbolIcons.icon(context, s.symbolTable, s.symbol)?.let { icon = it }
                     snippet = "${UiText.role(s.role)} · ${ago(s.lastHeard)}"
                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
                     setOnMarkerClickListener { _, _ -> onStation(s.call); true }
@@ -164,6 +191,8 @@ fun MapScreen(onStation: (String) -> Unit) {
                 map.overlays.add(Marker(map).apply {
                     position = GeoPoint(lat, lon)
                     title = UiText.text(R.string.me)
+                    val currentSettings = Settings.load(context)
+                    AprsSymbolIcons.icon(context, currentSettings.symbolTable, currentSettings.symbol)?.let { icon = it }
                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                 })
                 if (!centered && followedCall == null) {
@@ -176,6 +205,23 @@ fun MapScreen(onStation: (String) -> Unit) {
             map.invalidate()
         },
     )
+    TextButton(
+        modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)
+            .background(Pal.bar, RoundedCornerShape(10.dp)),
+        onClick = {
+            val lat = status.lat
+            val lon = status.lon
+            val map = mapRef[0]
+            if (map != null && lat != null && lon != null) {
+                AprsRepository.followStation(null)
+                centered = true
+                map.controller.setCenter(GeoPoint(lat, lon))
+                Settings.saveOption(context, "map_view_lat", lat.toString())
+                Settings.saveOption(context, "map_view_lon", lon.toString())
+                Settings.saveOption(context, "map_view_zoom", map.zoomLevelDouble.toString())
+            }
+        },
+    ) { Text("◎ " + UiText.text(R.string.me)) }
     if (followedCall != null) {
         Row(Modifier.align(Alignment.BottomCenter).background(Pal.bar, RoundedCornerShape(12.dp))) {
             TextButton(onClick = { followPaused = !followPaused }) {
