@@ -101,6 +101,7 @@ fun MapScreen(onStation: (String) -> Unit) {
     val context = LocalContext.current
     val status by AprsRepository.status.collectAsState()
     val followedCall by AprsRepository.followCall.collectAsState()
+    val activeFollow by androidx.compose.runtime.rememberUpdatedState(followedCall)
     var followPaused by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(followedCall) { followPaused = false }
     var centered by remember { mutableStateOf(false) }
@@ -112,7 +113,7 @@ fun MapScreen(onStation: (String) -> Unit) {
                 setTileSource(TileSourceFactory.MAPNIK)
                 setMultiTouchControls(true)
                 setOnTouchListener { _, event ->
-                    if (followedCall != null && event.actionMasked == android.view.MotionEvent.ACTION_MOVE)
+                    if (activeFollow != null && event.actionMasked == android.view.MotionEvent.ACTION_MOVE)
                         followPaused = true
                     false
                 }
