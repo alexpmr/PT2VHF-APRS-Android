@@ -4,7 +4,7 @@ Atualizado em 31/10/2026. **Esta matriz não é um release.**
 
 - Release **v0.1.2** gerada e assinada no GitHub. O site oficial ainda distribui **v0.1.0** até a transferência e verificação do novo APK.
 - Desenvolvimento integrado à `main` por meio do PR [#7](../../pull/7); release [v0.1.2](../../releases/tag/v0.1.2).
-- Versão para instalação: **0.1.2**, APK de produção assinado e verificado no GitHub Actions. A homologação física pelo usuário permanece obrigatória; não marcar os 15 itens como totalmente concluídos.
+- Versão para instalação: **0.1.2**, APK de produção assinado e verificado no GitHub Actions. A homologação física pelo usuário permanece obrigatória; não marcar os 17 itens como totalmente concluídos.
 - Status: `Não iniciado` → `Implementação parcial` → `Pronto para teste físico` → `Validado pelo usuário` → `Concluído/baixado`.
 - **Regra de baixa:** nunca baixar um item apenas porque o código compilou; registrar evidência, validar todas as partes exigidas e separar pendências residuais. Atualizar `BACKLOG.md` e registrar commit a cada baixa.
 - **Segurança:** use baixa potência e frequência/canal autorizado; não envie beacons de posição residencial sem querer. O perfil 'somente RX' ainda não está implementado; desligue TX RF e APRS-IS para testes exclusivamente de recepção.
@@ -15,7 +15,7 @@ Atualizado em 31/10/2026. **Esta matriz não é um release.**
 |---|---|---|---|
 | 1 | Símbolos APRS e comentário padrão | **Falha observada pelo usuário na v0.1.2**: mapa ainda apresenta ícones genéricos/incorretos | Renderizar símbolos APRS de ambas as tabelas e overlays; comparar em aparelho real com referência APRSdroid e registrar prints |
 | 2 | Filtro/ordenação de mensagens | Código para QA | Verificar filtros e persistência após reiniciar |
-| 3 | Estações: reatividade, classificação e filtros | **Falha relatada pelo usuário na v0.1.2; correção pendente** | Novos pacotes APRS-IS/TNC inserem e atualizam linhas sem recarregar; ícone abre seleção direta de classificação/filtros; persistência |
+| 3 | Estações: atualização, ordenação e filtragem avançadas | **Pendente na v0.1.2** | Novos pacotes atualizam lista; filtro real por nome, períodos de primeira/última recepção, distância mínima/máxima, fonte/tipo; ordem ASC/DESC; critérios combinados e persistidos |
 | 4 | Meus enlaces RF | Parcial: origem RF por TNC corrigida e teste unitário | Validar pacote TNC versus APRS-IS; interface própria de enlaces pendente |
 | 5 | Tracklog e estilo | Parcial: GPS/SQLite/linha e controles básicos | Verificar gravação, pausa, permanência, estilo e limpeza; GPX/ajustes avançados pendentes |
 | 6 | Configurações APRSdroid | Parcial: modo manual/periódico/Smart com parâmetros | Testar intervalos em movimento/parado; demais recursos permanecem pendentes |
@@ -29,6 +29,7 @@ Atualizado em 31/10/2026. **Esta matriz não é um release.**
 | 14 | Recordes e cobertura RF | Não implementado | Requer controle rigoroso de evidência TNC |
 | 15 | API Android externa | Não implementado | Requer auditoria de permissões e testes de segurança |
 | 16 | Confirmação de saída | **Não implementado; backlog registrado** | Confirmar/cancelar Back e verificar continuidade ou parada explícita do tracker/TNC/TX |
+| 17 | Restaurar mapa ao abrir | **Pendente na v0.1.2; centro e zoom fixos identificados no código** | Recuperar centro e zoom após reabrir; não recentralizar pelo GPS; botão Minha localização; cenário sem GPS |
 
 ## Roteiro de testes físicos, em ordem
 
@@ -57,9 +58,11 @@ Atualizado em 31/10/2026. **Esta matriz não é um release.**
 **T12 — Publicação OTA:** após o APK v0.1.2 real estar hospedado, comparar versão/manifesto, atualização in-app, URL e contador cumulativo `android-apk` na Hostinger.
 
 
-**T13 — Reatividade de estações (falha observada v0.1.2):** com a aba Estações aberta e filtros em "Todos", receber pelo menos três novos indicativos, sem tocar na tela; todos devem aparecer automaticamente. Receber novas posições/horários dos mesmos indicativos e conferir atualização dos detalhes e reordenação (mais recente/proximidade) sem trocar de aba. Abrir o ícone de classificação/filtro, escolher explicitamente categoria(s), favoritos e ordenação, aplicar, limpar, persistir após reinicializar e conferir que estações filtradas não foram apagadas. Comparar os pacotes recebidos no monitor/diagnóstico e distinguir falha de recepção da falha de exibição. Anexar evidências de RX/APRS-IS e de TNC RF quando disponível.
+**T13 — Reatividade e filtros avançados das estações (falha observada v0.1.2):** com a aba Estações aberta e filtros em "Todos", receber pelo menos três novos indicativos, sem tocar na tela; todos devem aparecer automaticamente. Receber novas posições/horários dos mesmos indicativos e conferir atualização dos detalhes e reordenação (mais recente/proximidade) sem trocar de aba. Abrir o ícone de classificação/filtro, escolher explicitamente categoria(s), favoritos e ordenação, aplicar, limpar, persistir após reinicializar e conferir que estações filtradas não foram apagadas. Comparar os pacotes recebidos no monitor/diagnóstico e distinguir falha de recepção da falha de exibição. Anexar evidências de RX/APRS-IS e de TNC RF quando disponível. Verificar separadamente filtros reais por indicativo, primeira recepção e última recepção (intervalos de datas/horas), distância mínima/máxima e tipo, combinados; conferir ordem ascendente e descendente de cada critério, valores sem GPS e persistência após reiniciar.
 
 **T14 — Confirmação de saída (item #16):** na tela principal, acionar o botão/gesto Voltar, conferir diálogo e escolher **Cancelar** — a interface deve continuar aberta. Repetir e escolher **Sair** — a interface deve encerrar. Com tracker/beacon ativo, validar as alternativas de sair mantendo o serviço ou interrompendo o rastreamento, verificando notificação e ausência de TX inesperado. Conferir persistência de estações/configurações após reabrir e que a confirmação não apareça ao fechar menus ou trocar de aba. Não esperar diálogo ao usar Home, encerramento forçado ou ao remover o processo pelo sistema.
+
+**T15 — Restauração da vista do mapa (item #17):** com GPS ativo, navegar manualmente para uma área diferente e ajustar o zoom; sair totalmente e reabrir o aplicativo, conferindo **mesmo centro e zoom** sem recentralização automática ao receber novo fix GPS. Tocar no ícone **Minha localização** e conferir deslocamento para a posição real; arrastar novamente e verificar que o GPS não recentraliza sozinho. Repetir após trocar de aba, girar a tela e reabrir sem internet/GPS. Em instalação limpa, a primeira abertura deve usar a posição atual quando disponível; testar interação com "Seguir estação" e cancelamento sem perder a vista manual. Registrar capturas antes/depois, valores aproximados do centro e zoom, versão do Android e modelo do aparelho.
 
 ## Como informar o resultado
 
