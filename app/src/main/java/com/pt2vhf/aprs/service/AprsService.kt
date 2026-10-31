@@ -290,7 +290,8 @@ class AprsService : Service(), LocationListener {
     }
 
     private fun sendWithRetry(local: ChatMessage, dest: String, text: String, msgId: String?, attempt: Int) {
-        if (AprsRepository.isAcked(local.id)) return
+        // Clearing history cancels pending retransmissions instead of sending deleted messages.
+        if (!AprsRepository.containsMessage(local.id) || AprsRepository.isAcked(local.id)) return
         val medium = transmit(messageInfo(dest, text, msgId))
         when {
             medium == null -> AprsRepository.setStatus(local.id, "Sem conexão para enviar")
