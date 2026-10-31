@@ -442,6 +442,7 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
     var path by remember { mutableStateOf(current.rfPath) }
     var txRf by remember { mutableStateOf(current.txViaRf) }
     var txIs by remember { mutableStateOf(current.txViaInternet) }
+    var autoAprsIs by remember { mutableStateOf(current.connectAprsIs) }
     var expanded by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf("") }
     var confirmEmptyFilter by remember { mutableStateOf(false) }
@@ -458,7 +459,7 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
             !validHostPort(server, portN) -> { error = UiText.text(R.string.invalid_server); null }
             symbol.length != 2 -> { error = UiText.text(R.string.invalid_symbol); null }
             else -> current.copy(callsign = base, ssid = ssidN, server = server.trim(), port = portN, filter = filter.trim(),
-                comment = comment, symbolTable = symbol[0], symbol = symbol[1], rfPath = path, txViaRf = txRf, txViaInternet = txIs)
+                comment = comment, symbolTable = symbol[0], symbol = symbol[1], rfPath = path, txViaRf = txRf, txViaInternet = txIs, connectAprsIs = autoAprsIs)
         }
     }
 
@@ -492,6 +493,10 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
                 if (custom) OutlinedTextField(server, { server = it.trim() }, label = { Text(UiText.text(R.string.server)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(port, { port = it.filter(Char::isDigit).take(5) }, label = { Text(UiText.text(R.string.port)) }, singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(autoAprsIs, { autoAprsIs = it })
+                    Text(UiText.text(R.string.aprs_auto_connect))
+                }
                 OutlinedTextField(filter, { filter = it }, label = { Text(UiText.text(R.string.aprs_filter)) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
                     supportingText = { Text(UiText.text(R.string.filter_hint, DEFAULT_FILTER)) })
                 OutlinedTextField(comment, { comment = it.take(43) }, label = { Text(UiText.text(R.string.beacon_comment)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
