@@ -1,0 +1,64 @@
+# Homologação do PT2VHF APRS Client for Android
+
+Atualizado em 31/10/2026. **Esta matriz não é um release.**
+
+- Versão pública: **v0.1.0**, ainda distribuída em `www.pt2vhf.com/android`.
+- Branch de desenvolvimento: `feat/android-next-release-core`, PR [#7](../../pull/7).
+- Identificação de teste: **0.2.0-rc1**; instalar somente quando o CI de homologação entregar APK **assinado** e verificado (artefato `android-signed-qa-rc1`).
+- Status: `Não iniciado` → `Implementação parcial` → `Pronto para teste físico` → `Validado pelo usuário` → `Concluído/baixado`.
+- **Regra de baixa:** nunca baixar um item apenas porque o código compilou; registrar evidência, validar todas as partes exigidas e separar pendências residuais. Atualizar `BACKLOG.md` e registrar commit a cada baixa.
+- **Segurança:** use baixa potência e frequência/canal autorizado; não envie beacons de posição residencial sem querer. O perfil 'somente RX' ainda não está implementado; desligue TX RF e APRS-IS para testes exclusivamente de recepção.
+
+## Estado por item (sem alegação de conclusão)
+
+| # | Funcionalidade | Situação no PR #7 | Teste obrigatório / restrição |
+|---|---|---|---|
+| 1 | Símbolos APRS e comentário padrão | Parcial: comentário PT2VHF | Símbolos/overlays ainda não implementados; conferir comentário no beacon |
+| 2 | Filtro/ordenação de mensagens | Código para QA | Verificar filtros e persistência após reiniciar |
+| 3 | Filtro/ordenação de estações | Código para QA | Proximidade, indicativo, recência e tipos |
+| 4 | Meus enlaces RF | Parcial: origem RF por TNC corrigida e teste unitário | Validar pacote TNC versus APRS-IS; interface própria de enlaces pendente |
+| 5 | Tracklog e estilo | Parcial: GPS/SQLite/linha e controles básicos | Verificar gravação, pausa, permanência, estilo e limpeza; GPX/ajustes avançados pendentes |
+| 6 | Configurações APRSdroid | Parcial: modo manual/periódico/Smart com parâmetros | Testar intervalos em movimento/parado; demais recursos permanecem pendentes |
+| 7 | Persistência de estações/enlaces | Código para QA | Forçar encerramento, reabrir sem internet e verificar horários originais |
+| 8 | Cabeçalho verde/vermelho | Código para QA | Simular quedas/reconexões APRS-IS, TNC e GPS |
+| 9 | APRS-IS automático configurável | Código para QA | Desligar, reiniciar/trocar redes e assegurar nenhuma reconexão; RX sem TX |
+| 10 | Perfis Base/Móvel/Portátil/RX | Não implementado | Não homologar |
+| 11 | Seguir estação móvel | Parcial: centrar, pausar, retomar | Verificar posições sucessivas com estação real; trajeto remoto pendente |
+| 12 | Favoritos/alertas | Parcial: favoritos persistentes | Verificar marcação e filtro; alertas por eventos pendentes |
+| 13 | Centro de diagnóstico | Parcial: métricas APRS-IS/TNC/monitor | Validar RX/TX e origem; exportação/diagnóstico avançado pendentes |
+| 14 | Recordes e cobertura RF | Não implementado | Requer controle rigoroso de evidência TNC |
+| 15 | API Android externa | Não implementado | Requer auditoria de permissões e testes de segurança |
+
+## Roteiro de testes físicos, em ordem
+
+**T01 — Instalação/atualização:** instalar o APK QA assinado sobre v0.1.0, sem desinstalar. Confirmar versão 0.2.0-rc1, configurações antigas e mensagens preservadas. Se a assinatura não corresponder, **não desinstalar para tentar corrigir**; registrar a falha.
+
+**T02 — GPS/cabeçalho:** com localização autorizada, abrir em área com fix, conferir GPS verde; desativar localização ou perder fix e verificar GPS vermelho; restaurar. Aguardar pelo menos 2 minutos na perda de fix.
+
+**T03 — APRS-IS:** habilitar conexão automática e verificar login 'verified' (verde); desligar opção nas Configurações, salvar, alternar Wi-Fi/dados móveis, fechar/reabrir: deve permanecer vermelho e sem reconectar. Reativar e confirmar verde. Desativar 'Transmitir pelo APRS-IS' mantendo conexão: ainda deve receber estações.
+
+**T04 — TNC Bluetooth KISS:** conectar um rádio/TNC real, conferir TNC verde, pacotes RX e contadores. Desligar Bluetooth/TNC e confirmar vermelho; religar e reconectar. Usar somente frequências e potência autorizadas.
+
+**T05 — Envio RF controlado:** com equipamento e configuração confirmados, transmitir beacon manual, conferir contador TX do TNC e recepção por uma segunda estação/receptor independente. Registrar indicativo, via e evidência real, evitando que retransmissão via APRS-IS seja interpretada como recepção direta.
+
+**T06 — Persistência offline:** receber ao menos cinco estações e um enlace RF real; fechar completamente o processo; desativar internet e reabrir. Conferir estações, horários antigos, favoritos e histórico; atualizar depois da reconexão sem duplicar.
+
+**T07 — Mensagens/estações:** testar ordenação e filtros (distância, último contato, indicativo, tipos, texto e hora) e se as escolhas persistem após reiniciar.
+
+**T08 — Tracker/tracklog:** deslocar-se em local seguro com tracker ligado e áudio/radio verificado; gravar trecho curto; verificar linha, limpeza e retenção após reiniciar. Conferir modos manual, periódico e SmartBeaconing evitando transmissão excessiva.
+
+**T09 — Seguir estação:** escolher móvel real com pelo menos três posições novas, testar recentralização, arrastar mapa para pausar, retomar e cancelar.
+
+**T10 — Idiomas:** mudar o idioma por aplicativo no Android (se disponível) para inglês, espanhol, francês e italiano; conferir mapa, mensagens, rádio, tracker e configurações. Em idioma não suportado, confirmar fallback inglês.
+
+**T11 — Favoritos/diagnóstico:** marcar favoritas, fechar e reabrir, filtrar, conferir contadores separados de APRS-IS/TNC e o monitor.
+
+**T12 — Publicação OTA:** somente após release assinada, comparar versão/manifesto, atualização in-app, URL e contador cumulativo `android-apk` na Hostinger. NÃO executar contra 0.2.0-rc1 como se fosse versão pública.
+
+## Como informar o resultado
+
+Responder com códigos e evidência objetiva, por exemplo:
+
+`T01 OK — atualização preservou mensagens; T02 OK — GPS verde/vermelho; T03 FALHA — reconectou após desabilitar, log/imagem...`
+
+Após cada resultado, reavaliar o item, corrigir erros se houver e atualizar os dois arquivos `BACKLOG.md` e `HOMOLOGACAO.md` com o commit correspondente. Baixar somente os itens totalmente validados.
