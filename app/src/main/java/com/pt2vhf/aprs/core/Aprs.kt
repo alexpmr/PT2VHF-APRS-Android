@@ -183,6 +183,22 @@ fun formatLongitude(lon: Double): String {
 }
 
 /** Info de posição APRS: !DDMM.mmS/DDDMM.mmW>CCC/SSScomentário */
+const val PT2VHF_BEACON_SITE = "www.PT2VHF.com"
+private val PT2VHF_BEACON_URL = Regex(
+    """(?i)(?<![a-z0-9])(?:https?://)?(?:www\.)?pt2vhf\.com(?:/[a-z0-9_./-]*)?"""
+)
+
+/** Normaliza o texto apenas para transmissão, preservando as configurações salvas. */
+fun beaconCommentWithSite(comment: String, maxChars: Int = 43): String {
+    require(maxChars >= PT2VHF_BEACON_SITE.length)
+    val original = comment.replace(Regex("""\s+"""), " ").trim()
+    val description = PT2VHF_BEACON_URL.replace(original, " ")
+        .replace(Regex("""\s+"""), " ").trim()
+    val maxPrefix = (maxChars - PT2VHF_BEACON_SITE.length - 1).coerceAtLeast(0)
+    val prefix = description.take(maxPrefix).trimEnd()
+    return if (prefix.isEmpty()) PT2VHF_BEACON_SITE else "$prefix $PT2VHF_BEACON_SITE"
+}
+
 fun positionInfo(lat: Double, lon: Double, table: Char, symbol: Char, comment: String,
                  course: Int? = null, speedKmh: Double? = null, messaging: Boolean = true): String {
     val ext = if (course != null && speedKmh != null)
