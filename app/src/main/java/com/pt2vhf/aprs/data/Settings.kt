@@ -21,6 +21,12 @@ data class Settings(
     val txViaRf: Boolean = true,
     val txViaInternet: Boolean = true,
     val connectAprsIs: Boolean = true,
+    val beaconMode: String = "smart", // smart | periodic | manual
+    val periodicIntervalSec: Int = 900,
+    val smartSlowSpeedKmh: Int = 5,
+    val smartFastSpeedKmh: Int = 90,
+    val smartSlowIntervalSec: Int = 1800,
+    val smartFastIntervalSec: Int = 60,
     val stoppedBeaconMinutes: Int = 30,
     val btAddress: String = "",
 ) {
@@ -47,6 +53,13 @@ data class Settings(
                 txViaRf = p.getBoolean("tx_rf", d.txViaRf),
                 txViaInternet = p.getBoolean("tx_is", d.txViaInternet),
                 connectAprsIs = p.getBoolean("connect_aprs_is", d.connectAprsIs),
+                beaconMode = p.getString("beacon_mode", d.beaconMode).orEmpty()
+                    .takeIf { it in setOf("smart", "periodic", "manual") } ?: d.beaconMode,
+                periodicIntervalSec = p.getInt("periodic_interval", d.periodicIntervalSec).coerceIn(30, 86400),
+                smartSlowSpeedKmh = p.getInt("smart_slow_speed", d.smartSlowSpeedKmh).coerceIn(1, 200),
+                smartFastSpeedKmh = p.getInt("smart_fast_speed", d.smartFastSpeedKmh).coerceIn(5, 300),
+                smartSlowIntervalSec = p.getInt("smart_slow_interval", d.smartSlowIntervalSec).coerceIn(30, 86400),
+                smartFastIntervalSec = p.getInt("smart_fast_interval", d.smartFastIntervalSec).coerceIn(30, 86400),
                 stoppedBeaconMinutes = p.getInt("stopped_minutes", d.stoppedBeaconMinutes),
                 btAddress = p.getString("bt_address", "") ?: "",
             )
@@ -66,6 +79,12 @@ data class Settings(
                 .putBoolean("tx_rf", s.txViaRf)
                 .putBoolean("tx_is", s.txViaInternet)
                 .putBoolean("connect_aprs_is", s.connectAprsIs)
+                .putString("beacon_mode", s.beaconMode)
+                .putInt("periodic_interval", s.periodicIntervalSec.coerceIn(30, 86400))
+                .putInt("smart_slow_speed", s.smartSlowSpeedKmh.coerceIn(1, 200))
+                .putInt("smart_fast_speed", s.smartFastSpeedKmh.coerceIn(5, 300))
+                .putInt("smart_slow_interval", s.smartSlowIntervalSec.coerceIn(30, 86400))
+                .putInt("smart_fast_interval", s.smartFastIntervalSec.coerceIn(30, 86400))
                 .putInt("stopped_minutes", s.stoppedBeaconMinutes)
                 .putString("bt_address", s.btAddress)
                 .apply()
