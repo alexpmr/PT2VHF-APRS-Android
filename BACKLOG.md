@@ -4,9 +4,8 @@ Itens registrados para as próximas versões. Não implementar até o pedido de 
 
 ## Onde estamos (31/10/2026)
 
-- Versão publicada: **0.1.0** (release v0.1.0 no GitHub, APK assinado), testada e aprovada no aparelho.
-- Nenhuma versão nova em andamento. Próximo passo: quando for pedida a versão 0.2.0, implementar os itens
-  pendentes abaixo, mover os entregues para o CHANGELOG e gerar o release (commit `release:` na `main`).
+- Release mais recente no GitHub: **v0.1.2**, APK assinado. **Teste físico do mapa revelou falha** no item #1; demais itens têm o status individual abaixo.
+- Continuar correções a partir do backlog e só baixar os requisitos validados. Distribuição pública no site requer confirmação separada do manifesto e do arquivo.
 - Também pendentes desde a 0.1.0 (ver CHANGELOG): TNC por USB-OTG e KISS TCP, mapa offline, mapa de calor de
   cobertura, modo carro, rotas e recordes RF.
 
@@ -20,7 +19,7 @@ seu APK real; há homologação física pendente. Não afirmar que os 15 itens f
 
 | Item | Estado atual | Evidência necessária para baixa |
 |---|---|---|
-| 1 | Parcial: comentário padrão | Símbolos APRS/overlays ainda faltam |
+| 1 | **FALHA CONFIRMADA NA v0.1.2**: símbolos do mapa genéricos/incorretos; comentário padrão alterado | Renderização real de símbolos APRS, tabela primária/alternativa, overlays, ícone próprio e testes físicos |
 | 2 | Implementado no PR; **teste físico pendente** | Filtro, ordem e persistência no Android |
 | 3 | Implementado no PR; **teste pendente** | Proximidade, tipo, ordenação e persistência |
 | 4 | Parcial: origem de RX RF corrigida | Evidência no TNC e apresentação dos meus enlaces |
@@ -45,6 +44,34 @@ para cada lote de aprovações. Pendências não implementadas **não são baixa
 
 ### 1. Mapa: ícones APRS por estação/objeto e site PT2VHF no comentário padrão
 _Registrado em 31/10/2026 (referência: print do mapa do APRSdroid)._
+
+**Regressão/pendência confirmada pelo usuário na APK v0.1.2 (31/10/2026):** o mapa continua
+sem exibir os símbolos gráficos correspondentes às estações reais. O ajuste do comentário de
+beacon **não resolve** a renderização dos ícones. **Status: aberto / correção prioritária /
+teste físico obrigatório. Não baixar este item apenas por compilação.**
+
+**Critérios objetivos de aceite para a próxima implementação:**
+
+- Utilizar os campos APRS do pacote de posição **`symbolTable` e `symbol`** (não um marcador
+  genérico, nem somente `role`/tipo de estação). Implementar mapeamento completo das
+  tabelas primária `/` e alternativa `\\`, com as variantes de overlay alfanumérico
+  definidas pelo protocolo, inclusive símbolos de objetos e itens quando forem recebidos.
+- Mostrar os símbolos convencionais corretos para estação fixa, móvel/carro, motocicleta,
+  portátil/pessoa, digipeater, iGate, meteorológica, aeronave etc.; quando um símbolo for
+  desconhecido, usar fallback visível e **não inventar outro símbolo como se fosse real**.
+- Exibir o **símbolo da própria estação** conforme suas Configurações, sem confundi-lo com
+  símbolos de estações remotas; manter o indicativo legível junto ao ícone.
+- Obter sprite/atlas com licença de redistribuição verificada (ou criar símbolos próprios
+  conforme a especificação) e garantir que imagens estejam embutidas no APK para funcionar
+  também sem internet; cuidar de escala, densidade de tela, cache, atualização dos marcadores
+  e desempenho com muitas estações.
+- **Teste de aceitação em aparelho real:** comparar lado a lado os mesmos indicativos/objetos
+  com mapa APRSdroid ou referência APRS conhecida, nas tabelas primária, alternativa e com
+  overlay; verificar mudanças de símbolo recebidas em novos beacons, símbolo próprio,
+  zoom, reinicialização do aplicativo e funcionamento offline. Anexar captura antes/depois.
+- **Não publicar como concluído** enquanto o usuário ainda enxergar marcadores genéricos
+  ou símbolos errados na APK instalada.
+
 
 - **Ícones APRS no mapa:** hoje todas as estações e objetos aparecem com o mesmo marcador padrão do osmdroid
   (`ui/Screens.kt`, laço `for (s in stations.values)`). Desenhar cada uma com o ícone do seu símbolo APRS,
