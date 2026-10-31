@@ -22,4 +22,4 @@ App Android (Kotlin + Jetpack Compose, osmdroid) do PT2VHF APRS Client. Textos, 
   release como concluída se o site público ainda não estiver validado; relatar
   qualquer falha de publicação. Esta regra não autoriza criar releases sem pedido.
 
-- **Todo novo item de backlog deve ser registrado imediatamente no GitHub:** atualizar `BACKLOG.md` na branch `backlog` e realizar commit de documentação no mesmo atendimento. Não basta mencionar a pendência na conversa. Confirmar o commit/link; não implementar o item nem gerar versão até pedido explícito. Se o commit falhar, informar claramente que o registro não foi concluído.
+- **Todo novo item de backlog deve ser registrado imediatamente no GitHub:** atualizar `BACKLOG.md` na branch principal `main` e realizar commit de documentação no mesmo atendimento (`docs(backlog):`, nunca `release:`). Não basta mencionar a pendência na conversa. Confirmar o commit/link; não implementar o item nem gerar versão até pedido explícito. Se o commit falhar, informar claramente que o registro não foi concluído.
