@@ -142,4 +142,10 @@
     <string name="follow_paused">Inseguimento in pausa — tocca per riprendere</string>
     <string name="favorites_only">Solo preferite</string>
     <string name="favorite_alert">La stazione preferita %1$s trasmette di nuovo</string>
+    <string name="track_record">Registra percorso con tracker attivo</string>
+    <string name="track_clear">Cancella percorso</string>
+    <string name="track_line">Linea del percorso</string>
+    <string name="track_solid">Continua</string>
+    <string name="track_dashed">Tratteggiata</string>
+    <string name="track_points">Punti del percorso: %1$d</string>
 </resources>
