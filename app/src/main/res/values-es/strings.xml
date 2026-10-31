@@ -193,4 +193,6 @@
     <string name="exit_stop_tracker">Salir y detener rastreador</string>
     <string name="exit_keep_tracker">Salir y mantener rastreador</string>
     <string name="current_installed_version">Versión instalada: %1$s</string>
+    <string name="tracker_auto_start">Iniciar el seguimiento automáticamente</string>
+    <string name="tracker_auto_start_notice">Cuando esté activado, transmitirá su posición por enlaces APRS autorizados tras obtener señal GPS. Puede detenerlo en cualquier momento.</string>
 </resources>
