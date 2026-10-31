@@ -30,6 +30,7 @@ data class Station(
     val speedKmh: Double?,
     val course: Int?,
     val heardBy: Set<String> = emptySet(),
+    val firstSeen: Long = lastHeard,
 ) {
     val role: String
         get() = when {
@@ -193,11 +194,13 @@ object AprsRepository {
         parsePosition(packet.info)?.let { pos ->
             var persisted: Station? = null
             _stations.update { map ->
-                val heardBy = (map[packet.source]?.heardBy ?: emptySet()) +
+                val existing = map[packet.source]
+                val heardBy = (existing?.heardBy ?: emptySet()) +
                     (if (medium == Medium.RF) digis.take(1) else emptyList())
                 val station = Station(
                     packet.source, pos.lat, pos.lon, pos.symbolTable, pos.symbol, pos.comment, now, medium,
                     packet.path.joinToString(","), pos.speedKmh, pos.course, heardBy,
+                    firstSeen = existing?.firstSeen ?: now,
                 )
                 persisted = station
                 map + (packet.source to station)
