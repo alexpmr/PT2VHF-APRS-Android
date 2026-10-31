@@ -5,6 +5,7 @@ import com.pt2vhf.aprs.core.AprsMessage
 import com.pt2vhf.aprs.core.AprsPacket
 import com.pt2vhf.aprs.core.parseMessage
 import com.pt2vhf.aprs.core.parsePosition
+import com.pt2vhf.aprs.core.localRfEvidenceLinks
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -180,9 +181,9 @@ object AprsRepository {
         val digis = packet.rfDigipeaters
         // A trilha de um pacote APRS-IS descreve um caminho anunciado, não uma recepção RF
         // feita pelo telefone. Somente o TNC físico pode registrar evidência RF local.
-        if (medium == Medium.RF && digis.isNotEmpty()) {
-            val chain = listOf(packet.source) + digis
-            val newLinks = chain.zipWithNext().map { (a, b) -> RfLink(a, b, now) }
+        val observedRfPath = localRfEvidenceLinks(packet, medium == Medium.RF)
+        if (observedRfPath.isNotEmpty()) {
+            val newLinks = observedRfPath.map { (a, b) -> RfLink(a, b, now) }
             _links.update { old ->
                 (old.filter { l -> newLinks.none { it.from == l.from && it.to == l.to } } + newLinks).takeLast(2000)
             }
