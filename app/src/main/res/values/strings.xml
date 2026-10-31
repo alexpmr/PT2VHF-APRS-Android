@@ -192,4 +192,5 @@
     <string name="exit_app">Exit</string>
     <string name="exit_stop_tracker">Exit and stop tracker</string>
     <string name="exit_keep_tracker">Exit; keep tracker running</string>
+    <string name="current_installed_version">Installed version: %1$s</string>
 </resources>
