@@ -94,3 +94,30 @@ transmitir por RF/APRS-IS. O que o APRSdroid oferece e falta aqui, agrupado por 
 Itens do APRSdroid que já temos ou cobrimos melhor: passcode automático (lá é digitado), lista de servidores
 APRS-IS, path RF e TNC KISS por Bluetooth. Organizar a tela de Configurações em seções (como no APRSdroid) em
 vez de um único diálogo.
+
+### 7. Persistência local das estações e histórico de enlaces RF entre reinicializações
+_Registrado em 31/10/2026 (relato: ao fechar o app, o mapa e a lista de estações começam vazios e precisam ser repopulados)._
+
+- **Diagnóstico atual:** `AprsRepository.kt` guarda `_stations` e `_links` apenas em `MutableStateFlow`,
+  em memória; ao encerrar o processo essas coleções são perdidas. Apenas mensagens têm persistência
+  local em `messages.json`. Não confundir fechar a tela com encerramento do processo pelo Android.
+- **Persistir estações localmente:** usar banco Room/SQLite com chave única por indicativo/objeto, incluindo
+  coordenadas, símbolo/tabela/overlay quando aplicável, comentário, tipo/role, meio, via, velocidade,
+  rumo, informações de recepção e `lastHeard` real do último pacote. Gravar incrementalmente sem
+  bloquear a thread principal, com transações e estratégia adequada a altas taxas de pacotes.
+- **Carregamento na inicialização:** popular mapa e lista de estações imediatamente a partir do banco,
+  antes de APRS-IS/TNC se reconectarem, inclusive offline. Pacotes novos devem atualizar os registros
+  sem duplicá-los e sem sobrescrever com dados mais antigos.
+- **Atualidade visível:** separar *última estação conhecida* de *estação recém-ouvida*. Identificar
+  visualmente dados antigos (por exemplo, ícone atenuado, idade desde o último contato e filtro
+  'ativas/recentes/todas'); nunca marcar estações restauradas como se tivessem sido recebidas agora.
+  Exibição padrão sugerida: últimas 24 h, configurável.
+- **Histórico e retenção:** sugerir 30 dias de retenção em disco, configuráveis; oferecer limpeza manual,
+  política de expiração e limites de quantidade/tamanho, considerando filtros APRS-IS de grande alcance.
+  A limpeza de cache/armazenamento pelo Android ou usuário pode excluir dados locais.
+- **Enlaces RF:** se também forem persistidos, guardar `lastSeen`, origem e evidência do enlace, respeitar
+  expiração própria e nunca representar um enlace histórico como contato RF ativo. Integrar ao item 4.
+- **Teste de aceitação:** receber estações, encerrar completamente o processo, abrir o app sem rede:
+  estações anteriores devem aparecer com horários originais; reconectar e verificar atualizações,
+  sem duplicatas ou regressões; testar volume elevado de pacotes e limpeza configurada.
+- **Escopo:** registrar para uma próxima versão; não implementar nem gerar APK até solicitação explícita.
