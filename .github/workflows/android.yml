@@ -146,5 +146,5 @@ jobs:
             gh release upload "$tag" dist/*.apk --clobber
           else
             gh release create "$tag" dist/*.apk --target "$GITHUB_SHA" --title "PT2VHF APRS Client for Android $tag" \
-              --notes "Atualização ${VERSION}: o comentário de posição inclui sempre www.PT2VHF.com nos beacons APRS-IS e RF, mantendo preferências personalizadas. Outras pendências seguem no BACKLOG.md. Downloads oficiais em https://www.pt2vhf.com/aprs-android"
+              --notes "Atualização ${VERSION}: mensagem direta nos detalhes, interface de chat responsiva, melhor feedback de transmissão e rastreador automático configurável. O domínio www.PT2VHF.com permanece no beacon. Demais pendências estão no BACKLOG.md. Downloads oficiais em https://www.pt2vhf.com/aprs-android"
           fi
