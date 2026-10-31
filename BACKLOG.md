@@ -13,7 +13,7 @@ Itens registrados para as próximas versões. Não implementar até o pedido de 
 
 Aprovada a implementação integral, mas **não confundir código no PR com funcionalidade homologada**.
 A release **v0.1.3** foi gerada e assinada no GitHub ([tag v0.1.3](../../releases/tag/v0.1.3)) e disponibilizada no site.
-O backlog permanece parcialmente implementado, com homologação física pendente. Não afirmar que os 23 itens foram concluídos. Os critérios, roteiros e evidências ficam no
+O backlog permanece parcialmente implementado, com homologação física pendente. Não afirmar que os 24 itens foram concluídos. Os critérios, roteiros e evidências ficam no
 [HOMOLOGACAO.md](HOMOLOGACAO.md).
 
 | Item | Estado atual | Evidência necessária para baixa |
@@ -41,6 +41,7 @@ O backlog permanece parcialmente implementado, com homologação física pendent
 | 21 | **Pendente — v0.1.3**: procurar indicativos para iniciar conversa nova | Busca por indicativo completo/parcial em estações e contatos recentes, seleção de SSID exato e abertura da conversa sem TX automático |
 | 22 | **Pendente — v0.1.3**: controle de brilho do mapa inexistente | Ícone de sol com ajuste independente das configurações globais do Android, intensidade persistente, padrão neutro e teste de camadas/legibilidade |
 | 23 | **Pendente — v0.1.3**: ordenar cada mensagem pessoal ou geral pelo horário de recepção | Linha do tempo cronológica (antigas acima, recentes abaixo), desempate estável e atualização reativa; independente da ordem da lista de Conversas (#2) |
+| 24 | **Pendente — v0.1.3**: balões estreitos, com espaço horizontal não aproveitado | Largura responsiva até ~90% da área útil, mensagens curtas compactas, longas com quebra correta, alinhamento enviado/recebido e legibilidade de metadados |
 
 
 **Baixa definitiva:** marcar `Concluído` somente após CI aprovado,
@@ -754,6 +755,49 @@ estável; não assumir que a ordem física na lista é sempre confiável.
   com e sem SSID e origem RF/APRS-IS.
 - **Status:** registrado para próxima implementação; **não corrigido
   nem homologado nesta solicitação**.
+
+### 24. Mensagens: aproveitar melhor a largura disponível dos balões
+_Solicitado em 31/10/2026, observado na v0.1.3._
+
+**Problema identificado no código:** `ui/Screens.kt`, composable
+`Bubble()`, limita cada balão a `Modifier.widthIn(max = 300.dp)`.
+Em celulares com telas mais largas e, especialmente, na orientação
+paisagem/tablet, isso cria quebras de linha desnecessárias e deixa
+grande faixa lateral vazia. O contêiner já ocupa a largura da tela,
+alinhando as mensagens próprias à direita e as recebidas à esquerda.
+
+**Requisito de interface:**
+
+- Substituir teto fixo de `300.dp` por largura **responsiva** relativa
+  à área útil da conversa, com limite aproximado de **88–92%** da
+  largura disponível e margens laterais consistentes. Respeitar
+  `WindowInsets`, telas pequenas, recortes/notch, orientação
+  retrato/paisagem e fontes ampliadas.
+- Manter **balões de mensagens curtas compactos**, expandindo apenas
+  quando o conteúdo exigir (não esticar todos os balões a 90%).
+  Mensagens mais longas devem usar melhor a área horizontal para
+  reduzir a quantidade de linhas, sem corte ou overflow.
+- Preservar os dois alinhamentos: **mensagens recebidas à esquerda**
+  e **enviadas à direita**, com cores e cantos originais e
+  separação perceptível entre os interlocutores. Em **Geral/CQ**,
+  boletins e conversas privadas, o mesmo comportamento deve valer.
+- Quebrar textos de modo natural, incluindo URLs e sequências
+  longas/sem espaços; preservar espaços legíveis e emojis Unicode,
+  sem adicionar rolagem horizontal. Não sobrepor **horário, status,
+  ACK, indicativo do remetente** nem controles de resposta por
+  pressão prolongada (item #20).
+- Evitar layouts com dimensões rígidas ou custo elevado de medição a
+  cada mensagem; não alterar histórico, conteúdo transmitido,
+  ordenação cronológica (item #23) ou regras APRS.
+- **Teste de aceitação T24:** comparar telas de 320/360/412 dp,
+  paisagem e tablet; enviar mensagens curtas, longas, com URL,
+  emojis e palavras sem espaços; conferir aproveitamento da
+  largura disponível, alinhamento correto, leitura integral,
+  ausência de texto cortado, metadados visíveis e interação de
+  resposta. Repetir com fontes grandes e aba Geral, boletins,
+  conversa privada, teclado aberto e lista rolando.
+- **Status:** especificação registrada, implementação e teste
+  físico pendentes. Nenhuma versão gerada nesta solicitação.
 
 ## Consolidação das sugestões aprovadas com itens já existentes
 
