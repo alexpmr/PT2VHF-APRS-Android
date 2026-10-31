@@ -2,9 +2,9 @@
 
 Atualizado em 31/10/2026. **Esta matriz não é um release.**
 
-- Release **v0.1.2** gerada e assinada no GitHub. O site oficial ainda distribui **v0.1.0** até a transferência e verificação do novo APK.
+- Release **v0.1.3** gerada e assinada no GitHub e distribuída pelo site oficial; homologação física de itens do backlog continua pendente.
 - Desenvolvimento integrado à `main` por meio do PR [#7](../../pull/7); release [v0.1.2](../../releases/tag/v0.1.2).
-- Versão para instalação: **0.1.2**, APK de produção assinado e verificado no GitHub Actions. A homologação física pelo usuário permanece obrigatória; não marcar os 18 itens como totalmente concluídos.
+- Versão para instalação: **0.1.3**, APK de produção assinado e verificado no GitHub Actions. A homologação física pelo usuário permanece obrigatória; não marcar os 19 itens como totalmente concluídos.
 - Status: `Não iniciado` → `Implementação parcial` → `Pronto para teste físico` → `Validado pelo usuário` → `Concluído/baixado`.
 - **Regra de baixa:** nunca baixar um item apenas porque o código compilou; registrar evidência, validar todas as partes exigidas e separar pendências residuais. Atualizar `BACKLOG.md` e registrar commit a cada baixa.
 - **Segurança:** use baixa potência e frequência/canal autorizado; não envie beacons de posição residencial sem querer. O perfil 'somente RX' ainda não está implementado; desligue TX RF e APRS-IS para testes exclusivamente de recepção.
@@ -31,6 +31,7 @@ Atualizado em 31/10/2026. **Esta matriz não é um release.**
 | 16 | Confirmação de saída | **Não implementado; backlog registrado** | Confirmar/cancelar Back e verificar continuidade ou parada explícita do tracker/TNC/TX |
 | 17 | Restaurar mapa ao abrir | **Pendente na v0.1.2; centro e zoom fixos identificados no código** | Recuperar centro e zoom após reabrir; não recentralizar pelo GPS; botão Minha localização; cenário sem GPS |
 | 18 | Versão instalada no aviso de site oficial | Implementado no PR #8; CI/homologação pendentes | Popup inicial mostra BuildConfig.VERSION_NAME e www.PT2VHF.com; OTA permanece separado |
+| 19 | Enviar mensagem nos detalhes da estação | **Ação no código existente; usabilidade não homologada na v0.1.3** | Botão de envio direto sempre visível; abre conversa privada com indicativo/SSID correto; nenhum TX até o comando Enviar |
 
 
 ## Roteiro de testes físicos, em ordem
@@ -67,6 +68,8 @@ Atualizado em 31/10/2026. **Esta matriz não é um release.**
 **T15 — Restauração da vista do mapa (item #17):** com GPS ativo, navegar manualmente para uma área diferente e ajustar o zoom; sair totalmente e reabrir o aplicativo, conferindo **mesmo centro e zoom** sem recentralização automática ao receber novo fix GPS. Tocar no ícone **Minha localização** e conferir deslocamento para a posição real; arrastar novamente e verificar que o GPS não recentraliza sozinho. Repetir após trocar de aba, girar a tela e reabrir sem internet/GPS. Em instalação limpa, a primeira abertura deve usar a posição atual quando disponível; testar interação com "Seguir estação" e cancelamento sem perder a vista manual. Registrar capturas antes/depois, valores aproximados do centro e zoom, versão do Android e modelo do aparelho.
 
 **T16 — Versão atual no aviso do site oficial (item #18):** instalar APK v0.1.3 no aparelho, abrir do zero e conferir o popup de boas-vindas com **"Versão instalada: 0.1.3"**, endereço/link **www.PT2VHF.com**, sem mostrar versão do servidor como instalada. Fechar aviso e trocar de abas: não pode reaparecer. Encerrar e abrir novamente: deve reaparecer. Com atualização OTA detectada, garantir popup separado após o anúncio inicial. Conferir as traduções PT/EN/ES/FR/IT.
+
+**T17 — Mensagem direta nos detalhes da estação (item #19):** selecionar uma estação na aba Estações, abrir os detalhes, localizar o botão destacado **Enviar mensagem** sem rolar horizontalmente, tocar e verificar que abre a conversa privada com o indicativo correto, inclusive SSID, histórico preservado e campo de digitação pronto. Repetir selecionando estação pelo mapa, em celulares com telas pequenas e fonte grande, e em todos os idiomas. Confirmar que abrir a conversa **não transmite nada**; somente enviar quando o usuário acionar Enviar e a configuração permitir. Conferir APRS-IS e TNC físico quando disponíveis, além dos caminhos de cancelar/voltar e selecionar outra estação. Anexar print e registro do TX quando aplicável.
 
 ## Como informar o resultado
 
