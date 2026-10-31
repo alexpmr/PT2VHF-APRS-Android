@@ -22,6 +22,7 @@ data class Settings(
     val txViaInternet: Boolean = true,
     val connectAprsIs: Boolean = true,
     val beaconMode: String = "smart", // smart | periodic | manual
+    val trackerAutoStart: Boolean = true, // Configured users can disable automatic tracking
     val periodicIntervalSec: Int = 900,
     val smartSlowSpeedKmh: Int = 5,
     val smartFastSpeedKmh: Int = 90,
@@ -53,6 +54,7 @@ data class Settings(
                 txViaRf = p.getBoolean("tx_rf", d.txViaRf),
                 txViaInternet = p.getBoolean("tx_is", d.txViaInternet),
                 connectAprsIs = p.getBoolean("connect_aprs_is", d.connectAprsIs),
+                trackerAutoStart = p.getBoolean("tracker_auto_start", d.trackerAutoStart),
                 beaconMode = p.getString("beacon_mode", d.beaconMode).orEmpty()
                     .takeIf { it in setOf("smart", "periodic", "manual") } ?: d.beaconMode,
                 periodicIntervalSec = p.getInt("periodic_interval", d.periodicIntervalSec).coerceIn(30, 86400),
@@ -80,6 +82,7 @@ data class Settings(
                 .putBoolean("tx_is", s.txViaInternet)
                 .putBoolean("connect_aprs_is", s.connectAprsIs)
                 .putString("beacon_mode", s.beaconMode)
+                .putBoolean("tracker_auto_start", s.trackerAutoStart)
                 .putInt("periodic_interval", s.periodicIntervalSec.coerceIn(30, 86400))
                 .putInt("smart_slow_speed", s.smartSlowSpeedKmh.coerceIn(1, 200))
                 .putInt("smart_fast_speed", s.smartFastSpeedKmh.coerceIn(5, 300))
