@@ -123,4 +123,5 @@
     <string name="server_oceania">Oceania</string>
     <string name="retry_ack">Waiting for ACK (attempt %1$d)</string>
     <string name="not_sent">not sent</string>
+    <string name="aprs_auto_connect">Connect automatically to APRS-IS</string>
 </resources>
