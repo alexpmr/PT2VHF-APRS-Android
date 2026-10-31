@@ -97,6 +97,8 @@ private fun hhmm(t: Long) = java.text.DateFormat.getTimeInstance(java.text.DateF
 fun MapScreen(onStation: (String) -> Unit) {
     val stations by AprsRepository.stations.collectAsState()
     val links by AprsRepository.links.collectAsState()
+    val ownTrack by AprsRepository.track.collectAsState()
+    val context = LocalContext.current
     val status by AprsRepository.status.collectAsState()
     val followedCall by AprsRepository.followCall.collectAsState()
     var followPaused by rememberSaveable { mutableStateOf(false) }
@@ -120,6 +122,20 @@ fun MapScreen(onStation: (String) -> Unit) {
         },
         update = { map ->
             map.overlays.clear()
+            if (ownTrack.size > 1) {
+                val trace = Polyline(map).apply {
+                    setPoints(ownTrack.map { GeoPoint(it.lat, it.lon) })
+                    outlinePaint.color = when (Settings.readOption(context, "track_color", "blue")) {
+                        "red" -> 0xFFF45B69.toInt()
+                        "green" -> 0xFF20D397.toInt()
+                        else -> 0xFF5CAEFF.toInt()
+                    }
+                    outlinePaint.strokeWidth = 6f
+                    if (Settings.readOption(context, "track_style", "solid") == "dashed")
+                        outlinePaint.pathEffect = android.graphics.DashPathEffect(floatArrayOf(15f, 10f), 0f)
+                }
+                map.overlays.add(trace)
+            }
             val dayAgo = System.currentTimeMillis() - 24 * 3600_000L
             for (l in links.filter { it.lastSeen > dayAgo }) {
                 val a = stations[l.from] ?: continue
@@ -485,6 +501,16 @@ fun RadioScreen(settings: Settings) {
 fun TrackerScreen(settings: Settings) {
     val context = LocalContext.current
     val status by AprsRepository.status.collectAsState()
+    val track by AprsRepository.track.collectAsState()
+    var trackEnabled by rememberSaveable {
+        mutableStateOf(Settings.readOption(context, "tracklog_enabled", "true") == "true")
+    }
+    var trackStyle by rememberSaveable {
+        mutableStateOf(Settings.readOption(context, "track_style", "solid"))
+    }
+    var trackColor by rememberSaveable {
+        mutableStateOf(Settings.readOption(context, "track_color", "blue"))
+    }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         SectionCard {
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -513,6 +539,33 @@ fun TrackerScreen(settings: Settings) {
                 enabled = settings.configured && status.lat != null) { Text(UiText.text(R.string.start_tracker)) }
         }
         Text(UiText.text(R.string.tracker_notice), color = Pal.muted, fontSize = 12.sp)
+        SectionCard(UiText.text(R.string.track_line)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(trackEnabled, {
+                    trackEnabled = it
+                    Settings.saveOption(context, "tracklog_enabled", it.toString())
+                })
+                Text(UiText.text(R.string.track_record))
+            }
+            Text(UiText.text(R.string.track_points, track.size), color = Pal.muted)
+            Row {
+                TextButton(onClick = {
+                    trackStyle = if (trackStyle == "solid") "dashed" else "solid"
+                    Settings.saveOption(context, "track_style", trackStyle)
+                }) {
+                    Text(UiText.text(if (trackStyle == "solid") R.string.track_solid else R.string.track_dashed))
+                }
+                TextButton(onClick = {
+                    trackColor = when (trackColor) { "blue" -> "red"; "red" -> "green"; else -> "blue" }
+                    Settings.saveOption(context, "track_color", trackColor)
+                }) { Text("●", color = when (trackColor) {
+                    "red" -> Pal.orange; "green" -> Pal.green; else -> Pal.accent
+                }) }
+                TextButton(onClick = { AprsRepository.clearTrack() }) {
+                    Text(UiText.text(R.string.track_clear))
+                }
+            }
+        }
     }
 }
 
