@@ -115,3 +115,6 @@ Responder com códigos e evidência objetiva, por exemplo:
 `T01 OK — atualização preservou mensagens; T02 OK — GPS verde/vermelho; T03 FALHA — reconectou após desabilitar, log/imagem...`
 
 Após cada resultado, reavaliar o item, corrigir erros se houver e atualizar os dois arquivos `BACKLOG.md` e `HOMOLOGACAO.md` com o commit correspondente. Baixar somente os itens totalmente validados.
+
+
+**T32 — Apagar todas as estações e mensagens (dados locais):** em Configurações → Dados locais, testar os dois botões separadamente. Conferir aviso irreversível e ação Cancelar sem alteração. Com muitas estações/enlaces e histórico privado/CQ/BLN, confirmar que apagar estações remove o mapa/lista e enlaces RF do SQLite após reiniciar, preservando mensagens, favoritos, tracklogs GPS, APRS-IS/TNC e demais configurações. Confirmar que apagar mensagens remove as três categorias e seus status/ACK do `messages.json`, preservando estações e preferências, e que a rotina de retry não transmite mensagens apagadas. Repetir após reinicialização, com rede desconectada, em recepção APRS-IS/TNC durante e depois da limpeza e com falha de armazenamento; novas estações e mensagens recebidas após a limpeza podem reaparecer e devem ser persistidas normalmente. Não marcar como homologado sem teste físico.
