@@ -464,6 +464,8 @@ fun RadioScreen(settings: Settings) {
     val context = LocalContext.current
     val status by AprsRepository.status.collectAsState()
     val monitor by AprsRepository.monitor.collectAsState()
+    val stations by AprsRepository.stations.collectAsState()
+    val links by AprsRepository.links.collectAsState()
     val bonded = remember {
         runCatching { context.getSystemService(BluetoothManager::class.java)?.adapter?.bondedDevices?.toList() }
             .getOrNull().orEmpty()
@@ -488,6 +490,20 @@ fun RadioScreen(settings: Settings) {
                 }
             }
             Text(UiText.text(R.string.future_tnc), color = Pal.muted, fontSize = 12.sp)
+        }
+        SectionCard(UiText.text(R.string.diagnostics)) {
+            KeyValue(UiText.text(R.string.aprs_received), status.aprsRx.toString())
+            KeyValue(UiText.text(R.string.aprs_sent), status.aprsTx.toString())
+            KeyValue(UiText.text(R.string.tnc_received), status.tncRx.toString())
+            KeyValue(UiText.text(R.string.tnc_sent), status.tncTx.toString())
+            KeyValue(UiText.text(R.string.station_count), stations.size.toString())
+            KeyValue(UiText.text(R.string.rf_link_count), links.size.toString())
+            if (status.aprsIsError.isNotBlank())
+                Text(UiText.text(R.string.aprs_error) + ": " + UiText.connectionError(status.aprsIsError),
+                    color = Pal.orange, fontSize = 12.sp)
+            if (status.tncError.isNotBlank())
+                Text(UiText.text(R.string.tnc_error) + ": " + UiText.connectionError(status.tncError),
+                    color = Pal.orange, fontSize = 12.sp)
         }
         SectionCard(UiText.text(R.string.live_monitor)) {
             if (monitor.isEmpty()) Text(UiText.text(R.string.await_tnc), color = Pal.muted, fontSize = 13.sp)
