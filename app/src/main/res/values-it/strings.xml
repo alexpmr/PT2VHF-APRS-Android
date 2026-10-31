@@ -166,4 +166,24 @@
     <string name="smart_fast_speed">Velocità rapida (km/h)</string>
     <string name="smart_slow_rate">Intervallo lento (secondi)</string>
     <string name="smart_fast_rate">Intervallo rapido (secondi)</string>
+    <string name="station_filter_action">Filtri / ordina</string>
+    <string name="station_showing">Mostrate %1$d di %2$d stazioni</string>
+    <string name="station_sort_label">Ordina per</string>
+    <string name="station_sort_distance">Distanza</string>
+    <string name="station_sort_last">Ultima ricezione</string>
+    <string name="station_sort_first">Prima ricezione</string>
+    <string name="station_sort_name">Nominativo</string>
+    <string name="station_ascending">Crescente</string>
+    <string name="station_descending">Decrescente</string>
+    <string name="station_filter_types">Tipi di stazione</string>
+    <string name="station_filter_source">Origine</string>
+    <string name="station_source_internet">APRS-IS</string>
+    <string name="station_received_from">Ultima ricezione da</string>
+    <string name="station_received_until">Ultima ricezione fino a</string>
+    <string name="station_first_from">Prima ricezione da</string>
+    <string name="station_first_until">Prima ricezione fino a</string>
+    <string name="station_distance_min">Distanza minima (km)</string>
+    <string name="station_distance_max">Distanza massima (km)</string>
+    <string name="station_filter_apply">Applica</string>
+    <string name="station_filter_clear">Cancella filtri</string>
 </resources>
