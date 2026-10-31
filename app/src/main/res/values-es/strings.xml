@@ -124,4 +124,16 @@
     <string name="retry_ack">Esperando ACK (intento %1$d)</string>
     <string name="not_sent">no enviado</string>
     <string name="aprs_auto_connect">Conectar automáticamente a APRS-IS</string>
+    <string name="sort_nearest">Más cercanas</string>
+    <string name="sort_recent">Escuchadas recientemente</string>
+    <string name="sort_callsign">Indicativo A–Z</string>
+    <string name="filter_all">Todos los tipos</string>
+    <string name="sort_oldest">Más antiguos primero</string>
+    <string name="sort_newest">Más recientes primero</string>
+    <string name="sort_label">Orden</string>
+    <string name="filter_label">Tipo</string>
+    <string name="messages_filter">Filtrar indicativo o texto</string>
+    <string name="favorites">Favoritas</string>
+    <string name="follow_station">Seguir estación</string>
+    <string name="stop_following">Dejar de seguir</string>
 </resources>
