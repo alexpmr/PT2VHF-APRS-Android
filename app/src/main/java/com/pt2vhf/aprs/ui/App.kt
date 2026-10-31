@@ -126,7 +126,7 @@ fun App(onExit: () -> Unit) {
     MaterialTheme(colorScheme = scheme) {
         Scaffold(
             containerColor = Pal.ground,
-            topBar = { if (!keyboardVisible) TopBar(settings, onSettings = { showSettings = true }) },
+            topBar = { if (!keyboardVisible) TopBar(settings, onSettings = { showSettings = true }, onRadio = { tab = Tab.RADIO }) },
             bottomBar = {
                 if (!keyboardVisible) NavigationBar(containerColor = Pal.bar) {
                     Tab.entries.forEach { t ->
@@ -226,7 +226,7 @@ fun App(onExit: () -> Unit) {
 }
 
 @Composable
-private fun TopBar(settings: Settings, onSettings: () -> Unit) {
+private fun TopBar(settings: Settings, onSettings: () -> Unit, onRadio: () -> Unit) {
     val context = LocalContext.current
     val status by AprsRepository.status.collectAsState()
     val beaconResults by AprsRepository.beaconResults.collectAsState()
@@ -292,8 +292,17 @@ private fun TopBar(settings: Settings, onSettings: () -> Unit) {
             IconButton(onClick = onSettings) { Icon(Icons.Filled.Settings, contentDescription = UiText.text(R.string.settings), tint = Pal.text) }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Chip("APRS-IS", status.aprsIsVerified)
-            Chip("TNC", status.tncConnected)
+            Chip("APRS-IS", status.aprsIsVerified, onClick = {
+                AprsService.send(context, if (status.aprsIsConnected)
+                    AprsService.ACTION_APRS_DISCONNECT else AprsService.ACTION_APRS_CONNECT)
+            })
+            Chip("TNC", status.tncConnected, onClick = {
+                when {
+                    status.tncConnected -> AprsService.send(context, AprsService.ACTION_BT_PAUSE)
+                    settings.btAddress.isNotBlank() -> AprsService.send(context, AprsService.ACTION_BT_RESUME)
+                    else -> onRadio()
+                }
+            })
             Chip("GPS", status.gpsAccuracyM != null &&
                 status.gpsFixTimeMs > 0 && System.currentTimeMillis() - status.gpsFixTimeMs <= 120_000L)
         }
@@ -301,11 +310,12 @@ private fun TopBar(settings: Settings, onSettings: () -> Unit) {
 }
 
 @Composable
-fun Chip(text: String, ok: Boolean) {
+fun Chip(text: String, ok: Boolean, onClick: (() -> Unit)? = null) {
     Row(
         Modifier.background(if (ok) Pal.greenBg else Color(0xFF3A1A23), RoundedCornerShape(14.dp))
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .semantics { contentDescription = "$text: ${if (ok) "connected" else "disconnected"}" }
-            .padding(horizontal = 10.dp, vertical = 5.dp),
+            .padding(horizontal = 10.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(8.dp).background(if (ok) Color(0xFF3CCF7C) else Color(0xFFF26F70), CircleShape))
