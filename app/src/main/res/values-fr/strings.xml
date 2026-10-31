@@ -192,4 +192,5 @@
     <string name="exit_app">Quitter</string>
     <string name="exit_stop_tracker">Quitter et arrêter le suivi</string>
     <string name="exit_keep_tracker">Quitter et conserver le suivi</string>
+    <string name="current_installed_version">Version installée : %1$s</string>
 </resources>
