@@ -28,6 +28,7 @@ Atualizado em 31/10/2026. **Esta matriz não é um release.**
 | 13 | Centro de diagnóstico | Parcial: métricas APRS-IS/TNC/monitor | Validar RX/TX e origem; exportação/diagnóstico avançado pendentes |
 | 14 | Recordes e cobertura RF | Não implementado | Requer controle rigoroso de evidência TNC |
 | 15 | API Android externa | Não implementado | Requer auditoria de permissões e testes de segurança |
+| 16 | Confirmação de saída | **Não implementado; backlog registrado** | Confirmar/cancelar Back e verificar continuidade ou parada explícita do tracker/TNC/TX |
 
 ## Roteiro de testes físicos, em ordem
 
@@ -57,6 +58,8 @@ Atualizado em 31/10/2026. **Esta matriz não é um release.**
 
 
 **T13 — Reatividade de estações (falha observada v0.1.2):** com a aba Estações aberta e filtros em "Todos", receber pelo menos três novos indicativos, sem tocar na tela; todos devem aparecer automaticamente. Receber novas posições/horários dos mesmos indicativos e conferir atualização dos detalhes e reordenação (mais recente/proximidade) sem trocar de aba. Abrir o ícone de classificação/filtro, escolher explicitamente categoria(s), favoritos e ordenação, aplicar, limpar, persistir após reinicializar e conferir que estações filtradas não foram apagadas. Comparar os pacotes recebidos no monitor/diagnóstico e distinguir falha de recepção da falha de exibição. Anexar evidências de RX/APRS-IS e de TNC RF quando disponível.
+
+**T14 — Confirmação de saída (item #16):** na tela principal, acionar o botão/gesto Voltar, conferir diálogo e escolher **Cancelar** — a interface deve continuar aberta. Repetir e escolher **Sair** — a interface deve encerrar. Com tracker/beacon ativo, validar as alternativas de sair mantendo o serviço ou interrompendo o rastreamento, verificando notificação e ausência de TX inesperado. Conferir persistência de estações/configurações após reabrir e que a confirmação não apareça ao fechar menus ou trocar de aba. Não esperar diálogo ao usar Home, encerramento forçado ou ao remover o processo pelo sistema.
 
 ## Como informar o resultado
 
