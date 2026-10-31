@@ -119,7 +119,7 @@ object AprsRepository {
     val sendResults: StateFlow<Map<String, OutboundSendResult>> = _sendResults.asStateFlow()
 
     fun reportSendResult(result: OutboundSendResult) {
-        _sendResults.update { (it + (result.requestId to result)).entries.takeLast(64).associate { e -> e.key to e.value } }
+        _sendResults.update { (it + (result.requestId to result)).entries.toList().takeLast(64).associate { e -> e.key to e.value } }
     }
 
     private var nextId = System.currentTimeMillis()
