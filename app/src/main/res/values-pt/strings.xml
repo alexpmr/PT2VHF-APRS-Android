@@ -136,4 +136,10 @@
     <string name="favorites">Favoritas</string>
     <string name="follow_station">Seguir estação</string>
     <string name="stop_following">Parar de seguir</string>
+    <string name="favorite_add">Adicionar favorita</string>
+    <string name="favorite_remove">Remover favorita</string>
+    <string name="following">Seguindo %1$s</string>
+    <string name="follow_paused">Acompanhamento pausado — toque para retomar</string>
+    <string name="favorites_only">Somente favoritas</string>
+    <string name="favorite_alert">Estação favorita %1$s voltou a transmitir</string>
 </resources>
