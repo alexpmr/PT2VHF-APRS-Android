@@ -80,6 +80,15 @@ class AprsService : Service(), LocationListener {
         },
     )
 
+    private fun restoreTrackerPreference() {
+        val enabled = settings.configured && settings.trackerAutoStart &&
+            (settings.txViaInternet || settings.txViaRf) &&
+            !Settings.flag(this, "tracker_explicit_off")
+        AprsRepository.updateStatus {
+            it.copy(trackerOn = enabled, nextBeaconSec = if (enabled) it.nextBeaconSec else null)
+        }
+    }
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
@@ -87,6 +96,7 @@ class AprsService : Service(), LocationListener {
         AprsRepository.init(this)
         settings = Settings.load(this)
         smart = configuredSmartBeaconing(settings)
+        restoreTrackerPreference()
         createChannels()
         startForegroundCompat()
         connectAprsIs()
@@ -101,6 +111,7 @@ class AprsService : Service(), LocationListener {
             ACTION_RELOAD -> {
                 settings = Settings.load(this)
                 smart = configuredSmartBeaconing(settings)
+                restoreTrackerPreference()
                 if (settings.connectAprsIs) connectAprsIs() else {
                     aprsIs.stop()
                     AprsRepository.updateStatus { it.copy(aprsIsConnected = false, aprsIsVerified = false, aprsIsError = "") }
@@ -108,8 +119,16 @@ class AprsService : Service(), LocationListener {
                 refreshNotification()
             }
             ACTION_BEACON -> sendBeacon()
-            ACTION_TRACKER_ON -> { AprsRepository.updateStatus { it.copy(trackerOn = true) }; if (settings.beaconMode != "manual") sendBeacon() }
-            ACTION_TRACKER_OFF -> AprsRepository.updateStatus { it.copy(trackerOn = false, nextBeaconSec = null) }
+            ACTION_TRACKER_ON -> {
+                Settings.setFlag(this, "tracker_explicit_off", false)
+                AprsRepository.updateStatus { it.copy(trackerOn = true) }
+                // Let the regular SmartBeaconing clock handle the next TX after a fresh GPS fix.
+                checkTracker()
+            }
+            ACTION_TRACKER_OFF -> {
+                Settings.setFlag(this, "tracker_explicit_off", true)
+                AprsRepository.updateStatus { it.copy(trackerOn = false, nextBeaconSec = null) }
+            }
             ACTION_MESSAGE -> intent.getStringExtra(EXTRA_TO)?.let { to ->
                 sendMessage(to, intent.getStringExtra(EXTRA_TEXT).orEmpty())
             }
@@ -120,7 +139,11 @@ class AprsService : Service(), LocationListener {
                 settings = settings.copy(btAddress = ""); Settings.save(this, settings); tnc.disconnect()
                 AprsRepository.updateStatus { it.copy(tncConnected = false, tncName = "") }
             }
-            ACTION_STOP -> { stopSelf(); return START_NOT_STICKY }
+            ACTION_STOP -> {
+                Settings.setFlag(this, "tracker_explicit_off", true)
+                AprsRepository.updateStatus { it.copy(trackerOn = false, nextBeaconSec = null) }
+                stopSelf(); return START_NOT_STICKY
+            }
         }
         refreshNotification()
         return START_STICKY
@@ -226,7 +249,7 @@ class AprsService : Service(), LocationListener {
         val moving = s.speedKmh >= 5.0
         val info = positionInfo(lat, lon, settings.symbolTable, settings.symbol, beaconCommentWithSite(settings.comment),
             if (moving) s.course else null, if (moving) s.speedKmh else null)
-        transmit(info)
+        if (transmit(info) == null) return
         lastBeaconAt = System.currentTimeMillis()
         lastBeaconCourse = s.course
         AprsRepository.updateStatus { it.copy(beaconsSent = it.beaconsSent + 1) }
