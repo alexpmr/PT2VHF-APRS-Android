@@ -202,4 +202,13 @@
     <string name="tx_aprs_unavailable">APRS-IS déconnecté. Reconnectez-vous avant tout envoi.</string>
     <string name="tx_send_failed">Échec de transmission malgré une liaison autorisée. Vérifiez la connexion et réessayez. Le texte est conservé.</string>
     <string name="tx_dispatch_failed">Impossible de démarrer le service de messagerie. Le texte est conservé.</string>
+    <string name="local_data_section">Données locales</string>
+    <string name="clear_all_stations">Supprimer toutes les stations</string>
+    <string name="clear_all_messages">Supprimer tous les messages</string>
+    <string name="clear_stations_confirmation">Supprimer les stations locales et leurs liaisons RF ? Les traces GPS, les indicatifs favoris et les paramètres seront conservés. De nouvelles stations pourront réapparaître à la réception de paquets. Cette action est irréversible.</string>
+    <string name="clear_messages_confirmation">Supprimer les messages privés, CQ, bulletins et messages en attente ? Les retransmissions en attente seront annulées. Les stations et paramètres seront conservés. Cette action est irréversible.</string>
+    <string name="clear_local_data_busy">Suppression des données locales…</string>
+    <string name="clear_local_data_success">Données locales supprimées.</string>
+    <string name="clear_local_data_error">Impossible de supprimer toutes les données locales. Vérifiez le stockage et réessayez.</string>
+    <string name="clear_data_confirm">Supprimer</string>
 </resources>
