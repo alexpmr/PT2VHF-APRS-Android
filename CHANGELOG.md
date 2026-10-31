@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.4 — 2026-10-31
+
+- O comentário transmitido nos beacons de posição inclui sempre
+  `www.PT2VHF.com`, como identificação do projeto, tanto por APRS-IS
+  quanto por RF/TNC. Nenhum beacon extra é enviado por esta alteração.
+- O domínio não é truncado ao limitar o comentário APRS a 43 caracteres;
+  a descrição personalizada é abreviada somente na transmissão, mantendo
+  intacta a preferência salva. Variantes de endereço existentes não são
+  repetidas e a grafia final é padronizada.
+- Testes unitários para comentários vazios, legados, personalizados,
+  URLs já presentes, limite de caracteres e montagem do pacote APRS.
+- Esta é uma correção pontual: as demais pendências continuam abertas no
+  `BACKLOG.md` e precisam de homologação própria.
+
 ## 0.1.3 — 2026-10-31 (candidata, aguardando CI e homologação)
 
 - Exibição da **versão instalada** no popup inicial de anúncio do site oficial
