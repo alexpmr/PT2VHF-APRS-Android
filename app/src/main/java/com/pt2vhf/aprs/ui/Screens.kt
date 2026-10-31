@@ -612,6 +612,12 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
     var txRf by remember { mutableStateOf(current.txViaRf) }
     var txIs by remember { mutableStateOf(current.txViaInternet) }
     var autoAprsIs by remember { mutableStateOf(current.connectAprsIs) }
+    var beaconMode by remember { mutableStateOf(current.beaconMode) }
+    var periodicSec by remember { mutableStateOf(current.periodicIntervalSec.toString()) }
+    var slowSpeed by remember { mutableStateOf(current.smartSlowSpeedKmh.toString()) }
+    var fastSpeed by remember { mutableStateOf(current.smartFastSpeedKmh.toString()) }
+    var slowSec by remember { mutableStateOf(current.smartSlowIntervalSec.toString()) }
+    var fastSec by remember { mutableStateOf(current.smartFastIntervalSec.toString()) }
     var expanded by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf("") }
     var confirmEmptyFilter by remember { mutableStateOf(false) }
@@ -628,7 +634,14 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
             !validHostPort(server, portN) -> { error = UiText.text(R.string.invalid_server); null }
             symbol.length != 2 -> { error = UiText.text(R.string.invalid_symbol); null }
             else -> current.copy(callsign = base, ssid = ssidN, server = server.trim(), port = portN, filter = filter.trim(),
-                comment = comment, symbolTable = symbol[0], symbol = symbol[1], rfPath = path, txViaRf = txRf, txViaInternet = txIs, connectAprsIs = autoAprsIs)
+                comment = comment, symbolTable = symbol[0], symbol = symbol[1], rfPath = path,
+                txViaRf = txRf, txViaInternet = txIs, connectAprsIs = autoAprsIs,
+                beaconMode = beaconMode,
+                periodicIntervalSec = (periodicSec.toIntOrNull() ?: current.periodicIntervalSec).coerceIn(30, 86400),
+                smartSlowSpeedKmh = (slowSpeed.toIntOrNull() ?: current.smartSlowSpeedKmh).coerceIn(1, 200),
+                smartFastSpeedKmh = (fastSpeed.toIntOrNull() ?: current.smartFastSpeedKmh).coerceIn(5, 300),
+                smartSlowIntervalSec = (slowSec.toIntOrNull() ?: current.smartSlowIntervalSec).coerceIn(30, 86400),
+                smartFastIntervalSec = (fastSec.toIntOrNull() ?: current.smartFastIntervalSec).coerceIn(30, 86400))
         }
     }
 
@@ -674,6 +687,40 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
                 OutlinedTextField(path, { path = it.uppercase() }, label = { Text(UiText.text(R.string.rf_path)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(txRf, { txRf = it }); Text(UiText.text(R.string.tx_rf)) }
                 Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(txIs, { txIs = it }); Text(UiText.text(R.string.tx_aprs)) }
+                Text(UiText.text(R.string.beacon_mode), color = Pal.muted)
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    listOf("smart", "periodic", "manual").forEach { mode ->
+                        TextButton(onClick = { beaconMode = mode }) {
+                            Text(
+                                UiText.text(when (mode) {
+                                    "periodic" -> R.string.mode_periodic
+                                    "manual" -> R.string.mode_manual
+                                    else -> R.string.mode_smart
+                                }),
+                                color = if (mode == beaconMode) Pal.green else Pal.muted
+                            )
+                        }
+                    }
+                }
+                if (beaconMode == "periodic") {
+                    OutlinedTextField(periodicSec, { periodicSec = it.filter(Char::isDigit).take(5) },
+                        label = { Text(UiText.text(R.string.beacon_interval)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth())
+                }
+                if (beaconMode == "smart") {
+                    listOf(
+                        Triple(R.string.smart_slow_speed, slowSpeed, { v: String -> slowSpeed = v }),
+                        Triple(R.string.smart_fast_speed, fastSpeed, { v: String -> fastSpeed = v }),
+                        Triple(R.string.smart_slow_rate, slowSec, { v: String -> slowSec = v }),
+                        Triple(R.string.smart_fast_rate, fastSec, { v: String -> fastSec = v })
+                    ).forEach { (labelId, value, setter) ->
+                        OutlinedTextField(value, { setter(it.filter(Char::isDigit).take(5)) },
+                            label = { Text(UiText.text(labelId)) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.fillMaxWidth())
+                    }
+                }
                 if (error.isNotEmpty()) Text(error, color = Pal.orange, fontSize = 13.sp)
             }
         },
