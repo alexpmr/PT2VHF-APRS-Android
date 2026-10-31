@@ -33,6 +33,7 @@ import com.pt2vhf.aprs.core.SmartBeaconing
 import com.pt2vhf.aprs.core.ackInfo
 import com.pt2vhf.aprs.core.expandFilter
 import com.pt2vhf.aprs.core.messageInfo
+import com.pt2vhf.aprs.core.beaconCommentWithSite
 import com.pt2vhf.aprs.core.positionInfo
 import com.pt2vhf.aprs.core.splitMessage
 import com.pt2vhf.aprs.data.AprsRepository
@@ -223,7 +224,7 @@ class AprsService : Service(), LocationListener {
         val lat = s.lat ?: return
         val lon = s.lon ?: return
         val moving = s.speedKmh >= 5.0
-        val info = positionInfo(lat, lon, settings.symbolTable, settings.symbol, settings.comment,
+        val info = positionInfo(lat, lon, settings.symbolTable, settings.symbol, beaconCommentWithSite(settings.comment),
             if (moving) s.course else null, if (moving) s.speedKmh else null)
         transmit(info)
         lastBeaconAt = System.currentTimeMillis()
