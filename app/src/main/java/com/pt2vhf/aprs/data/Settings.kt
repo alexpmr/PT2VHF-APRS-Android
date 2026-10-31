@@ -71,6 +71,13 @@ data class Settings(
                 .apply()
         }
 
+        fun readOption(context: Context, key: String, default: String): String =
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(key, default) ?: default
+
+        fun saveOption(context: Context, key: String, value: String) {
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(key, value).apply()
+        }
+
         fun flag(context: Context, key: String): Boolean =
             context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(key, false)
 
