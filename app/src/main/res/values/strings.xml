@@ -211,4 +211,6 @@
     <string name="clear_local_data_success">Local data deleted successfully.</string>
     <string name="clear_local_data_error">Unable to delete the local data completely. Check storage and try again.</string>
     <string name="clear_data_confirm">Delete</string>
+    <string name="beacon_sending">Sending…</string>
+    <string name="beacon_failed">Send failed</string>
 </resources>
