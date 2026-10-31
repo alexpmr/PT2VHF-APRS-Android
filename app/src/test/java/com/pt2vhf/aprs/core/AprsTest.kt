@@ -76,6 +76,28 @@ class AprsTest {
         assertEquals(-47.93, pos.lon, 1e-3)
     }
 
+    @Test fun beaconCommentAlwaysIncludesCanonicalSite() {
+        val examples = mapOf(
+            "" to "www.PT2VHF.com",
+            "Teste" to "Teste www.PT2VHF.com",
+            "PT2VHF APRS www.PT2VHF.com" to "PT2VHF APRS www.PT2VHF.com",
+            "https://www.pt2vhf.com/aprs-android" to "www.PT2VHF.com",
+            "Site http://pt2vhf.com/aprs" to "Site www.PT2VHF.com",
+            "teste WWW.pt2VHF.com" to "teste www.PT2VHF.com"
+        )
+        for ((input, expected) in examples) {
+            assertEquals(expected, beaconCommentWithSite(input))
+        }
+        for (input in listOf("X".repeat(200), "Texto com descricao longa e URL http://pt2vhf.com/aprs", "  ")) {
+            val formatted = beaconCommentWithSite(input)
+            assertTrue(formatted.endsWith(PT2VHF_BEACON_SITE))
+            assertEquals(1, Regex("(?i)pt2vhf\\.com").findAll(formatted).count())
+            assertTrue(formatted.length <= 43)
+            val onAir = positionInfo(-15.78, -47.93, '/', '>', formatted, 90, 60.0)
+            assertEquals(formatted, parsePosition(onAir)!!.comment)
+        }
+    }
+
     @Test fun splitsLongMessages() {
         val parts = splitMessage("a".repeat(30) + " " + "b".repeat(50) + " " + "c".repeat(20))
         assertTrue(parts.all { it.length <= 67 })
