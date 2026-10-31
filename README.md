@@ -26,3 +26,17 @@ mensagens, beacon, modo tracker com SmartBeaconing em segundo plano e TNC KISS p
 O APK de release é assinado no GitHub Actions com os segredos `ANDROID_KEYSTORE_BASE64`,
 `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` e `ANDROID_KEY_PASSWORD`. Commits na `main` cujo título
 começa com `release:` geram o APK assinado.
+
+## Publicação de novas versões e site oficial
+
+Toda nova versão do Android deve ser acompanhada da atualização do repositório
+[`PT2VHF-Site`](https://github.com/alexpmr/PT2VHF-Site): APK assinado em
+`downloads/aprs-android/`, metadados do produto `aprs-android` em `updates.json`,
+página `/android`, changelog, recursos/requisitos relevantes, tabela de downloads
+e endpoint OTA `update.php?product=aprs-android`.
+
+O identificador de contador de downloads do APK é `android-apk` e **não muda**
+com a versão: os downloads manuais e OTA compõem uma contagem acumulada,
+sem duplicação. Verifique o arquivo público e a implantação Hostinger antes de
+considerar a publicação concluída. Uma release no GitHub isoladamente **não**
+constitui uma publicação completa no site.
