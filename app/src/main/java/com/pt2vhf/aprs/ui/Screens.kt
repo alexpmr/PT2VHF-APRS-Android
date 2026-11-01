@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -47,6 +48,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -54,6 +56,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
@@ -64,6 +67,7 @@ import android.graphics.drawable.BitmapDrawable
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -85,6 +89,7 @@ import com.pt2vhf.aprs.data.Medium
 import com.pt2vhf.aprs.data.Settings
 import com.pt2vhf.aprs.data.Station
 import com.pt2vhf.aprs.data.StationCriteria
+import com.pt2vhf.aprs.data.stationSpeedLabel
 import com.pt2vhf.aprs.data.selectStations
 import com.pt2vhf.aprs.service.AprsService
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
@@ -95,6 +100,7 @@ import org.osmdroid.views.overlay.Polyline
 import java.util.Date
 import java.util.UUID
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import com.pt2vhf.aprs.data.OutboundSendResult
 
 private fun ago(t: Long): String {
@@ -471,6 +477,19 @@ fun StationsScreen(onStation: (String) -> Unit) {
     val status by AprsRepository.status.collectAsState()
     val favorites by AprsRepository.favorites.collectAsState()
     val context = LocalContext.current
+    val screenWidth = LocalConfiguration.current.screenWidthDp
+    val compact = screenWidth <= 360
+    val callWidth = if (compact) 72.dp else 92.dp
+    val ageWidth = if (compact) 38.dp else 52.dp
+    val speedWidth = if (compact) 55.dp else 68.dp
+    val distanceWidth = if (compact) 58.dp else 71.dp
+    var refreshClock by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(60_000)
+            refreshClock = System.currentTimeMillis()
+        }
+    }
     var filterOpen by remember { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_search", "")) }
     var sort by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_sort_v2", "distance")) }
@@ -527,25 +546,39 @@ fun StationsScreen(onStation: (String) -> Unit) {
         LazyColumn {
             items(list, key = { it.call }) { station ->
                 Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { onStation(station.call) }
-                    .padding(horizontal = 10.dp, vertical = 2.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(3.dp),
                     verticalAlignment = Alignment.CenterVertically) {
                     val drawable = remember(station.symbolTable, station.symbol) {
                         AprsSymbolIcons.icon(context, station.symbolTable, station.symbol) as? BitmapDrawable
                     }
                     if (drawable != null) {
                         Image(painter = BitmapPainter(drawable.bitmap.asImageBitmap()),
-                            contentDescription = UiText.role(station.role), modifier = Modifier.size(26.dp))
+                            contentDescription = UiText.role(station.role), modifier = Modifier.size(22.dp))
                     } else {
-                        Text("•", color = Pal.accent, fontSize = 20.sp)
+                        Text("•", color = Pal.accent, fontSize = 18.sp, modifier = Modifier.width(22.dp))
                     }
-                    Text(station.call, fontWeight = FontWeight.Bold, fontSize = 13.sp,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                    if (station.call in favorites) Text("★", color = Pal.yellow, fontSize = 15.sp)
-                    Text(stationAge(station.lastHeard), fontSize = 11.sp, color = Pal.muted, maxLines = 1)
+                    Row(Modifier.width(callWidth), verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(station.call, fontWeight = FontWeight.Bold, fontSize = if (compact) 11.sp else 12.sp,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                        if (station.call in favorites) Text("★", color = Pal.yellow, fontSize = 13.sp)
+                    }
+                    Text(stationAge(station.lastHeard), modifier = Modifier.width(ageWidth),
+                        fontSize = if (compact) 10.sp else 11.sp, color = Pal.muted,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    // Description is the flex column: truncate it first on narrow displays.
+                    Text(station.comment.ifBlank { " " }, modifier = Modifier.weight(1f),
+                        color = Pal.muted, fontSize = 11.sp,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(stationSpeedLabel(station.speedKmh), modifier = Modifier.width(speedWidth),
+                        color = Pal.muted, fontSize = if (compact) 10.sp else 11.sp,
+                        textAlign = TextAlign.End, maxLines = 1)
                     Text(if (status.lat != null && status.lon != null)
                         "%.1f km".format(haversineKm(status.lat!!, status.lon!!, station.lat, station.lon))
-                        else "—", color = Pal.muted, fontSize = 11.sp, maxLines = 1)
+                        else "—", modifier = Modifier.width(distanceWidth),
+                        color = Pal.text, fontSize = if (compact) 10.sp else 11.sp,
+                        textAlign = TextAlign.End, maxLines = 1)
                 }
             }
         }
