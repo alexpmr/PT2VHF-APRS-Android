@@ -115,8 +115,8 @@ private fun ago(t: Long): String {
 
 private fun hhmm(t: Long) = java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT, UiText.locale()).format(Date(t))
 
-private fun stationAge(t: Long): String {
-    val age = ((System.currentTimeMillis() - t).coerceAtLeast(0L)) / 1000
+private fun stationAge(t: Long, nowMs: Long = System.currentTimeMillis()): String {
+    val age = ((nowMs - t).coerceAtLeast(0L)) / 1000
     return if (age >= 86400) UiText.text(R.string.days_ago, age / 86400) else ago(t)
 }
 
@@ -564,7 +564,7 @@ fun StationsScreen(onStation: (String) -> Unit) {
                             maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                         if (station.call in favorites) Text("★", color = Pal.yellow, fontSize = 13.sp)
                     }
-                    Text(stationAge(station.lastHeard), modifier = Modifier.width(ageWidth),
+                    Text(stationAge(station.lastHeard, refreshClock), modifier = Modifier.width(ageWidth),
                         fontSize = if (compact) 10.sp else 11.sp, color = Pal.muted,
                         maxLines = 1, overflow = TextOverflow.Ellipsis)
                     // Description is the flex column: truncate it first on narrow displays.
