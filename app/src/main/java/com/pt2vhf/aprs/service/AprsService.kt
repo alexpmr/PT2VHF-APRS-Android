@@ -42,6 +42,8 @@ import com.pt2vhf.aprs.data.Medium
 import com.pt2vhf.aprs.data.OutboundSendResult
 import com.pt2vhf.aprs.data.OutboundBeaconResult
 import com.pt2vhf.aprs.data.Settings
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.abs
 
 /** Serviço em primeiro plano: mantém APRS-IS, TNC Bluetooth, GPS e o tracker ativos com a tela desligada. */
@@ -55,11 +57,17 @@ class AprsService : Service(), LocationListener {
         fastSpeed = maxOf(s.smartFastSpeedKmh, s.smartSlowSpeedKmh + 1).toDouble(),
         fastRateSec = s.smartFastIntervalSec,
     )
-    private var lastBeaconAt = 0L
+    @Volatile private var lastBeaconAt = 0L
+    private val beaconPending = AtomicBoolean(false)
+    // Android invokes onStartCommand and LocationListener on the main thread. Never write TCP there.
+    private val txWorker = Executors.newSingleThreadExecutor { task ->
+        Thread(task, "aprs-tx").apply { isDaemon = true }
+    }
     private var lastBeaconCourse: Int? = null
     private var lastLocation: Location? = null
     private var msgCounter = (System.currentTimeMillis() / 1000 % 900).toInt() + 1
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
+    @Volatile private var previousDefaultNetwork: Network? = null
 
     private val aprsIs = AprsIsClient(
         onLine = { line -> handleLine(line, Medium.INTERNET) },
@@ -131,13 +139,7 @@ class AprsService : Service(), LocationListener {
                     it.copy(aprsIsConnected = false, aprsIsVerified = false, aprsIsError = "")
                 }
             }
-            ACTION_BEACON -> {
-                val requestId = intent.getStringExtra(EXTRA_REQUEST_ID)
-                val transmitted = sendBeacon()
-                if (!requestId.isNullOrBlank()) {
-                    AprsRepository.reportBeaconResult(OutboundBeaconResult(requestId, transmitted))
-                }
-            }
+            ACTION_BEACON -> queueBeacon(intent.getStringExtra(EXTRA_REQUEST_ID))
             ACTION_TRACKER_ON -> {
                 Settings.setFlag(this, "tracker_explicit_off", false)
                 AprsRepository.updateStatus { it.copy(trackerOn = true) }
@@ -149,12 +151,15 @@ class AprsService : Service(), LocationListener {
                 AprsRepository.updateStatus { it.copy(trackerOn = false, nextBeaconSec = null) }
             }
             ACTION_MESSAGE -> intent.getStringExtra(EXTRA_TO)?.let { to ->
-                // Service owns the TX decision. The UI must not assume an Intent is a successful write.
-                settings = Settings.load(this)
-                val submitted = sendMessage(to, intent.getStringExtra(EXTRA_TEXT).orEmpty())
-                intent.getStringExtra(EXTRA_REQUEST_ID)?.let { id ->
-                    AprsRepository.reportSendResult(OutboundSendResult(id, submitted,
-                        if (submitted) "" else sendFailureReason()))
+                // Write on dedicated IO worker. Report true only after transport accepts the bytes.
+                val message = intent.getStringExtra(EXTRA_TEXT).orEmpty()
+                val requestId = intent.getStringExtra(EXTRA_REQUEST_ID)
+                txWorker.execute {
+                    val submitted = runCatching { sendMessage(to, message) }.getOrDefault(false)
+                    if (!requestId.isNullOrBlank()) {
+                        AprsRepository.reportSendResult(OutboundSendResult(requestId, submitted,
+                            if (submitted) "" else sendFailureReason()))
+                    }
                 }
             }
             ACTION_BT_CONNECT -> intent.getStringExtra(EXTRA_ADDRESS)?.let {
@@ -186,6 +191,7 @@ class AprsService : Service(), LocationListener {
 
     override fun onDestroy() {
         handler.removeCallbacksAndMessages(null)
+        txWorker.shutdownNow()
         aprsIs.stop()
         tnc.disconnect()
         runCatching { (getSystemService(LOCATION_SERVICE) as LocationManager).removeUpdates(this) }
@@ -213,7 +219,17 @@ class AprsService : Service(), LocationListener {
         val cm = getSystemService(ConnectivityManager::class.java) ?: return
         val cb = object : ConnectivityManager.NetworkCallback() {
             // Wi-Fi ↔ dados móveis: reconecta em vez de esperar o timeout do socket antigo.
-            override fun onAvailable(network: Network) { handler.postDelayed({ if (settings.connectAprsIs && !Settings.flag(this@AprsService, "aprs_manual_pause")) aprsIs.reconnectNow() }, 1500) }
+            override fun onAvailable(network: Network) {
+                val previous = previousDefaultNetwork
+                previousDefaultNetwork = network
+                // The initial callback reports the existing default network, not a handover.
+                if (previous != null && previous != network) {
+                    handler.postDelayed({
+                        if (settings.connectAprsIs && !Settings.flag(this@AprsService, "aprs_manual_pause"))
+                            aprsIs.reconnectNow()
+                    }, 1500)
+                }
+            }
         }
         runCatching { cm.registerDefaultNetworkCallback(cb) }
         networkCallback = cb
@@ -243,7 +259,11 @@ class AprsService : Service(), LocationListener {
             Settings.readOption(this, "tracklog_enabled", "true") == "true") {
             AprsRepository.recordTrack(location.latitude, location.longitude)
         }
-        if (firstFix && settings.filter.contains("r/")) connectAprsIs()  // filtro r/4000 precisa da posição
+        if (firstFix && settings.filter.contains("r/")) {
+            val expanded = expandFilter(settings.filter, location.latitude, location.longitude)
+            // Reconfigure the filter within the authenticated session, without closing the socket.
+            txWorker.execute { aprsIs.updateFilter(expanded) }
+        }
         checkTracker()
     }
 
@@ -257,7 +277,7 @@ class AprsService : Service(), LocationListener {
         val interval = settings.periodicIntervalSec.toLong()
         val due = if (settings.beaconMode == "periodic") since >= interval
             else smart.shouldBeacon(since, s.speedKmh, abs(change))
-        if (due) sendBeacon()
+        if (due) queueBeacon()
         AprsRepository.updateStatus {
             it.copy(nextBeaconSec = if (settings.beaconMode == "periodic")
                 (interval - (System.currentTimeMillis() - lastBeaconAt) / 1000).coerceAtLeast(0)
@@ -273,6 +293,24 @@ class AprsService : Service(), LocationListener {
             }
             checkTracker()
             handler.postDelayed(this, 5000)
+        }
+    }
+
+    /** Never block Android main thread with APRS-IS/TNC writes or duplicate auto beacons. */
+    private fun queueBeacon(requestId: String? = null) {
+        if (!beaconPending.compareAndSet(false, true)) {
+            if (!requestId.isNullOrBlank())
+                AprsRepository.reportBeaconResult(OutboundBeaconResult(requestId, false))
+            return
+        }
+        txWorker.execute {
+            try {
+                val submitted = runCatching { sendBeacon() }.getOrDefault(false)
+                if (!requestId.isNullOrBlank())
+                    AprsRepository.reportBeaconResult(OutboundBeaconResult(requestId, submitted))
+            } finally {
+                beaconPending.set(false)
+            }
         }
     }
 
