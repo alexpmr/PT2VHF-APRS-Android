@@ -76,6 +76,13 @@ class AprsService : Service(), LocationListener {
                 it.copy(aprsIsConnected = connected, aprsIsVerified = verified,
                     aprsIsServer = "${settings.server}:${settings.port}", aprsIsError = error)
             }
+            if (verified && settings.filter.contains("r/")) {
+                val gps = AprsRepository.status.value
+                if (gps.lat != null && gps.lon != null) {
+                    val updatedFilter = expandFilter(settings.filter, gps.lat, gps.lon)
+                    if (!txWorker.isShutdown) txWorker.execute { aprsIs.updateFilter(updatedFilter) }
+                }
+            }
             refreshNotification()
         },
     )
@@ -376,7 +383,11 @@ class AprsService : Service(), LocationListener {
             else -> {
                 AprsRepository.setStatus(local.id, if (attempt == 0) "Aguardando ACK · ${medium.label}"
                     else "Aguardando ACK (${attempt + 1}ª tentativa)")
-                handler.postDelayed({ sendWithRetry(local, dest, text, msgId, attempt + 1) }, 30_000L * (attempt + 1))
+                handler.postDelayed({
+                    if (!txWorker.isShutdown) txWorker.execute {
+                        sendWithRetry(local, dest, text, msgId, attempt + 1)
+                    }
+                }, 30_000L * (attempt + 1))
             }
         }
         return medium != null
