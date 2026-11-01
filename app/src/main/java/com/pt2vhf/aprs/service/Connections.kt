@@ -71,8 +71,10 @@ class AprsIsClient(
     }
 
     fun send(line: String): Boolean {
-        // Validate the current socket and writer together; never use a stale writer
-        // kept from before a network handover or service restart.
+        // Call from an IO thread only; AprsService queues TX on aprs-tx.
+        // A missing/unverified session is NOT a socket error: never disconnect a healthy
+        // APRS-IS login just because a TX was attempted before the writer was ready.
+        var writeError: Exception? = null
         val sent = synchronized(this) {
             val activeSocket = socket
             val writer = output
@@ -84,11 +86,23 @@ class AprsIsClient(
                     writer.write((line + "\r\n").toByteArray(Charsets.ISO_8859_1))
                     writer.flush()
                     true
-                } catch (_: Exception) { false }
+                } catch (e: Exception) {
+                    writeError = e
+                    false
+                }
             }
         }
-        if (!sent && running) reconnectNow()
+        if (writeError != null && running) {
+            onState(false, false, "Erro na escrita APRS-IS: ${writeError!!.javaClass.simpleName}")
+            runCatching { socket?.close() } // reconnect via existing reader loop
+        }
         return sent
+    }
+
+    /** APRS-IS supports updating the filter in-place; do not log in again after a GPS fix. */
+    fun updateFilter(filter: String): Boolean {
+        val safe = filter.trim().replace("\r", "").replace("\n", " ").take(250)
+        return safe.isNotEmpty() && send("#filter $safe")
     }
 
     /** Invalidate green TX indication immediately before closing an obsolete socket. */
