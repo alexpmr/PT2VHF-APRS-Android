@@ -76,13 +76,7 @@ class AprsService : Service(), LocationListener {
                 it.copy(aprsIsConnected = connected, aprsIsVerified = verified,
                     aprsIsServer = "${settings.server}:${settings.port}", aprsIsError = error)
             }
-            if (verified && settings.filter.contains("r/")) {
-                val gps = AprsRepository.status.value
-                if (gps.lat != null && gps.lon != null) {
-                    val updatedFilter = expandFilter(settings.filter, gps.lat, gps.lon)
-                    if (!txWorker.isShutdown) txWorker.execute { aprsIs.updateFilter(updatedFilter) }
-                }
-            }
+            if (verified) updateAprsFilterForKnownPosition()
             refreshNotification()
         },
     )
@@ -205,6 +199,19 @@ class AprsService : Service(), LocationListener {
         networkCallback?.let { runCatching { getSystemService(ConnectivityManager::class.java).unregisterNetworkCallback(it) } }
         AprsRepository.updateStatus { it.copy(aprsIsConnected = false, aprsIsVerified = false, tncConnected = false, trackerOn = false) }
         super.onDestroy()
+    }
+
+    /**
+     * Called after login verification and GPS first fix. Keep filter updates out of
+     * the AprsIsClient property initializer to avoid circular type inference.
+     */
+    private fun updateAprsFilterForKnownPosition() {
+        if (!::settings.isInitialized || !settings.filter.contains("r/")) return
+        val gps = AprsRepository.status.value
+        val lat = gps.lat ?: return
+        val lon = gps.lon ?: return
+        val filter = expandFilter(settings.filter, lat, lon)
+        if (!txWorker.isShutdown) txWorker.execute { aprsIs.updateFilter(filter) }
     }
 
     private fun connectAprsIs(force: Boolean = false) {
