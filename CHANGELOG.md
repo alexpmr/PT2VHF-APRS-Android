@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.7 — Candidata de homologação (não publicada)
+
+- **P0 #37:** mensagens, beacons e retransmissões usam executor de I/O, sem escrita TCP na thread principal Android.
+- Primeiro GPS fix atualiza o filtro APRS-IS na sessão existente; não reinicia login para atualizar posição.
+- Primeiro callback de rede não força reconexão; escritor temporariamente indisponível não derruba socket saudável.
+- **#33:** lista Estações em linha única: símbolo APRS, indicativo, último contato, descrição, velocidade km/h e distância fixa à direita.
+- Testes de velocidade desconhecida/zero e sessão APRS-IS local após transmissão.
+- **Pendente:** CI, homologação física com APRS-IS e TNC, e restante do backlog histórico. Não declarar 100% concluído.
 ## Em desenvolvimento — correção do envio APRS-IS (sem release pública)
 
 - O indicador de APRS-IS é invalidado imediatamente quando a sessão de socket é reiniciada ou encerrada; falhas de escrita solicitam reconexão.
