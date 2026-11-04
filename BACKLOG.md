@@ -1439,6 +1439,119 @@ e tem **prioridade para a próxima versão**.
   modo somente RX sem acionar VOX; troca entre KISS e Áudio sem reinstalar.
 - **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
 
+### 45. Sobre: botão "Enviar log" para relatório de erros
+_Sugestão aprovada pelo usuário em 04/11/2026 ("Todas.")._
+
+**Como está hoje (v0.1.8):** a aba Rádio → Diagnóstico (item 13) já exporta um
+.txt anonimizado (reconexões, ACK pendentes, transições, monitor), salvo pelo
+seletor de arquivos. Não há captura de travamentos nem envio direto.
+
+**Comportamento exigido:**
+- Em Configurações → Sobre, botão **Enviar log** que monta o relatório (o mesmo
+  .txt do diagnóstico + versão do app, Android, aparelho, configurações sem
+  passcode) e abre o compartilhamento do Android (e-mail, WhatsApp, Drive).
+- Guardar o último travamento (exceção não tratada, com pilha) e incluí-lo no
+  relatório; na abertura seguinte, oferecer "O app fechou inesperadamente. Enviar log?".
+- Anonimização igual à atual (passcode nunca; posição/indicativo opcionais).
+- Útil para casos como a queda do APRS-IS (#37).
+- **Critério de aceite:** relatório compartilhado por e-mail contém versão, eventos
+  recentes e o último crash, sem passcode.
+- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+
+### 46. Widget na tela inicial: último beacon, "beacon agora" e status da conexão
+_Sugestão aprovada pelo usuário em 04/11/2026 ("Todas.")._
+
+**Como está hoje (v0.1.8):** não há widget. Existe a API de integração (item 15,
+`ApiReceiver`) com comandos SEND_BEACON, TRACKER_START/STOP e REQUEST_STATUS,
+que o widget pode reaproveitar.
+
+**Comportamento exigido:**
+- Widget redimensionável mostrando: indicadores APRS-IS/TNC/GPS (verde/vermelho),
+  tracker ligado/desligado, horário e há quanto tempo foi o último beacon.
+- Botões **Beacon agora** e **Tracker liga/desliga**; tocar no resto abre o app.
+- Atualiza quando o estado muda (sem polling que gaste bateria); respeita as
+  autorizações de TX existentes; tema claro/escuro; cinco línguas.
+- **Critério de aceite:** com o app fechado, beacon pelo widget aparece em aprs.fi;
+  status muda no widget ao desconectar o APRS-IS.
+- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+
+### 47. Mensagens: confirmação (ACK/REJ) e reenvio mais visíveis no balão
+_Sugestão aprovada pelo usuário em 04/11/2026 ("Todas.")._
+
+**Como está hoje (v0.1.8):** já existe reenvio automático e o estado aparece em
+texto no rodapé do balão: "Aguardando ACK · APRS-IS", "Aguardando ACK (2ª
+tentativa)", "ACK recebido", "Rejeitada", "Sem ACK após 5 tentativas"
+(`service/AprsService.kt` `sendWithRetry`: 5 tentativas, intervalo 30 s × n).
+Este item **complementa** o que existe, não cria outro mecanismo.
+
+**Comportamento exigido:**
+- Ícone de estado no balão (relógio = aguardando, ✓ = ACK, ✗ = rejeitada/sem ACK),
+  com cor, além do texto.
+- Contador explícito "tentativa 2/5" e tempo até a próxima.
+- Após falha ou REJ: ações **Reenviar** e **Cancelar** (pressão longa / toque no
+  ícone); cancelar interrompe os reenvios pendentes.
+- Número de tentativas e intervalo configuráveis (padrão atual 5 / 30 s × n).
+- **Critério de aceite:** mensagem sem destino responsivo mostra 1/5…5/5 e depois
+  ✗ com Reenviar; ACK muda para ✓ na hora; REJ mostra ✗ distinto.
+- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+
+### 48. Objetos e itens APRS: criar e transmitir pelo mapa
+_Sugestão aprovada pelo usuário em 04/11/2026 ("Todas.")._
+
+**Como está hoje (v0.1.8):** o app recebe e mostra objetos/itens de outras
+estações, mas não cria nem transmite os próprios.
+
+**Comportamento exigido:**
+- Pressão longa no mapa → **Criar objeto aqui**: nome (até 9 caracteres), símbolo
+  (seletor visual existente), comentário, frequência (ex.: repetidora "146.910-
+  T123"), tipo objeto ou item.
+- Transmitir pelo APRS-IS e/ou RF conforme autorizações; repetição periódica
+  configurável (ex.: a cada 10–30 min) enquanto ativo.
+- Lista "Meus objetos" para editar, mover, pausar e **apagar/encerrar** (enviar o
+  objeto como "killed", formato APRS).
+- Formatos conforme especificação APRS (`;NOME_____*DDHHMMz...` e `)NOME!...`).
+- **Critério de aceite:** objeto criado aparece em aprs.fi com símbolo e
+  comentário certos; editar move; encerrar remove dos outros clientes.
+- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+
+### 49. Modo economia de bateria
+_Sugestão aprovada pelo usuário em 04/11/2026 ("Todas.")._
+
+**Como está hoje (v0.1.8):** não há modo dedicado; SmartBeaconing e intervalos
+(item 6) já reduzem beacons, mas GPS e mapa seguem no mesmo ritmo.
+
+**Comportamento exigido:**
+- Opção **Economia de bateria** (manual ou automática abaixo de X% de carga):
+  com a tela desligada, reduzir a frequência/precisão do GPS e parar refresh do
+  mapa e animações; aumentar intervalos mínimos do beacon.
+- Mostrar **consumo estimado** do app (por hora, com base no uso real do Android
+  quando disponível) e o que o modo está economizando.
+- Nunca desligar recepção de mensagens nem o APRS-IS conectado; avisar que a
+  precisão da trilha cai.
+- **Critério de aceite:** em 1 h de tracker com tela desligada, consumo menor que
+  no modo normal (medir); mensagens continuam chegando.
+- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+
+### 50. Backup e restauração das configurações em arquivo
+_Sugestão aprovada pelo usuário em 04/11/2026 ("Todas.")._
+
+**Como está hoje (v0.1.8):** não há exportação manual. O manifesto tem
+`allowBackup="true"` (backup automático do Android na conta Google), que não é
+controlável pelo usuário nem serve para trocar de celular de forma garantida.
+
+**Comportamento exigido:**
+- Em Configurações, **Exportar configurações** → arquivo (.json) via seletor de
+  arquivos/compartilhamento; **Importar configurações** → lê e aplica após
+  confirmação mostrando o que será substituído.
+- Incluir indicativo, SSID, símbolo, comentários, beacon/SmartBeaconing, TNC,
+  APRS-IS (servidor/filtro), favoritos, retenção, mapa e idioma. **Passcode
+  opcional**, desmarcado por padrão; avisar se incluído.
+- Opcional: incluir mensagens/estações/tracklog.
+- Versão do formato no arquivo; importar de versões antigas sem quebrar.
+- **Critério de aceite:** exportar no celular A, importar no B: mesmas
+  configurações; arquivo inválido mostra erro sem alterar nada.
+- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+
 ## Consolidação das sugestões aprovadas com itens já existentes
 
 A comparação com o APRSdroid também aprovou os recursos abaixo, que **já estavam
