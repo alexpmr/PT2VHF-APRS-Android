@@ -1168,6 +1168,33 @@ _Solicitado em 31/10/2026: "Backlog: iniciar o rastreamento ligado por default".
 - **Status:** registrado no backlog, **não implementado e
   não homologado** nesta solicitação. Nenhum APK novo gerado.
 
+### 31. Remover o aviso de anúncio exibido ao abrir o aplicativo
+_Solicitado em 04/11/2026: "Backlog: Tire a mensagem de anúncio ao abrir o aplicativo"._
+
+**Onde está no código (main atual):**
+- `ui/App.kt`: estado `siteNotice` (`rememberSaveable { mutableStateOf(true) }`,
+  ~linha 109), tratado no `BackHandler` (~linha 118) e exibido em
+  `if (!showSettings && siteNotice) OfficialSiteNotice(...)` (~linha 208).
+- `ui/App.kt`: composable privado `OfficialSiteNotice` (~linha 329), o popup
+  "Downloads no site oficial" com o texto de distribuição pelo site, a linha
+  "Versão instalada: X.Y.Z" e o link www.PT2VHF.com.
+- Strings `official_downloads`, `official_notice` e `current_installed_version`
+  em `res/values*/strings.xml` (PT/EN/ES/FR/IT), usadas só por esse popup.
+
+**Comportamento exigido:**
+- Ao abrir o app, **não mostrar** mais o popup de anúncio do site oficial.
+- Remover o estado `siteNotice`, o ramo do `BackHandler`, a chamada e o composable
+  `OfficialSiteNotice`; o diálogo de **nova versão disponível** (OTA, `update`)
+  deve continuar funcionando e passa a ser o primeiro aviso possível na abertura.
+- Remover as strings órfãs nas cinco línguas, ou reaproveitá-las se o link do site
+  e a versão instalada forem mantidos em outro lugar (ex.: Configurações/Sobre).
+- **Substitui o item 18** (anúncio do site com a versão instalada na abertura):
+  ao implementar, marcar o item 18 como cancelado/substituído por este.
+- **Critério de aceite:** instalação nova e atualização: abrir o app, sem popup de
+  anúncio; botão Voltar não precisa fechar aviso extra; com versão remota mais
+  nova, o aviso OTA aparece normalmente; sem strings não usadas no lint.
+- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+
 ## Consolidação das sugestões aprovadas com itens já existentes
 
 A comparação com o APRSdroid também aprovou os recursos abaixo, que **já estavam
