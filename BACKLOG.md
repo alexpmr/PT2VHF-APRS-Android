@@ -1367,6 +1367,38 @@ Geral e Boletins (item 26).
   banco) sem reiniciar o app; as mais novas ficam; reiniciar e conferir.
 - **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
 
+### 43. Boletim automático anunciando a versão na 1ª conexão APRS-IS
+_Solicitado em 04/11/2026: "Backlog: ao logar no aprs-is pela primeira vez na versão, o app irá enviar um boletim no idioma corrente, anunciando que está usando versão X, com download em www.PT2VHF.com"._
+
+**Como está hoje (v0.1.8):** o app já envia e recebe mensagens gerais e boletins
+(aba Mensagens → Boletins usa o destino `BLN0`, `ui/MessagesUi.kt` ~linha 162),
+mas não envia nada automaticamente ao conectar.
+
+**Comportamento exigido:**
+- Na **primeira conexão APRS-IS verificada** (login aceito, `logresp verified`)
+  depois de instalar ou atualizar para uma versão, enviar **um** boletim no idioma
+  atual do app anunciando a versão e o download em www.PT2VHF.com.
+  Ex. PT: "Usando PT2VHF APRS Android v0.1.9 - download www.PT2VHF.com".
+- Gravar a última versão anunciada (ex.: `lastAnnouncedVersion`); só marcar como
+  enviada após escrita bem-sucedida no APRS-IS. Reconexões, reinícios e novas
+  conexões na mesma versão **não** repetem o envio.
+- Mostrar o boletim enviado na aba Boletins como mensagem própria.
+
+**Observações para a implementação:**
+- Texto do boletim APRS limitado a **67 caracteres**; conferir nas cinco línguas
+  (PT/EN/ES/FR/IT) com o número de versão mais longo previsto.
+- Formato `:BLNn     :texto` (destino de 9 caracteres); boletim não tem ACK.
+  Sugerir `BLN0` ou um identificador dedicado, a definir.
+- Só enviar com passcode válido e TX por APRS-IS autorizado; **nunca por RF**
+  (evitar anúncio em frequência compartilhada) e não enviar em modo "Somente recepção".
+- Sugere-se uma opção em Configurações para desligar o anúncio (padrão ligado),
+  para respeitar quem não quer transmitir automaticamente.
+- Não repetir o boletim (sem retransmissões periódicas), para não gerar ruído na rede.
+- **Critério de aceite:** atualizar a versão, conectar → um boletim no APRS-IS
+  (conferir em aprs.fi ou outro cliente); reconectar e reiniciar → nada novo;
+  sem passcode/TX desativado → nada enviado e nenhuma marcação feita.
+- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+
 ## Consolidação das sugestões aprovadas com itens já existentes
 
 A comparação com o APRSdroid também aprovou os recursos abaixo, que **já estavam
