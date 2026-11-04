@@ -1332,7 +1332,7 @@ _Solicitado em 04/11/2026: "Backlog: Opção para apagar todas as mensagens, bol
 - Oferecer três opções: **Apagar todas as mensagens**, **Apagar boletins**
   (boletins/anúncios BLN e mensagens gerais/CQ) e **Apagar mensagens pessoais**
   (conversas privadas, incluindo enviadas e pendentes).
-- Disponível em Configurações → Mensagens e também na aba **Mensagens** (menu ⋮
+- Disponível em Configurações → Dados locais (onde já está o botão atual) e também na aba **Mensagens** (menu ⋮
   ou ícone de lixeira), na aba/visão correspondente.
 - Confirmação explícita em cada opção, dizendo o que será apagado e o que fica;
   ação irreversível; retorno de sucesso/falha (reaproveitar textos atuais).
