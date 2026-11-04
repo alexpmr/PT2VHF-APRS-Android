@@ -59,7 +59,7 @@ Roteiros de teste (Txx) em [HOMOLOGACAO.md](HOMOLOGACAO.md).
 | 37 | **P0** queda do APRS-IS ao transmitir | Pronto para teste | Correção da 0.1.7 mantida; **bloqueia publicação** até teste real | T37 |
 | 38 | Remover aviso de abertura (ex-31) | Pronto para teste | Popup removido; aviso OTA mantido; versão e site em Configurações → Sobre | T38 |
 | — | KISS TCP (herdado 0.1.0) | Pronto para teste | Rádio → KISS TCP com servidor/porta (ex.: Direwolf 8001), reconexão automática | T49 |
-| — | USB-OTG, AFSK, mapa offline em massa, modo carro, rotas | Não implementado | Dependem de hardware ou de fonte de mapas que permita download | — |
+| — | USB-OTG, AFSK (agora item 44, prioridade), mapa offline em massa, modo carro, rotas | Não implementado | Dependem de hardware ou de fonte de mapas que permita download | — |
 
 ## Acompanhamento de implementação e baixa (31/10/2026)
 
@@ -1397,6 +1397,46 @@ mas não envia nada automaticamente ao conectar.
 - **Critério de aceite:** atualizar a versão, conectar → um boletim no APRS-IS
   (conferir em aprs.fi ou outro cliente); reconectar e reiniciar → nada novo;
   sem passcode/TX desativado → nada enviado e nenhuma marcação feita.
+- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+
+### 44. Conexão pela interface de áudio (modem AFSK 1200), como no APRSdroid — PRIORIDADE próxima versão
+_Solicitado em 04/11/2026: "adicione conexão pela interface de áudio, como no aprsdroid"._
+
+**Como está hoje (v0.1.8):** o app só fala com rádio por TNC KISS via Bluetooth
+(e APRS-IS pela internet). AFSK aparece apenas como sub-item do item 6 (tipos de
+conexão) e ficou fora da 0.1.8 ("depende de hardware", tabela de status). Não há
+código de áudio/modem no app. Este item passa a ser o registro próprio do AFSK
+e tem **prioridade para a próxima versão**.
+
+**Comportamento exigido:**
+- Novo tipo de conexão **"Áudio (AFSK)"** em Configurações → Conexão/TNC, ao lado
+  do KISS Bluetooth: o celular faz papel de TNC, sem hardware extra além do cabo
+  de áudio (ou interface tipo APRS-K1 / cabo com VOX, Bluetooth de áudio do rádio).
+- **RX:** demodular AFSK Bell 202 1200 bd (1200/2200 Hz) do microfone/entrada de
+  áudio, decodificar AX.25/HDLC e entregar ao mesmo fluxo de pacotes RF existente
+  (estações, mensagens, enlaces RF, origem "RF").
+- **TX:** gerar AFSK do pacote AX.25 na saída de áudio, com **PTT por VOX** (tom
+  de pré-chave/preâmbulo configurável, TXDELAY) e respeitando as autorizações de
+  TX por RF já existentes; beacons e mensagens funcionam como no KISS.
+- Configurações: fonte de áudio (microfone interno, fone com fio, USB, Bluetooth
+  SCO), volume/nível de saída, preâmbulo/TXDELAY, qualidade do demodulador
+  (alto desempenho x economia de bateria), medidor de nível de entrada e botão
+  de teste de tom para ajustar o rádio.
+- Indicador "TNC" no cabeçalho mostra o estado do modem de áudio (ouvindo /
+  transmitindo / erro de permissão).
+- Funcionar em segundo plano com o serviço atual (permissão de microfone e
+  serviço em primeiro plano do tipo adequado no Android 14+).
+
+**Observações para a implementação:**
+- APRSdroid é GPL: usar só como referência de comportamento, **sem copiar código**.
+  Implementar demodulador próprio ou usar biblioteca de licença compatível.
+- Núcleo do modem (modulação/demodulação, HDLC, bit-stuffing, CRC) em código
+  puro testável na JVM com arquivos WAV de referência (ex.: faixas de teste TNC).
+- Exige teste com rádio real: decodificação de pacotes no ar, TX ouvido por outro
+  TNC/digipeater, ajuste de nível, VOX, ruído e consumo de bateria.
+- **Critério de aceite:** com rádio + cabo, decodificar pacotes reais e mostrá-los
+  como RF; enviar beacon e mensagem que apareçam em aprs.fi via igate próximo;
+  modo somente RX sem acionar VOX; troca entre KISS e Áudio sem reinstalar.
 - **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
 
 ## Consolidação das sugestões aprovadas com itens já existentes
