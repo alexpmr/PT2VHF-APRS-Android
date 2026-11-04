@@ -291,9 +291,10 @@ private fun Bubble(
     Column(Modifier.fillMaxWidth(), horizontalAlignment = if (m.outgoing) Alignment.End else Alignment.Start) {
         BoxWithConstraints(Modifier.fillMaxWidth(),
             contentAlignment = if (m.outgoing) Alignment.TopEnd else Alignment.TopStart) {
+            val bubbleMax = maxWidth * 0.90f
             Box {
                 Column(
-                    Modifier.widthIn(max = maxWidth * 0.90f)
+                    Modifier.widthIn(max = bubbleMax)
                         .background(if (m.outgoing) Pal.mine else Pal.card, RoundedCornerShape(14.dp))
                         .combinedClickable(onClick = {}, onLongClick = { if (actions.isNotEmpty()) menu = true },
                             onLongClickLabel = UiText.text(R.string.message_actions))
