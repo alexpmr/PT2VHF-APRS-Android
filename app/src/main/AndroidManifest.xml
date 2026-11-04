@@ -14,6 +14,13 @@
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 
+    <!-- API para outros apps (#15): o usuário concede esta permissão ao app cliente. -->
+    <permission
+        android:name="com.pt2vhf.aprs.permission.API"
+        android:description="@string/api_permission_description"
+        android:label="@string/api_permission_label"
+        android:protectionLevel="dangerous" />
+
     <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 
@@ -45,5 +52,17 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Cliente APRS para radioamadores: mantém a conexão APRS-IS e o recebimento de mensagens com a tela desligada." />
         </service>
+
+        <receiver
+            android:name=".service.ApiReceiver"
+            android:exported="true"
+            android:permission="com.pt2vhf.aprs.permission.API">
+            <intent-filter>
+                <action android:name="com.pt2vhf.aprs.command.REQUEST_STATUS" />
+                <action android:name="com.pt2vhf.aprs.command.TRACKER_START" />
+                <action android:name="com.pt2vhf.aprs.command.TRACKER_STOP" />
+                <action android:name="com.pt2vhf.aprs.command.SEND_BEACON" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

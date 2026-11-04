@@ -33,7 +33,11 @@ import com.pt2vhf.aprs.core.SmartBeaconing
 import com.pt2vhf.aprs.core.ackInfo
 import com.pt2vhf.aprs.core.expandFilter
 import com.pt2vhf.aprs.core.messageInfo
-import com.pt2vhf.aprs.core.beaconCommentWithSite
+import com.pt2vhf.aprs.core.composeBeaconComment
+import com.pt2vhf.aprs.core.decodeAprsText
+import com.pt2vhf.aprs.core.formatAltitude
+import com.pt2vhf.aprs.core.formatVoiceFrequency
+import com.pt2vhf.aprs.data.Station
 import com.pt2vhf.aprs.core.positionInfo
 import com.pt2vhf.aprs.core.splitMessage
 import com.pt2vhf.aprs.data.AprsRepository
@@ -56,6 +60,10 @@ class AprsService : Service(), LocationListener {
         slowRateSec = s.smartSlowIntervalSec,
         fastSpeed = maxOf(s.smartFastSpeedKmh, s.smartSlowSpeedKmh + 1).toDouble(),
         fastRateSec = s.smartFastIntervalSec,
+        minTurnAngle = s.smartMinTurnAngle.toDouble(),
+        turnSlope = s.smartTurnSlope.toDouble(),
+        minTurnTimeSec = s.smartMinTurnTimeSec,
+        stoppedRateSec = s.stoppedBeaconMinutes * 60,
     )
     @Volatile private var lastBeaconAt = 0L
     private val beaconPending = AtomicBoolean(false)
@@ -72,27 +80,52 @@ class AprsService : Service(), LocationListener {
     private val aprsIs = AprsIsClient(
         onLine = { line -> handleLine(line, Medium.INTERNET) },
         onState = { connected, verified, error ->
+            val before = AprsRepository.status.value
             AprsRepository.updateStatus {
                 it.copy(aprsIsConnected = connected, aprsIsVerified = verified,
-                    aprsIsServer = "${settings.server}:${settings.port}", aprsIsError = error)
+                    aprsIsServer = "${settings.server}:${settings.port}", aprsIsError = error,
+                    aprsIsSince = if (verified && !it.aprsIsVerified) System.currentTimeMillis()
+                        else if (!connected) 0L else it.aprsIsSince,
+                    aprsIsReconnects = if (connected && !it.aprsIsConnected && it.aprsIsEverConnected)
+                        it.aprsIsReconnects + 1 else it.aprsIsReconnects,
+                    aprsIsEverConnected = it.aprsIsEverConnected || connected)
             }
-            if (verified) updateAprsFilterForKnownPosition()
+            if (before.aprsIsConnected != connected || before.aprsIsVerified != verified || (error.isNotBlank() && error != before.aprsIsError)) {
+                AprsRepository.logConnection("APRS-IS", when {
+                    verified -> "verified ${settings.server}:${settings.port}"
+                    connected -> "connected ${settings.server}:${settings.port} (login pending/unverified)"
+                    else -> "disconnected" + if (error.isNotBlank()) ": $error" else ""
+                })
+            }
+            if (verified) {
+                alertsQuietUntil = System.currentTimeMillis() + 60_000L // no burst after (re)connecting
+                updateAprsFilterForKnownPosition()
+            }
             refreshNotification()
         },
     )
-    private val tnc = BluetoothTnc(
-        onFrame = { line ->
-            AprsRepository.updateStatus { it.copy(tncRx = it.tncRx + 1) }
-            handleLine(line, Medium.RF)
-        },
-        onState = { connected, name, error ->
-            AprsRepository.updateStatus { it.copy(tncConnected = connected, tncName = name, tncError = error) }
-            refreshNotification()
-        },
-    )
+    private val tncFrame: (String) -> Unit = { line ->
+        AprsRepository.updateStatus { it.copy(tncRx = it.tncRx + 1) }
+        handleLine(line, Medium.RF)
+    }
+    private val tncState: (Boolean, String, String) -> Unit = { connected, name, error ->
+        val before = AprsRepository.status.value
+        AprsRepository.updateStatus { it.copy(tncConnected = connected, tncName = name, tncError = error) }
+        if (before.tncConnected != connected || (error.isNotBlank() && error != before.tncError))
+            AprsRepository.logConnection("TNC", (if (connected) "connected " else "disconnected ") + name +
+                if (error.isNotBlank()) ": $error" else "")
+        refreshNotification()
+    }
+    private val tnc = BluetoothTnc(onFrame = tncFrame, onState = tncState)
+    private val tcpTnc = KissTcpTnc(onFrame = tncFrame, onState = tncState)
+    private fun tncConnected(): Boolean = tnc.connected || tcpTnc.connected
+    private fun tncSend(line: String): Boolean =
+        if (tcpTnc.connected) tcpTnc.send(line) else tnc.send(line)
+    @Volatile private var alertsQuietUntil = System.currentTimeMillis() + 60_000L
+    private val alertCooldown = HashMap<String, Long>()
 
     private fun restoreTrackerPreference() {
-        val enabled = settings.configured && settings.trackerAutoStart &&
+        val enabled = settings.configured && settings.trackerAutoStart && !settings.rxOnly &&
             (settings.txViaInternet || settings.txViaRf) &&
             !Settings.flag(this, "tracker_explicit_off")
         AprsRepository.updateStatus {
@@ -110,17 +143,21 @@ class AprsService : Service(), LocationListener {
         restoreTrackerPreference()
         createChannels()
         startForegroundCompat()
+        running = true
         connectAprsIs()
         startLocation()
         watchNetwork()
-        if (settings.btAddress.isNotEmpty() && !Settings.flag(this, "tnc_manual_pause")) connectBluetooth(settings.btAddress)
+        if (!Settings.flag(this, "tnc_manual_pause")) connectTnc()
         handler.post(ticker)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_RELOAD -> {
+                val previousTnc = Triple(settings.tncType, settings.tncHost, settings.tncPort)
                 settings = Settings.load(this)
+                if (previousTnc != Triple(settings.tncType, settings.tncHost, settings.tncPort) &&
+                    !Settings.flag(this, "tnc_manual_pause")) connectTnc()
                 smart = configuredSmartBeaconing(settings)
                 restoreTrackerPreference()
                 if (settings.connectAprsIs && !Settings.flag(this, "aprs_manual_pause")) connectAprsIs() else {
@@ -141,6 +178,12 @@ class AprsService : Service(), LocationListener {
                 }
             }
             ACTION_BEACON -> queueBeacon(intent.getStringExtra(EXTRA_REQUEST_ID))
+            ACTION_API_BEACON -> if (settings.apiEnabled && settings.apiAllowBeacon) queueBeacon()
+            ACTION_API_STATUS -> if (settings.apiEnabled) broadcastStatus()
+            ACTION_TCP_CONNECT -> {
+                Settings.setFlag(this, "tnc_manual_pause", false)
+                connectTnc()
+            }
             ACTION_TRACKER_ON -> {
                 Settings.setFlag(this, "tracker_explicit_off", false)
                 AprsRepository.updateStatus { it.copy(trackerOn = true) }
@@ -155,8 +198,9 @@ class AprsService : Service(), LocationListener {
                 // Write on dedicated IO worker. Report true only after transport accepts the bytes.
                 val message = intent.getStringExtra(EXTRA_TEXT).orEmpty()
                 val requestId = intent.getStringExtra(EXTRA_REQUEST_ID)
+                val replyTo = intent.getStringExtra(EXTRA_REPLY_TO)?.toLongOrNull()
                 txWorker.execute {
-                    val submitted = runCatching { sendMessage(to, message) }.getOrDefault(false)
+                    val submitted = runCatching { sendMessage(to, message, replyTo) }.getOrDefault(false)
                     if (!requestId.isNullOrBlank()) {
                         AprsRepository.reportSendResult(OutboundSendResult(requestId, submitted,
                             if (submitted) "" else sendFailureReason()))
@@ -170,14 +214,17 @@ class AprsService : Service(), LocationListener {
             ACTION_BT_PAUSE -> {
                 Settings.setFlag(this, "tnc_manual_pause", true)
                 tnc.disconnect()
+                tcpTnc.disconnect()
                 AprsRepository.updateStatus { it.copy(tncConnected = false, tncName = "") }
             }
             ACTION_BT_RESUME -> {
                 Settings.setFlag(this, "tnc_manual_pause", false)
-                settings.btAddress.takeIf { it.isNotBlank() }?.let { connectBluetooth(it) }
+                connectTnc()
             }
             ACTION_BT_DISCONNECT -> {
-                settings = settings.copy(btAddress = ""); Settings.save(this, settings); tnc.disconnect()
+                if (settings.tncType == "bt") { settings = settings.copy(btAddress = ""); Settings.save(this, settings) }
+                tnc.disconnect()
+                tcpTnc.disconnect()
                 AprsRepository.updateStatus { it.copy(tncConnected = false, tncName = "") }
             }
             ACTION_STOP -> {
@@ -195,6 +242,8 @@ class AprsService : Service(), LocationListener {
         txWorker.shutdownNow()
         aprsIs.stop()
         tnc.disconnect()
+        tcpTnc.disconnect()
+        running = false
         runCatching { (getSystemService(LOCATION_SERVICE) as LocationManager).removeUpdates(this) }
         networkCallback?.let { runCatching { getSystemService(ConnectivityManager::class.java).unregisterNetworkCallback(it) } }
         AprsRepository.updateStatus { it.copy(aprsIsConnected = false, aprsIsVerified = false, tncConnected = false, trackerOn = false) }
@@ -219,6 +268,17 @@ class AprsService : Service(), LocationListener {
         val s = AprsRepository.status.value
         aprsIs.start(settings.server, settings.port, settings.fullCall, settings.passcode,
             expandFilter(settings.filter, s.lat, s.lon))
+    }
+
+    /** Connects the configured TNC (Bluetooth KISS or KISS TCP); does nothing if none is set. */
+    private fun connectTnc() {
+        if (settings.tncType == "tcp") {
+            tnc.disconnect()
+            if (settings.tncHost.isNotBlank()) tcpTnc.connect(settings.tncHost.trim(), settings.tncPort)
+        } else {
+            tcpTnc.disconnect()
+            if (settings.btAddress.isNotEmpty()) connectBluetooth(settings.btAddress)
+        }
     }
 
     @SuppressLint("MissingPermission")
@@ -264,11 +324,14 @@ class AprsService : Service(), LocationListener {
         val firstFix = previous == null
         lastLocation = location
         val speed = if (location.hasSpeed()) location.speed * 3.6 else 0.0
+        val hadFix = AprsRepository.status.value.gpsAccuracyM != null
         AprsRepository.updateStatus {
             it.copy(lat = location.latitude, lon = location.longitude, gpsAccuracyM = location.accuracy,
                 speedKmh = speed, gpsFixTimeMs = System.currentTimeMillis(),
-                course = if (location.hasBearing()) location.bearing.toInt() else it.course)
+                course = if (location.hasBearing()) location.bearing.toInt() else it.course,
+                altitudeM = if (location.hasAltitude()) location.altitude else it.altitudeM)
         }
+        if (!hadFix) AprsRepository.logConnection("GPS", "fix ${location.provider} ±${location.accuracy.toInt()} m")
         if (AprsRepository.status.value.trackerOn &&
             Settings.readOption(this, "tracklog_enabled", "true") == "true") {
             AprsRepository.recordTrack(location.latitude, location.longitude)
@@ -302,8 +365,11 @@ class AprsService : Service(), LocationListener {
     private val ticker = object : Runnable {
         override fun run() {
             AprsRepository.updateStatus { state ->
-                if (state.gpsFixTimeMs > 0 && System.currentTimeMillis() - state.gpsFixTimeMs > 120_000L)
-                    state.copy(gpsAccuracyM = null) else state
+                if (state.gpsAccuracyM != null && state.gpsFixTimeMs > 0 &&
+                    System.currentTimeMillis() - state.gpsFixTimeMs > 120_000L) {
+                    AprsRepository.logConnection("GPS", "fix lost (> 2 min without location)")
+                    state.copy(gpsAccuracyM = null)
+                } else state
             }
             checkTracker()
             handler.postDelayed(this, 5000)
@@ -329,13 +395,15 @@ class AprsService : Service(), LocationListener {
     }
 
     private fun sendBeacon(): Boolean {
-        if (!settings.configured) return false
+        if (!settings.configured || settings.rxOnly) return false
         val s = AprsRepository.status.value
         val lat = s.lat ?: return false
         val lon = s.lon ?: return false
-        val moving = s.speedKmh >= 5.0
-        val info = positionInfo(lat, lon, settings.symbolTable, settings.symbol, beaconCommentWithSite(settings.comment),
-            if (moving) s.course else null, if (moving) s.speedKmh else null)
+        val moving = settings.sendCourseSpeed && s.speedKmh >= 5.0
+        val comment = composeBeaconComment(settings.comment, formatVoiceFrequency(settings.voiceFrequency),
+            if (settings.sendAltitude) formatAltitude(s.altitudeM) else null)
+        val info = positionInfo(lat, lon, settings.symbolTable, settings.symbol, comment,
+            if (moving) s.course else null, if (moving) s.speedKmh else null, ambiguity = settings.ambiguity)
         if (transmit(info) == null) return false
         lastBeaconAt = System.currentTimeMillis()
         lastBeaconCourse = s.course
@@ -346,11 +414,15 @@ class AprsService : Service(), LocationListener {
     /** Envia pelo(s) meio(s) ativo(s) e autorizado(s): RF (TNC) e/ou APRS-IS. Retorna o meio usado. */
     private fun transmit(info: String): Medium? {
         val call = settings.fullCall
+        if (settings.rxOnly) {
+            AprsRepository.monitorLine("TX ${UiText.text(R.string.not_sent)} (RX only) $call>$TOCALL:$info")
+            return null
+        }
         var used: Medium? = null
-        if (settings.txViaRf && tnc.connected) {
+        if (settings.txViaRf && tncConnected()) {
             val path = settings.rfPath.split(',').map { it.trim() }.filter { it.isNotEmpty() }
             val line = "$call>$TOCALL" + (if (path.isNotEmpty()) "," + path.joinToString(",") else "") + ":" + info
-            if (tnc.send(line)) { used = Medium.RF; AprsRepository.updateStatus { it.copy(tncTx = it.tncTx + 1) } }
+            if (tncSend(line)) { used = Medium.RF; AprsRepository.updateStatus { it.copy(tncTx = it.tncTx + 1) } }
         }
         val status = AprsRepository.status.value
         if (settings.txViaInternet && status.aprsIsVerified) {
@@ -363,16 +435,19 @@ class AprsService : Service(), LocationListener {
         return used
     }
 
-    private fun sendMessage(to: String, text: String): Boolean {
+    private fun sendMessage(to: String, text: String, replyTo: Long? = null): Boolean {
         val dest = to.trim().uppercase()
-        if (dest.isEmpty() || text.isBlank() || !settings.configured) return false
+        if (dest.isEmpty() || text.isBlank() || !settings.configured || settings.rxOnly) return false
+        // Never message our own callsign by mistake (#20).
+        if (dest == settings.fullCall) return false
         val general = dest == "CQ" || dest.startsWith("BLN")
         var allSubmitted = true
         for (part in splitMessage(text)) {
             val msgId = if (general) null else nextMsgId()
             val local = ChatMessage(AprsRepository.newId(), settings.fullCall, dest, part, System.currentTimeMillis(),
                 true, null, msgId = msgId, status = "Enviando",
-                kind = if (dest.startsWith("BLN")) AprsMessage.Kind.BULLETIN else AprsMessage.Kind.MESSAGE)
+                kind = if (dest.startsWith("BLN")) AprsMessage.Kind.BULLETIN else AprsMessage.Kind.MESSAGE,
+                replyToId = replyTo)
             AprsRepository.add(local)
             if (!sendWithRetry(local, dest, part, msgId, 0)) allSubmitted = false
         }
@@ -404,6 +479,7 @@ class AprsService : Service(), LocationListener {
         val s = AprsRepository.status.value
         return when {
             !settings.configured -> UiText.text(R.string.configure_callsign)
+            settings.rxOnly -> UiText.text(R.string.rx_only_blocked)
             !settings.txViaInternet && !settings.txViaRf -> UiText.text(R.string.tx_disabled)
             !settings.txViaInternet && !s.tncConnected -> UiText.text(R.string.tx_tnc_unavailable)
             settings.txViaInternet && !s.aprsIsVerified && (!settings.txViaRf || !s.tncConnected) ->
@@ -421,24 +497,118 @@ class AprsService : Service(), LocationListener {
         val packet = AprsPacket.parse(line) ?: return
         if (medium == Medium.INTERNET)
             AprsRepository.updateStatus { it.copy(aprsRx = it.aprsRx + 1) }
-        AprsRepository.monitorLine("RX ${medium.label} ${line.take(300)}")
-        val forUs = AprsRepository.ingest(packet, medium, settings.fullCall) ?: return
-        // ACK pelo mesmo meio por onde a mensagem chegou.
-        forUs.msgId?.let { id ->
+        if (settings.monitorEnabled) AprsRepository.monitorLine("RX ${medium.label} ${decodeAprsText(line.take(300))}")
+        val previous = AprsRepository.stations.value[packet.source]
+        val eventsBefore = AprsRepository.rfEvents.value.size
+        val forUs = AprsRepository.ingest(packet, medium, settings.fullCall)
+        runCatching { checkAlerts(packet, medium, previous, eventsBefore) }
+        if (settings.apiEnabled) runCatching { broadcastPacket(packet, medium) }
+        if (forUs == null) return
+        // ACK pelo mesmo meio por onde a mensagem chegou. Somente recepção não transmite nem ACK.
+        forUs.msgId?.takeIf { !settings.rxOnly }?.let { id ->
             val info = ackInfo(forUs.from, id)
-            if (medium == Medium.RF && tnc.connected) {
-                tnc.send("${settings.fullCall}>$TOCALL:${info}")
+            if (medium == Medium.RF && tncConnected()) {
+                tncSend("${settings.fullCall}>$TOCALL:${info}")
             } else if (AprsRepository.status.value.aprsIsVerified) {
                 aprsIs.send("${settings.fullCall}>$TOCALL,TCPIP*:$info")
             }
         }
-        notifyMessage(forUs)
+        if (settings.notifyMessages) notifyMessage(forUs)
+    }
+
+    // ---------- Alertas de favoritas (#12) ----------
+
+    private fun inQuietHours(): Boolean {
+        if (!settings.quietHours) return false
+        val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+        val start = settings.quietStart
+        val end = settings.quietEnd
+        return if (start == end) false else if (start < end) hour in start until end else hour >= start || hour < end
+    }
+
+    private fun checkAlerts(packet: AprsPacket, medium: Medium, previous: Station?, eventsBefore: Int) {
+        val now = System.currentTimeMillis()
+        if (now < alertsQuietUntil || inQuietHours()) return
+        val call = packet.source
+        val events = AprsRepository.rfEvents.value
+        val newEvent = if (events.size > eventsBefore) events.lastOrNull() else null
+        if (settings.alertMyDigi && newEvent?.kind == "digi") {
+            alert("digi:${newEvent.call}", UiText.text(R.string.alert_my_digi_title),
+                UiText.text(R.string.alert_my_digi_body, newEvent.call))
+        }
+        if (call !in AprsRepository.favorites.value) return
+        val current = AprsRepository.stations.value[call]
+        when {
+            previous == null && current != null && settings.alertFavFirst ->
+                alert("first:$call", UiText.text(R.string.alert_fav_title, call), UiText.text(R.string.alert_fav_first))
+            previous != null && settings.alertFavReturn &&
+                now - previous.lastHeard >= settings.alertReturnMinutes * 60_000L ->
+                alert("return:$call", UiText.text(R.string.alert_fav_title, call),
+                    UiText.text(R.string.alert_fav_return, (now - previous.lastHeard) / 60_000L))
+            previous != null && current != null && settings.alertFavPosition &&
+                current.lastHeard > previous.lastHeard &&
+                com.pt2vhf.aprs.core.haversineKm(previous.lat, previous.lon, current.lat, current.lon) >= 0.1 ->
+                alert("pos:$call", UiText.text(R.string.alert_fav_title, call), UiText.text(R.string.alert_fav_position))
+        }
+        if (settings.alertFavRf && medium == Medium.RF && newEvent?.kind == "heard" && newEvent.direct && newEvent.call == call) {
+            alert("rf:$call", UiText.text(R.string.alert_fav_title, call), UiText.text(R.string.alert_fav_rf))
+        }
+    }
+
+    private fun alert(key: String, title: String, body: String) {
+        val now = System.currentTimeMillis()
+        synchronized(alertCooldown) {
+            if (now - (alertCooldown[key] ?: 0L) < 10 * 60_000L) return
+            alertCooldown[key] = now
+        }
+        if (!canNotify()) return
+        val n = NotificationCompat.Builder(this, CH_ALERTS)
+            .setSmallIcon(R.drawable.ic_stat_aprs)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setAutoCancel(true)
+            .setContentIntent(openAppIntent())
+            .build()
+        runCatching { getSystemService(NotificationManager::class.java).notify(key.hashCode(), n) }
+    }
+
+    // ---------- API para outros apps (#15) ----------
+
+    private fun broadcastPacket(packet: AprsPacket, medium: Medium) {
+        val station = AprsRepository.stations.value[packet.source] ?: return
+        if (station.lastHeard < System.currentTimeMillis() - 5_000L) return // only positions from this packet
+        val intent = Intent(ApiContract.EVENT_POSITION).apply {
+            putExtra(ApiContract.EXTRA_VERSION, ApiContract.VERSION)
+            putExtra(ApiContract.EXTRA_CALL, station.call)
+            putExtra(ApiContract.EXTRA_LAT, station.lat)
+            putExtra(ApiContract.EXTRA_LON, station.lon)
+            putExtra(ApiContract.EXTRA_SYMBOL, "${station.symbolTable}${station.symbol}")
+            putExtra(ApiContract.EXTRA_COMMENT, station.comment)
+            putExtra(ApiContract.EXTRA_MEDIUM, medium.name)
+            putExtra(ApiContract.EXTRA_TIME, station.lastHeard)
+        }
+        sendBroadcast(intent, ApiContract.PERMISSION)
+    }
+
+    private fun broadcastStatus() {
+        val s = AprsRepository.status.value
+        val intent = Intent(ApiContract.EVENT_STATUS).apply {
+            putExtra(ApiContract.EXTRA_VERSION, ApiContract.VERSION)
+            putExtra(ApiContract.EXTRA_CALL, settings.fullCall)
+            putExtra(ApiContract.EXTRA_APRS_IS, s.aprsIsVerified)
+            putExtra(ApiContract.EXTRA_TNC, s.tncConnected)
+            putExtra(ApiContract.EXTRA_TRACKER, s.trackerOn)
+            putExtra(ApiContract.EXTRA_STATIONS, AprsRepository.stations.value.size)
+            putExtra(ApiContract.EXTRA_RX_ONLY, settings.rxOnly)
+        }
+        sendBroadcast(intent, ApiContract.PERMISSION)
     }
 
     private fun createChannels() {
         val nm = getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(NotificationChannel(CH_SERVICE, UiText.text(R.string.connection_channel), NotificationManager.IMPORTANCE_LOW))
         nm.createNotificationChannel(NotificationChannel(CH_MESSAGES, UiText.text(R.string.messages_channel), NotificationManager.IMPORTANCE_HIGH))
+        nm.createNotificationChannel(NotificationChannel(CH_ALERTS, UiText.text(R.string.alerts_channel), NotificationManager.IMPORTANCE_DEFAULT))
     }
 
     private fun openAppIntent(): PendingIntent = PendingIntent.getActivity(this, 0,
@@ -450,6 +620,7 @@ class AprsService : Service(), LocationListener {
         val parts = mutableListOf<String>()
         parts += if (s.aprsIsVerified) UiText.text(R.string.aprs_ok) else if (s.aprsIsConnected) UiText.text(R.string.aprs_unverified) else UiText.text(R.string.aprs_disconnected)
         if (s.tncConnected) parts += "TNC ${s.tncName}"
+        if (settings.rxOnly) parts += UiText.text(R.string.profile_rx)
         if (s.trackerOn) parts += UiText.text(R.string.active_tracker_notification, s.beaconsSent)
         return NotificationCompat.Builder(this, CH_SERVICE)
             .setSmallIcon(R.drawable.ic_stat_aprs)
@@ -504,6 +675,9 @@ class AprsService : Service(), LocationListener {
         const val TOCALL = "APZVHF"
         private const val CH_SERVICE = "service"
         private const val CH_MESSAGES = "messages"
+        private const val CH_ALERTS = "alerts"
+        /** true while the foreground service is alive; the API receiver only forwards then. */
+        @Volatile var running = false
         private const val NOTIF_SERVICE = 1
         const val ACTION_RELOAD = "reload"
         const val ACTION_BEACON = "beacon"
@@ -517,6 +691,10 @@ class AprsService : Service(), LocationListener {
         const val ACTION_BT_PAUSE = "bt_pause"
         const val ACTION_BT_RESUME = "bt_resume"
         const val ACTION_STOP = "stop"
+        const val ACTION_TCP_CONNECT = "tcp_connect"
+        const val ACTION_API_BEACON = "api_beacon"
+        const val ACTION_API_STATUS = "api_status"
+        const val EXTRA_REPLY_TO = "reply_to"
         const val EXTRA_TO = "to"
         const val EXTRA_TEXT = "text"
         const val EXTRA_REQUEST_ID = "request_id"

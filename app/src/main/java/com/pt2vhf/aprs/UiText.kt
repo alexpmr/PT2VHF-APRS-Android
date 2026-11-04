@@ -31,6 +31,9 @@ object UiText {
             "iGate" -> R.string.role_igate
             "Estação meteorológica" -> R.string.role_weather
             "Móvel" -> R.string.role_mobile
+            "Pessoa" -> R.string.role_person
+            "Aeronave" -> R.string.role_aircraft
+            "Embarcação" -> R.string.role_vessel
             else -> R.string.role_station
         }
     )
@@ -75,6 +78,7 @@ object UiText {
         "Passcode não verificado pelo servidor" -> text(R.string.unverified_passcode)
         "Servidor encerrou a conexão" -> text(R.string.server_closed)
         "Conexão Bluetooth encerrada" -> text(R.string.bt_closed)
+        "Conexão KISS TCP encerrada" -> text(R.string.kiss_tcp_closed)
         "Falha ao conectar" -> text(R.string.connection_failed)
         else -> raw
     }

@@ -119,7 +119,20 @@ data class AprsMessage(val addressee: String, val text: String, val id: String?,
     enum class Kind { MESSAGE, ACK, REJ, BULLETIN }
 }
 
-private val UNCOMPRESSED = Regex("^(\\d{2})(\\d{2}\\.\\d{2})([NS])(.)(\\d{3})(\\d{2}\\.\\d{2})([EW])(.)(.*)$")
+// Minutes may contain spaces when the sender uses position ambiguity (APRS 1.0.1, ch. 6).
+private val UNCOMPRESSED = Regex("^(\\d{2})([\\d ]{2}\\.[\\d ]{2})([NS])(.)(\\d{3})([\\d ]{2}\\.[\\d ]{2})([EW])(.)(.*)$")
+
+/** Ambiguous minutes ("03.5 ", "0 .  ") become the centre of the ambiguity box. */
+private fun ambiguousMinutes(text: String): Double? {
+    val blanks = text.count { it == ' ' }
+    if (blanks == 0) return text.toDoubleOrNull()
+    // Blanks must be the trailing digits: "MM.m ", "MM.  ", "M .  ", "  .  ".
+    val digits = text.replace(".", "")
+    if (digits.trimEnd().contains(' ')) return null
+    val base = text.replace(' ', '0').toDoubleOrNull() ?: return null
+    val half = when (blanks) { 1 -> 0.05; 2 -> 0.5; 3 -> 5.0; else -> 30.0 }
+    return (base + half).coerceAtMost(59.99)
+}
 
 /** Posição não comprimida (!, =, /, @). Minutos >= 60 são rejeitados, como no desktop. */
 fun parsePosition(info: String): Position? {
@@ -130,8 +143,8 @@ fun parsePosition(info: String): Position? {
     }
     val m = UNCOMPRESSED.find(body) ?: return null
     val g = m.groupValues
-    val latMin = g[2].toDouble()
-    val lonMin = g[6].toDouble()
+    val latMin = ambiguousMinutes(g[2]) ?: return null
+    val lonMin = ambiguousMinutes(g[6]) ?: return null
     if (latMin >= 60.0 || lonMin >= 60.0) return null
     var lat = g[1].toInt() + latMin / 60.0
     var lon = g[5].toInt() + lonMin / 60.0
@@ -200,11 +213,13 @@ fun beaconCommentWithSite(comment: String, maxChars: Int = 43): String {
 }
 
 fun positionInfo(lat: Double, lon: Double, table: Char, symbol: Char, comment: String,
-                 course: Int? = null, speedKmh: Double? = null, messaging: Boolean = true): String {
+                 course: Int? = null, speedKmh: Double? = null, messaging: Boolean = true,
+                 ambiguity: Int = 0): String {
     val ext = if (course != null && speedKmh != null)
         String.format(Locale.ROOT, "%03d/%03d", ((course % 360) + 360) % 360, (speedKmh / 1.852).roundToInt().coerceIn(0, 999))
     else ""
-    return (if (messaging) "=" else "!") + formatLatitude(lat) + table + formatLongitude(lon) + symbol + ext + comment.take(43)
+    val (la, lo) = applyAmbiguity(formatLatitude(lat), formatLongitude(lon), ambiguity)
+    return (if (messaging) "=" else "!") + la + table + lo + symbol + ext + comment.take(43)
 }
 
 fun messageInfo(to: String, text: String, id: String?): String {
@@ -268,13 +283,18 @@ class SmartBeaconing(
     private val minTurnAngle: Double = 28.0,
     private val turnSlope: Double = 255.0,
     private val minTurnTimeSec: Int = 15,
+    /** Interval when practically stopped (< 1 km/h); 0 = use slowRateSec. */
+    private val stoppedRateSec: Int = 0,
 ) {
+    private fun rateFor(speedKmh: Double): Int = when {
+        stoppedRateSec > 0 && speedKmh < 1.0 -> stoppedRateSec
+        speedKmh < slowSpeed -> slowRateSec
+        speedKmh > fastSpeed -> fastRateSec
+        else -> (fastRateSec * fastSpeed / speedKmh).toInt()
+    }
+
     fun shouldBeacon(secondsSinceLast: Long, speedKmh: Double, headingChange: Double): Boolean {
-        val rate = when {
-            speedKmh < slowSpeed -> slowRateSec
-            speedKmh > fastSpeed -> fastRateSec
-            else -> (fastRateSec * fastSpeed / speedKmh).toInt()
-        }
+        val rate = rateFor(speedKmh)
         if (secondsSinceLast >= rate) return true
         if (speedKmh >= slowSpeed && secondsSinceLast >= minTurnTimeSec) {
             val threshold = minTurnAngle + turnSlope / speedKmh
@@ -283,14 +303,8 @@ class SmartBeaconing(
         return false
     }
 
-    fun nextBeaconSeconds(secondsSinceLast: Long, speedKmh: Double): Long {
-        val rate = when {
-            speedKmh < slowSpeed -> slowRateSec
-            speedKmh > fastSpeed -> fastRateSec
-            else -> (fastRateSec * fastSpeed / speedKmh).toInt()
-        }
-        return (rate - secondsSinceLast).coerceAtLeast(0)
-    }
+    fun nextBeaconSeconds(secondsSinceLast: Long, speedKmh: Double): Long =
+        (rateFor(speedKmh) - secondsSinceLast).coerceAtLeast(0)
 }
 
 /** Comparação de versões x.y.z. */

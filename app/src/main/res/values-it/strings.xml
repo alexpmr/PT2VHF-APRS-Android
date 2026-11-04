@@ -17,9 +17,6 @@
     <string name="aprs_disconnected">APRS-IS disconnesso</string>
     <string name="tnc_off">TNC disconnesso</string>
     <string name="no_gps">GPS assente</string>
-    <string name="official_downloads">Download sul sito ufficiale</string>
-    <string name="official_notice">D\'ora in poi, le nuove versioni e i pacchetti di installazione di PT2VHF APRS Client for Android saranno distribuiti sul sito ufficiale.</string>
-    <string name="understood">Ho capito</string>
     <string name="me">Tu</string>
     <string name="now">adesso</string>
     <string name="minutes_ago">%1$d min fa</string>

@@ -11,7 +11,7 @@ import org.json.JSONArray
  * All writes are dispatched from AprsRepository's single-thread executor.
  * Raw APRS packets, passwords and passcodes are deliberately not stored here.
  */
-internal class StationStore(context: Context) : SQLiteOpenHelper(context, "stations.db", null, 2) {
+internal class StationStore(context: Context) : SQLiteOpenHelper(context, "stations.db", null, 3) {
     override fun onConfigure(db: SQLiteDatabase) {
         super.onConfigure(db)
         db.enableWriteAheadLogging()
@@ -37,6 +37,16 @@ internal class StationStore(context: Context) : SQLiteOpenHelper(context, "stati
         db.execSQL("CREATE INDEX idx_track_recorded ON own_track(recorded)")
         db.execSQL("CREATE INDEX idx_station_heard ON stations(heard)")
         db.execSQL("CREATE INDEX idx_link_seen ON rf_links(seen)")
+        createRfEvents(db)
+    }
+
+    private fun createRfEvents(db: SQLiteDatabase) {
+        db.execSQL("""CREATE TABLE IF NOT EXISTS rf_events(
+            id INTEGER PRIMARY KEY AUTOINCREMENT, call TEXT NOT NULL, kind TEXT NOT NULL,
+            via TEXT NOT NULL, direct INTEGER NOT NULL, time INTEGER NOT NULL,
+            distance REAL, lat REAL, lon REAL, own_lat REAL, own_lon REAL
+        )""")
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_rf_events_time ON rf_events(time)")
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -46,7 +56,8 @@ internal class StationStore(context: Context) : SQLiteOpenHelper(context, "stati
             db.execSQL("ALTER TABLE stations ADD COLUMN first_seen INTEGER NOT NULL DEFAULT 0")
             db.execSQL("UPDATE stations SET first_seen = heard WHERE first_seen = 0")
         }
-        check(newVersion == 2) { "Missing StationStore migration $oldVersion to $newVersion" }
+        if (oldVersion < 3) createRfEvents(db)
+        check(newVersion == 3) { "Missing StationStore migration $oldVersion to $newVersion" }
     }
 
     fun readStations(since: Long): Map<String, Station> {
@@ -173,9 +184,38 @@ internal class StationStore(context: Context) : SQLiteOpenHelper(context, "stati
 
     fun clearTrack() { writableDatabase.delete("own_track", null, null) }
 
-    fun prune(olderThan: Long) {
+    fun saveRfEvent(e: RfEvent) {
+        val c = ContentValues().apply {
+            put("call", e.call); put("kind", e.kind); put("via", e.via); put("direct", if (e.direct) 1 else 0)
+            put("time", e.time)
+            fun opt(k: String, v: Double?) { if (v != null) put(k, v) else putNull(k) }
+            opt("distance", e.distanceKm); opt("lat", e.lat); opt("lon", e.lon)
+            opt("own_lat", e.ownLat); opt("own_lon", e.ownLon)
+        }
+        writableDatabase.insert("rf_events", null, c)
+    }
+
+    fun readRfEvents(since: Long, limit: Int = 20000): List<RfEvent> {
+        val out = ArrayList<RfEvent>()
+        readableDatabase.query("rf_events", null, "time >= ?", arrayOf(since.toString()),
+            null, null, "time DESC", limit.toString()).use { c ->
+            fun idx(n: String) = c.getColumnIndexOrThrow(n)
+            fun d(n: String): Double? = if (c.isNull(idx(n))) null else c.getDouble(idx(n))
+            while (c.moveToNext()) out += RfEvent(
+                c.getString(idx("call")), c.getString(idx("kind")), c.getString(idx("via")),
+                c.getInt(idx("direct")) == 1, c.getLong(idx("time")), d("distance"),
+                d("lat"), d("lon"), d("own_lat"), d("own_lon"),
+            )
+        }
+        return out.asReversed()
+    }
+
+    fun clearRfEvents() { writableDatabase.delete("rf_events", null, null) }
+
+    fun prune(olderThan: Long, trackOlderThan: Long, rfOlderThan: Long) {
         writableDatabase.delete("stations", "heard < ?", arrayOf(olderThan.toString()))
         writableDatabase.delete("rf_links", "seen < ?", arrayOf(olderThan.toString()))
-        writableDatabase.delete("own_track", "recorded < ?", arrayOf((System.currentTimeMillis() - 7L * 86400000).toString()))
+        writableDatabase.delete("own_track", "recorded < ?", arrayOf(trackOlderThan.toString()))
+        writableDatabase.delete("rf_events", "time < ?", arrayOf(rfOlderThan.toString()))
     }
 }
