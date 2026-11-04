@@ -1249,6 +1249,102 @@ _Solicitado em 04/11/2026: "Backlog: Tire a mensagem de anúncio ao abrir o apli
   nova, o aviso OTA aparece normalmente; sem strings não usadas no lint.
 - **Status:** implementado na 0.1.8 QA (PR #13); aguarda teste físico (T38). Item 18 cancelado/substituído.
 
+### 39. Aviso no app quando houver nova versão (melhoria do aviso OTA atual)
+_Solicitado em 04/11/2026: "backlog para a próxima versão: aviso no app quando houver uma nova versão."_
+
+**O que já existe (main, v0.1.7 QA):**
+- `data/UpdateCheck.kt` consulta `https://www.pt2vhf.com/update.php?product=aprs-android`
+  (mesma API do desktop, alimentada pelo `updates.json` do site), compara com
+  `isNewerVersion` e aceita APK somente de `https://www.pt2vhf.com/`.
+- `ui/App.kt` chama a verificação **uma única vez, ao abrir o app**
+  (`LaunchedEffect(Unit)`), e mostra o diálogo "Nova versão X" com notas,
+  **Baixar e instalar** (abre o navegador) e **Mais tarde**.
+
+**Limitações do atual (o que este item deve resolver):**
+- Só verifica na abertura da tela; com o app aberto por horas, ou rodando em
+  segundo plano com o tracker, a nova versão não é percebida.
+- Falha de rede/servidor é silenciosa (`null`), sem nova tentativa.
+- "Mais tarde" só vale para aquela abertura; não há aviso permanente e discreto
+  depois de dispensar o diálogo, nem forma de verificar manualmente.
+
+**Comportamento exigido:**
+- **Indicador persistente** enquanto houver versão mais nova: selo/ícone no
+  cabeçalho (ou em Configurações) que, ao tocar, reabre o diálogo com notas e
+  download. Some quando a versão instalada alcançar a remota.
+- **Verificação periódica** além da abertura: ao voltar ao primeiro plano e no
+  máximo a cada ~12 h (WorkManager ou equivalente, só com rede), com nova
+  tentativa após falha; sem consumo relevante de bateria/dados.
+- **Notificação do Android** opcional quando a nova versão for detectada com o
+  app em segundo plano (canal próprio "Atualizações", respeitando permissão de
+  notificações; uma por versão).
+- **"Mais tarde"/"Ignorar esta versão"**: Mais tarde volta a avisar na próxima
+  abertura; Ignorar esta versão silencia o diálogo até sair outra mais nova
+  (o indicador discreto continua).
+- **Verificar agora** em Configurações/Sobre, mostrando versão instalada, última
+  verificação e resultado (atualizado / nova versão / falha de rede).
+- Manter: fonte única no site oficial, APK só de `www.pt2vhf.com`, nenhuma
+  instalação automática; textos nas cinco línguas (PT/EN/ES/FR/IT).
+- **Critério de aceite:** com `updates.json` publicando versão maior, o aviso
+  aparece sem reabrir o app (primeiro plano e segundo plano); indicador some
+  após atualizar; sem rede, nenhuma mensagem de erro intrusiva e nova tentativa.
+- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+
+### 40. Mensagens: mostrar a data, além da hora, e tempo decorrido nas de hoje
+_Solicitado em 04/11/2026: "backlog: Mensagens, indicar a data, além da hora. Se a data for dentro do dia corrente, mostre a data e quanto tempo foi, ex: há 4 minutos, há 3h e 45min"._
+
+**Como está hoje (v0.1.8):**
+- Nos balões da conversa (`ui/MessagesUi.kt`, ~linha 309), o rodapé mostra só a
+  hora via `hhmm(m.time)` (ex.: "14:32 · APRS-IS"); a data não aparece, então
+  mensagens de dias diferentes ficam iguais.
+- Na lista de conversas (~linha 147), a última mensagem usa `ago()` de
+  `ui/Screens.kt`: "agora", "X min", "X h" (só horas inteiras) e, após 24 h,
+  data/hora curtas.
+
+**Comportamento exigido:**
+- Toda mensagem (balões das conversas privadas e gerais) mostra **data e hora**
+  de recepção/envio, no formato curto do idioma do app (ex.: PT "04/11/2026 14:32").
+- Se a mensagem for **do dia corrente** (data local do aparelho), mostrar a data,
+  a hora e o **tempo decorrido**: "há 4 minutos", "há 3h e 45min"; abaixo de
+  1 min, "agora". Combinar horas e minutos (não arredondar para horas inteiras).
+- Mensagens de dias anteriores: só data e hora, sem tempo decorrido.
+- O tempo decorrido **se atualiza sozinho** com a tela aberta (ao menos a cada
+  minuto) e muda para o formato de dia anterior após a meia-noite.
+- Aplicar o mesmo critério à lista de conversas (última mensagem) para manter
+  coerência, sem quebrar a linha em telas estreitas (truncar o comentário antes).
+- Textos e plurais nas cinco línguas (PT/EN/ES/FR/IT); preservar via/estado
+  (APRS-IS/RF, enviada/confirmada) no rodapé do balão.
+- **Critério de aceite:** mensagem de agora → "04/11/2026 14:32 · há 0–1 min";
+  de 3h45 atrás no mesmo dia → "… · há 3h e 45min"; de ontem → só data e hora;
+  virada de meia-noite com o app aberto; fuso/horário de verão do aparelho.
+- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+
+### 41. Mensagens: apagar todas, só boletins ou só mensagens pessoais
+_Solicitado em 04/11/2026: "Backlog: Opção para apagar todas as mensagens, boletins e mensagens pessoais."_
+
+**Como está hoje (v0.1.8):**
+- Configurações já tem **Apagar todas as mensagens** (`ui/SettingsUi.kt`, ~linha 440 →
+  `AprsRepository.clearMessages()`), com confirmação; apaga tudo de uma vez:
+  privadas, CQ, boletins e pendentes (cancela retransmissões).
+- Não há como apagar **só boletins** ou **só mensagens pessoais**, nem atalho na
+  própria aba Mensagens.
+
+**Comportamento exigido:**
+- Oferecer três opções: **Apagar todas as mensagens**, **Apagar boletins**
+  (boletins/anúncios BLN e mensagens gerais/CQ) e **Apagar mensagens pessoais**
+  (conversas privadas, incluindo enviadas e pendentes).
+- Disponível em Configurações → Mensagens e também na aba **Mensagens** (menu ⋮
+  ou ícone de lixeira), na aba/visão correspondente.
+- Confirmação explícita em cada opção, dizendo o que será apagado e o que fica;
+  ação irreversível; retorno de sucesso/falha (reaproveitar textos atuais).
+- Apagar pessoais cancela as retransmissões pendentes dessas mensagens; apagar
+  boletins não mexe nas conversas privadas, e vice-versa.
+- Apagar da memória e do banco (`MessageStore`), sem reaparecer ao reiniciar;
+  preservar estações, favoritos e configurações. Coerente com a retenção (item 26).
+- Textos nas cinco línguas (PT/EN/ES/FR/IT).
+- **Critério de aceite:** com boletins e pessoais armazenados, cada opção apaga só
+  o seu tipo; reiniciar o app e conferir; cancelar a confirmação não apaga nada.
+- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+
 ## Consolidação das sugestões aprovadas com itens já existentes
 
 A comparação com o APRSdroid também aprovou os recursos abaixo, que **já estavam
@@ -1293,48 +1389,3 @@ não transmitir por RF/APRS-IS sem permissão, otimizar bateria/armazenamento,
 testar com rádio/TNC reais, preservar a separação entre RF comprovado e
 dados APRS-IS e, em cada release, publicar APK assinado + atualização
 coordenada de www.pt2vhf.com/android (incluindo OTA/changelog/contadores).
-
-## Itens registrados após a 0.1.8 QA
-
-> Seção no fim do arquivo para não conflitar com o PR #13 (0.1.8 QA), que altera
-> a tabela e o item 38. Ao mesclar, mover para "Pendentes" e para a tabela.
-
-### 39. Aviso no app quando houver nova versão (melhoria do aviso OTA atual)
-_Solicitado em 04/11/2026: "backlog para a próxima versão: aviso no app quando houver uma nova versão."_
-
-**O que já existe (main, v0.1.7 QA):**
-- `data/UpdateCheck.kt` consulta `https://www.pt2vhf.com/update.php?product=aprs-android`
-  (mesma API do desktop, alimentada pelo `updates.json` do site), compara com
-  `isNewerVersion` e aceita APK somente de `https://www.pt2vhf.com/`.
-- `ui/App.kt` chama a verificação **uma única vez, ao abrir o app**
-  (`LaunchedEffect(Unit)`), e mostra o diálogo "Nova versão X" com notas,
-  **Baixar e instalar** (abre o navegador) e **Mais tarde**.
-
-**Limitações do atual (o que este item deve resolver):**
-- Só verifica na abertura da tela; com o app aberto por horas, ou rodando em
-  segundo plano com o tracker, a nova versão não é percebida.
-- Falha de rede/servidor é silenciosa (`null`), sem nova tentativa.
-- "Mais tarde" só vale para aquela abertura; não há aviso permanente e discreto
-  depois de dispensar o diálogo, nem forma de verificar manualmente.
-
-**Comportamento exigido:**
-- **Indicador persistente** enquanto houver versão mais nova: selo/ícone no
-  cabeçalho (ou em Configurações) que, ao tocar, reabre o diálogo com notas e
-  download. Some quando a versão instalada alcançar a remota.
-- **Verificação periódica** além da abertura: ao voltar ao primeiro plano e no
-  máximo a cada ~12 h (WorkManager ou equivalente, só com rede), com nova
-  tentativa após falha; sem consumo relevante de bateria/dados.
-- **Notificação do Android** opcional quando a nova versão for detectada com o
-  app em segundo plano (canal próprio "Atualizações", respeitando permissão de
-  notificações; uma por versão).
-- **"Mais tarde"/"Ignorar esta versão"**: Mais tarde volta a avisar na próxima
-  abertura; Ignorar esta versão silencia o diálogo até sair outra mais nova
-  (o indicador discreto continua).
-- **Verificar agora** em Configurações/Sobre, mostrando versão instalada, última
-  verificação e resultado (atualizado / nova versão / falha de rede).
-- Manter: fonte única no site oficial, APK só de `www.pt2vhf.com`, nenhuma
-  instalação automática; textos nas cinco línguas (PT/EN/ES/FR/IT).
-- **Critério de aceite:** com `updates.json` publicando versão maior, o aviso
-  aparece sem reabrir o app (primeiro plano e segundo plano); indicador some
-  após atualizar; sem rede, nenhuma mensagem de erro intrusiva e nova tentativa.
-- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
