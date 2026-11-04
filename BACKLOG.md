@@ -1239,3 +1239,48 @@ não transmitir por RF/APRS-IS sem permissão, otimizar bateria/armazenamento,
 testar com rádio/TNC reais, preservar a separação entre RF comprovado e
 dados APRS-IS e, em cada release, publicar APK assinado + atualização
 coordenada de www.pt2vhf.com/android (incluindo OTA/changelog/contadores).
+
+## Itens registrados após a 0.1.8 QA
+
+> Seção no fim do arquivo para não conflitar com o PR #13 (0.1.8 QA), que altera
+> a tabela e o item 38. Ao mesclar, mover para "Pendentes" e para a tabela.
+
+### 39. Aviso no app quando houver nova versão (melhoria do aviso OTA atual)
+_Solicitado em 04/11/2026: "backlog para a próxima versão: aviso no app quando houver uma nova versão."_
+
+**O que já existe (main, v0.1.7 QA):**
+- `data/UpdateCheck.kt` consulta `https://www.pt2vhf.com/update.php?product=aprs-android`
+  (mesma API do desktop, alimentada pelo `updates.json` do site), compara com
+  `isNewerVersion` e aceita APK somente de `https://www.pt2vhf.com/`.
+- `ui/App.kt` chama a verificação **uma única vez, ao abrir o app**
+  (`LaunchedEffect(Unit)`), e mostra o diálogo "Nova versão X" com notas,
+  **Baixar e instalar** (abre o navegador) e **Mais tarde**.
+
+**Limitações do atual (o que este item deve resolver):**
+- Só verifica na abertura da tela; com o app aberto por horas, ou rodando em
+  segundo plano com o tracker, a nova versão não é percebida.
+- Falha de rede/servidor é silenciosa (`null`), sem nova tentativa.
+- "Mais tarde" só vale para aquela abertura; não há aviso permanente e discreto
+  depois de dispensar o diálogo, nem forma de verificar manualmente.
+
+**Comportamento exigido:**
+- **Indicador persistente** enquanto houver versão mais nova: selo/ícone no
+  cabeçalho (ou em Configurações) que, ao tocar, reabre o diálogo com notas e
+  download. Some quando a versão instalada alcançar a remota.
+- **Verificação periódica** além da abertura: ao voltar ao primeiro plano e no
+  máximo a cada ~12 h (WorkManager ou equivalente, só com rede), com nova
+  tentativa após falha; sem consumo relevante de bateria/dados.
+- **Notificação do Android** opcional quando a nova versão for detectada com o
+  app em segundo plano (canal próprio "Atualizações", respeitando permissão de
+  notificações; uma por versão).
+- **"Mais tarde"/"Ignorar esta versão"**: Mais tarde volta a avisar na próxima
+  abertura; Ignorar esta versão silencia o diálogo até sair outra mais nova
+  (o indicador discreto continua).
+- **Verificar agora** em Configurações/Sobre, mostrando versão instalada, última
+  verificação e resultado (atualizado / nova versão / falha de rede).
+- Manter: fonte única no site oficial, APK só de `www.pt2vhf.com`, nenhuma
+  instalação automática; textos nas cinco línguas (PT/EN/ES/FR/IT).
+- **Critério de aceite:** com `updates.json` publicando versão maior, o aviso
+  aparece sem reabrir o app (primeiro plano e segundo plano); indicador some
+  após atualizar; sem rede, nenhuma mensagem de erro intrusiva e nova tentativa.
+- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
