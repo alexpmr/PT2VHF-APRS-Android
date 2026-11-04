@@ -1552,6 +1552,36 @@ controlável pelo usuário nem serve para trocar de celular de forma garantida.
   configurações; arquivo inválido mostra erro sem alterar nada.
 - **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
 
+### 51. Tela principal: nova aba "Logs" com todos os pacotes, depois de Tracker
+_Solicitado em 04/11/2026: "Backlog: página principal, adicione uma aba Logs, que mostra todas os pacotes, depois de Tracker."_
+
+**Como está hoje (v0.1.8):** a barra inferior tem Mapa, Mensagens, Estações,
+Rádio e Tracker (`ui/App.kt`, `enum class Tab`). Os pacotes aparecem só no
+cartão **Monitor ao vivo** dentro da aba Rádio (`ui/RadioUi.kt` ~linha 222),
+com filtro Todos/RX/TX/RF e texto; guarda apenas as **últimas 200 linhas em
+memória** (`AprsRepository.monitorLine`) e some ao reiniciar. A exportação .txt
+do diagnóstico (item 13) e o "Enviar log" (item 45) são relatórios, não a lista.
+
+**Comportamento exigido:**
+- Sexta aba **Logs** na barra inferior, **logo após Tracker**, com ícone próprio.
+- Lista de **todos os pacotes**, recebidos e enviados, de APRS-IS e RF (TNC/AFSK),
+  um por linha: horário (data+hora), direção RX/TX, meio (APRS-IS/RF, via/digis),
+  origem→destino, tipo (posição, mensagem, objeto, status, telemetria, clima…) e
+  o pacote bruto (TNC2), com quebra/truncamento legível.
+- Mais recentes no topo, rolagem fluida com milhares de linhas; pausar rolagem
+  automática; tocar no pacote mostra detalhes decodificados e atalho para a
+  estação/mensagem; copiar/compartilhar o pacote.
+- Filtros: RX/TX, APRS-IS/RF, tipo, indicativo/texto (reaproveitar os do Monitor).
+- Guardar em banco local com retenção configurável (ex.: 24 h / 7 dias / quantidade),
+  sobrevivendo a reinícios; botão limpar com confirmação; exportar (.txt/.csv).
+- Com seis abas, conferir largura em 320/360 dp (rótulos curtos ou só ícone no
+  selecionado) e cinco línguas. Decidir se o Monitor ao vivo da aba Rádio fica
+  (resumo) ou passa a apontar para a aba Logs.
+- **Critério de aceite:** beacon enviado e pacotes recebidos de APRS-IS e TNC
+  aparecem na aba Logs com direção e meio corretos; reiniciar o app mantém o
+  histórico conforme a retenção; filtros combinados funcionam.
+- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+
 ## Consolidação das sugestões aprovadas com itens já existentes
 
 A comparação com o APRSdroid também aprovou os recursos abaixo, que **já estavam
