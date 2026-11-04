@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.8 — Candidata de homologação (não publicada, 04/11/2026)
+## 0.1.8 — Publicada (04/11/2026, beta; testes item a item pendentes)
 
 Inclui a 0.1.7 QA (correção do P0 #37). Itens prontos para teste físico; nenhuma baixa sem o OK do mantenedor.
 

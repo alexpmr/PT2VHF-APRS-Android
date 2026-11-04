@@ -4,12 +4,11 @@ Itens registrados para as próximas versões. Não implementar até o pedido de 
 
 ## Onde estamos (04/11/2026)
 
-- Última versão **publicada**: **v0.1.6** (tag e release de 31/10/2026, distribuída pelo site).
-- **0.1.7** ficou como candidata QA (correção do P0 #37) e **não foi publicada**; ela está contida na 0.1.8.
-- **0.1.8 — candidata QA** (PR #13): implementa os itens parciais e pendentes listados abaixo. O APK QA
-  assinado sai do CI do PR. **Nenhum item tem baixa definitiva**: cada um aguarda o teste físico e o OK
-  do mantenedor, item a item, conforme a tabela "Status para teste — 0.1.8 QA".
-- O P0 **#37** (queda do APRS-IS ao transmitir) continua bloqueando a publicação: confirmar em servidor real.
+- Última versão **publicada**: **v0.1.8** (04/11/2026, beta), publicada a pedido do mantenedor **antes** dos
+  testes item a item. A v0.1.6 foi a anterior; a 0.1.7 (correção do P0 #37) nunca foi publicada e está contida na 0.1.8.
+- **Nenhum item da 0.1.8 tem baixa definitiva**: cada um aguarda o teste físico e o OK do mantenedor,
+  item a item, conforme a tabela "Status para teste — 0.1.8 QA". Correções que surgirem vão para a 0.1.9.
+- O P0 **#37** (queda do APRS-IS ao transmitir) ainda precisa de confirmação em servidor real.
 - Ainda **não implementados** (dependem de hardware ou ficam fora do escopo desta versão): TNC por USB-OTG,
   AFSK pelo áudio, download em massa de mapas offline (a política de tiles do OpenStreetMap proíbe; o cache
   do osmdroid já guarda as áreas visitadas), modo carro e rotas.
