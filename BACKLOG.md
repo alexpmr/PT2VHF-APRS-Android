@@ -1345,6 +1345,28 @@ _Solicitado em 04/11/2026: "Backlog: Opção para apagar todas as mensagens, bol
   o seu tipo; reiniciar o app e conferir; cancelar a confirmação não apaga nada.
 - **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
 
+### 42. Configurações → Mensagens: retenção do histórico: opção "24 h" em "Manter por"
+_Solicitado em 04/11/2026: "Backlog: configurações, manter por, adicionar 24h."_
+
+**Como está hoje (v0.1.8):** em Configurações → "Mensagens: retenção do histórico", o seletor
+"Manter por" (`ui/SettingsUi.kt`, ~linha 278, `dayOptions`) oferece **7, 30, 90,
+180 e 365 dias** ou **sem limite**; vale para todas ou separado por Conversas,
+Geral e Boletins (item 26).
+
+**Comportamento exigido:**
+- Acrescentar **24 h** como primeira opção (antes de 7 dias), nas linhas de
+  retenção comum e nas separadas (Conversas/Geral/Boletins).
+- Rótulo "24 h" (não "1 dia") nas cinco línguas.
+- Contar 24 h corridas a partir do horário de cada mensagem (não "até a meia-noite");
+  a limpeza automática precisa rodar com frequência suficiente (ao menos a cada
+  hora e na abertura do app) para essa opção fazer sentido.
+- Manter a confirmação atual quando a mudança apagar mensagens na hora, com a
+  prévia de quantas serão apagadas.
+- Preferências existentes continuam válidas (sem migração de valores).
+- **Critério de aceite:** com "24 h", mensagens com mais de 24 h somem (memória e
+  banco) sem reiniciar o app; as mais novas ficam; reiniciar e conferir.
+- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+
 ## Consolidação das sugestões aprovadas com itens já existentes
 
 A comparação com o APRSdroid também aprovou os recursos abaixo, que **já estavam
