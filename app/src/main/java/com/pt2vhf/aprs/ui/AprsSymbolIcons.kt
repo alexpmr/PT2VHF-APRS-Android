@@ -67,4 +67,49 @@ internal object AprsSymbolIcons {
             setBounds(0, 0, CELL, CELL)
         }
     }
+
+    /** Visible fallback for unknown symbols (#1): a neutral "?" disc, never another real symbol. */
+    private fun fallback(): Bitmap = icons.getOrPut("fallback") {
+        val image = Bitmap.createBitmap(CELL, CELL, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(image)
+        val disc = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.rgb(120, 130, 145) }
+        canvas.drawCircle(CELL / 2f, CELL / 2f, CELL / 2.6f, disc)
+        val text = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE; textSize = 26f; textAlign = Paint.Align.CENTER
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        }
+        canvas.drawText("?", CELL / 2f, CELL / 2f + 9, text)
+        image
+    }
+
+    private val labeledCache = ConcurrentHashMap<String, Bitmap>()
+
+    /**
+     * Symbol plus callsign label to its right, like other APRS maps (#1). Returns the drawable and the
+     * horizontal anchor (0..1) that keeps the symbol centre on the station position.
+     */
+    fun labeled(context: Context, tableChar: Char, symbol: Char, label: String, density: Float): Pair<Drawable, Float> {
+        val key = "$tableChar$symbol|$label|$density"
+        val bitmap = labeledCache.getOrPut(key) {
+            val base = (icon(context, tableChar, symbol) as? BitmapDrawable)?.bitmap ?: fallback()
+            val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.WHITE; textSize = 12f * density
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            }
+            val stroke = Paint(textPaint).apply { color = Color.BLACK; style = Paint.Style.STROKE; strokeWidth = 3f * density / 2 }
+            val textWidth = if (label.isEmpty()) 0 else (textPaint.measureText(label) + 6 * density).toInt()
+            val image = Bitmap.createBitmap(CELL + textWidth, CELL, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(image)
+            canvas.drawBitmap(base, 0f, 0f, null)
+            if (label.isNotEmpty()) {
+                val y = CELL / 2f + textPaint.textSize / 3
+                canvas.drawText(label, CELL + 2 * density, y, stroke)
+                canvas.drawText(label, CELL + 2 * density, y, textPaint)
+            }
+            image
+        }
+        if (labeledCache.size > 3000) labeledCache.clear()
+        val drawable = BitmapDrawable(context.resources, bitmap).apply { setBounds(0, 0, bitmap.width, bitmap.height) }
+        return drawable to (CELL / 2f) / bitmap.width
+    }
 }

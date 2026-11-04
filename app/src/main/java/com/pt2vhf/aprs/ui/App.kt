@@ -42,7 +42,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -106,7 +108,7 @@ fun App(onExit: () -> Unit) {
     var selectedStation by rememberSaveable { mutableStateOf<String?>(null) }
     var chatWith by rememberSaveable { mutableStateOf<String?>(null) }
     var update by remember { mutableStateOf<UpdateInfo?>(null) }
-    var siteNotice by rememberSaveable { mutableStateOf(true) }
+    var replyToId by rememberSaveable { mutableStateOf<Long?>(null) }
     var exitDialog by rememberSaveable { mutableStateOf(false) }
     val serviceStatus by AprsRepository.status.collectAsState()
     val keyboardVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
@@ -115,13 +117,18 @@ fun App(onExit: () -> Unit) {
             selectedStation != null -> selectedStation = null
             chatWith != null -> chatWith = null
             showSettings && settings.configured -> showSettings = false
-            siteNotice && !showSettings -> siteNotice = false
             update != null -> update = null
             else -> exitDialog = true
         }
     }
 
     LaunchedEffect(Unit) { update = withContext(Dispatchers.IO) { runCatching { UpdateCheck.fetch() }.getOrNull() } }
+    // #6: manter a tela ligada (opcional), só enquanto o app está visível.
+    val view = LocalView.current
+    DisposableEffect(settings.keepScreenOn) {
+        view.keepScreenOn = settings.keepScreenOn
+        onDispose { view.keepScreenOn = false }
+    }
 
     MaterialTheme(colorScheme = scheme) {
         Scaffold(
@@ -132,7 +139,7 @@ fun App(onExit: () -> Unit) {
                     Tab.entries.forEach { t ->
                         NavigationBarItem(
                             selected = tab == t,
-                            onClick = { tab = t; if (t != Tab.MESSAGES) chatWith = null },
+                            onClick = { tab = t; if (t != Tab.MESSAGES) { chatWith = null; replyToId = null } },
                             icon = {
                                 Icon(when (t) {
                                     Tab.MAP -> Icons.Filled.Place
@@ -154,18 +161,20 @@ fun App(onExit: () -> Unit) {
         ) { padding ->
             Box(Modifier.padding(padding).fillMaxSize()) {
                 when (tab) {
-                    Tab.MAP -> MapScreen(onStation = { selectedStation = it })
-                    Tab.MESSAGES -> MessagesScreen(settings, chatWith, onOpenChat = { chatWith = it }, onStation = { selectedStation = it })
-                    Tab.STATIONS -> StationsScreen(onStation = { selectedStation = it })
-                    Tab.RADIO -> RadioScreen(settings)
-                    Tab.TRACKER -> TrackerScreen(settings)
+                    Tab.MAP -> MapScreen(settings, onStation = { selectedStation = it })
+                    Tab.MESSAGES -> MessagesScreen(settings, chatWith, replyToId,
+                        onOpenChat = { call, reply -> chatWith = call; replyToId = reply },
+                        onStation = { selectedStation = it })
+                    Tab.STATIONS -> StationsScreen(settings.stationMaxAgeHours, onStation = { selectedStation = it })
+                    Tab.RADIO -> RadioScreen(settings, onSettingsChanged = { settings = it })
+                    Tab.TRACKER -> TrackerScreen(settings, onSettingsChanged = { settings = it })
                 }
             }
         }
 
         selectedStation?.let { call ->
             StationDialog(call, onDismiss = { selectedStation = null }, onMessage = {
-                selectedStation = null; chatWith = call; tab = Tab.MESSAGES
+                selectedStation = null; chatWith = call; replyToId = null; tab = Tab.MESSAGES
             })
         }
         if (showSettings) {
@@ -205,9 +214,8 @@ fun App(onExit: () -> Unit) {
             )
         }
         val pending = update
-        if (!showSettings && siteNotice) {
-            OfficialSiteNotice(onClose = { siteNotice = false })
-        } else if (!showSettings && pending != null) {
+        // #38: sem aviso de anúncio na abertura; o aviso OTA de nova versão é o único possível.
+        if (!showSettings && pending != null) {
             AlertDialog(
                 onDismissRequest = { update = null },
                 containerColor = Pal.bar,
@@ -259,7 +267,9 @@ private fun TopBar(settings: Settings, onSettings: () -> Unit, onRadio: () -> Un
             Column(Modifier.weight(1f)) {
                 Text(if (settings.configured) settings.fullCall else UiText.text(R.string.configure_callsign),
                     fontWeight = FontWeight.Bold, fontSize = 17.sp, color = Pal.text)
-                Text("PT2VHF APRS Client for Android", fontSize = 12.sp, color = Pal.muted)
+                Text(if (settings.rxOnly) "PT2VHF APRS Client for Android · " + UiText.text(R.string.profile_rx)
+                    else "PT2VHF APRS Client for Android", fontSize = 12.sp,
+                    color = if (settings.rxOnly) Pal.orange else Pal.muted)
             }
             val beaconColor = when {
                 pendingBeaconId != null -> Pal.blue
@@ -279,7 +289,7 @@ private fun TopBar(settings: Settings, onSettings: () -> Unit, onRadio: () -> Un
                         beaconFailed = true
                     }
                 },
-                enabled = settings.configured && status.lat != null && pendingBeaconId == null,
+                enabled = settings.configured && !settings.rxOnly && status.lat != null && pendingBeaconId == null,
                 border = androidx.compose.foundation.BorderStroke(2.dp, beaconColor),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = beaconColor),
             ) {
@@ -322,33 +332,6 @@ fun Chip(text: String, ok: Boolean, onClick: (() -> Unit)? = null) {
         Spacer(Modifier.size(6.dp))
         Text(text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = if (ok) Pal.green else Color(0xFFF26F70))
     }
-}
-
-/** Mesmo aviso dos aplicativos de desktop, uma vez por abertura. */
-@Composable
-private fun OfficialSiteNotice(onClose: () -> Unit) {
-    val context = LocalContext.current
-    AlertDialog(
-        onDismissRequest = onClose,
-        containerColor = Color(0xFF2A2C33),
-        title = { Text(UiText.text(R.string.official_downloads), fontWeight = FontWeight.Bold) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(UiText.text(R.string.official_notice))
-                Text(UiText.text(R.string.current_installed_version, BuildConfig.VERSION_NAME),
-                    color = Pal.accent, fontWeight = FontWeight.SemiBold)
-                Text("www.PT2VHF.com", color = Color(0xFF72D2FF), fontWeight = FontWeight.Bold,
-                    textDecoration = TextDecoration.Underline,
-                    modifier = Modifier.padding(vertical = 4.dp)
-                        .clickable { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(UpdateCheck.SITE))) })
-            }
-        },
-        confirmButton = {
-            OutlinedButton(onClick = onClose, border = androidx.compose.foundation.BorderStroke(2.dp, Pal.yellow)) {
-                Text(UiText.text(R.string.understood), color = Pal.text)
-            }
-        },
-    )
 }
 
 @Composable

@@ -180,3 +180,73 @@ class BluetoothTnc(
         val SPP_UUID: UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
     }
 }
+
+/**
+ * TNC KISS sobre TCP (herdado da 0.1.0): Direwolf, soundmodem, UZ7HO ou TNC de rede.
+ * Mesmo enquadramento KISS do Bluetooth; reconecta com espera crescente até ser desconectado.
+ */
+class KissTcpTnc(
+    private val onFrame: (String) -> Unit,
+    private val onState: (connected: Boolean, name: String, error: String) -> Unit,
+) {
+    @Volatile private var socket: Socket? = null
+    @Volatile private var running = false
+    private val epoch = AtomicLong(0L)
+
+    fun connect(host: String, port: Int) {
+        disconnect()
+        val session = epoch.incrementAndGet()
+        running = true
+        val name = "$host:$port"
+        Thread({
+            var backoff = 5_000L
+            while (running && epoch.get() == session) {
+                var s: Socket? = null
+                try {
+                    s = Socket()
+                    s.connect(InetSocketAddress(host, port), 10_000)
+                    s.tcpNoDelay = true
+                    socket = s
+                    if (epoch.get() == session) onState(true, name, "")
+                    backoff = 5_000L
+                    val decoder = Kiss.Decoder()
+                    val buf = ByteArray(1024)
+                    val input = s.getInputStream()
+                    while (running && epoch.get() == session) {
+                        val n = input.read(buf)
+                        if (n < 0) break
+                        for (frame in decoder.feed(buf.copyOf(n))) runCatching { onFrame(Ax25.toTnc2(frame)) }
+                    }
+                    if (epoch.get() == session) onState(false, name, if (running) "Conexão KISS TCP encerrada" else "")
+                } catch (e: Exception) {
+                    if (epoch.get() == session) onState(false, name, e.message ?: "Falha ao conectar")
+                } finally {
+                    runCatching { s?.close() }
+                    if (socket === s) socket = null
+                }
+                if (running && epoch.get() == session) runCatching { Thread.sleep(backoff) }
+                backoff = (backoff * 2).coerceAtMost(60_000L)
+            }
+        }, "kiss-tcp").also { it.isDaemon = true; it.start() }
+    }
+
+    fun send(tnc2: String): Boolean {
+        val s = socket ?: return false
+        return try {
+            synchronized(this) {
+                s.getOutputStream().write(Kiss.encode(Ax25.fromTnc2(tnc2)))
+                s.getOutputStream().flush()
+            }
+            true
+        } catch (e: Exception) { false }
+    }
+
+    val connected: Boolean get() = socket?.let { it.isConnected && !it.isClosed } == true
+
+    fun disconnect() {
+        running = false
+        epoch.incrementAndGet()
+        runCatching { socket?.close() }
+        socket = null
+    }
+}
