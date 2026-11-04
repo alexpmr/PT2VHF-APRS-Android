@@ -15,7 +15,19 @@ mensagens, beacon, modo tracker com SmartBeaconing em segundo plano e TNC KISS p
 - Mensagens: conversas, canal geral (CQ) e boletins; ACK, novas tentativas e notificações.
 - Botão **Enviar beacon** e **modo tracker** (SmartBeaconing) com notificação fixa.
 - TNC KISS por Bluetooth (Mobilinkd, BTECH UV-Pro, Radtel RT-950 Pro e similares) com monitor ao vivo.
-- Aviso de nova versão e "Downloads no site oficial", pelo site www.pt2vhf.com.
+- Aviso de nova versão pelo site www.pt2vhf.com (o aviso de "Downloads no site oficial" na abertura saiu na 0.1.8).
+
+## Novidades da 0.1.8 (candidata QA)
+
+- Perfis Base, Móvel, Portátil e **Somente recepção** (nenhum beacon, mensagem ou ACK sai).
+- Mensagens em SQLite com retenção configurável; pressão longa para responder ou mandar mensagem direta;
+  busca de indicativo para nova conversa; filtros combináveis; acentos UTF-8/CP1252 exibidos corretamente.
+- Mapa: brilho ajustável, indicativo ao lado do símbolo, meus enlaces RF, cobertura RF do meu TNC e trilha
+  da estação seguida.
+- Rádio: KISS por TCP (Direwolf etc.), meus enlaces RF, alcance e recordes RF, diagnóstico exportável.
+- Tracklog com cor, espessura, opacidade, retenção e exportação GPX.
+- Beacon com ambiguidade de posição, frequência de voz, altitude e corner pegging editável; seletor visual
+  de símbolo; alertas de estações favoritas; API opcional para outros apps ([API.md](API.md)).
 
 ## Desenvolvimento
 

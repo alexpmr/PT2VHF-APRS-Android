@@ -2,14 +2,69 @@
 
 Itens registrados para as próximas versões. Não implementar até o pedido de versão nova.
 
-## Onde estamos (31/10/2026)
+## Onde estamos (04/11/2026)
 
-- Release mais recente publicada: **v0.1.3**, APK assinado; o site oficial também publica v0.1.3. Há validação física pendente dos itens do backlog, incluindo falhas anteriormente observadas na v0.1.2.
-- Continuar correções a partir do backlog e só baixar os requisitos validados. Distribuição pública no site requer confirmação separada do manifesto e do arquivo.
-- Também pendentes desde a 0.1.0 (ver CHANGELOG): TNC por USB-OTG e KISS TCP, mapa offline, mapa de calor de
-  cobertura, modo carro, rotas e recordes RF.
+- Última versão **publicada**: **v0.1.6** (tag e release de 31/10/2026, distribuída pelo site).
+- **0.1.7** ficou como candidata QA (correção do P0 #37) e **não foi publicada**; ela está contida na 0.1.8.
+- **0.1.8 — candidata QA** (PR #13): implementa os itens parciais e pendentes listados abaixo. O APK QA
+  assinado sai do CI do PR. **Nenhum item tem baixa definitiva**: cada um aguarda o teste físico e o OK
+  do mantenedor, item a item, conforme a tabela "Status para teste — 0.1.8 QA".
+- O P0 **#37** (queda do APRS-IS ao transmitir) continua bloqueando a publicação: confirmar em servidor real.
+- Ainda **não implementados** (dependem de hardware ou ficam fora do escopo desta versão): TNC por USB-OTG,
+  AFSK pelo áudio, download em massa de mapas offline (a política de tiles do OpenStreetMap proíbe; o cache
+  do osmdroid já guarda as áreas visitadas), modo carro e rotas.
+- Numeração: o item "31" duplicado (remover aviso de abertura, 04/11) passou a ser o **#38**. Não há #32.
+
+## Status para teste — 0.1.8 QA (04/11/2026)
+
+Legenda: **Pronto para teste** = implementado e com CI; falta o teste físico e o OK do mantenedor.
+**Parcial** = parte entregue, o restante está descrito. Ao dar OK, mudar para `Validado pelo usuário`.
+Roteiros de teste (Txx) em [HOMOLOGACAO.md](HOMOLOGACAO.md).
+
+| # | Item | Status 0.1.8 | O que mudou / o que testar | Teste |
+|---|---|---|---|---|
+| 1 | Símbolos APRS no mapa | Pronto para teste | Indicativo ao lado do ícone (camada "Rótulos"), símbolo próprio com o indicativo, "?" neutro para símbolo desconhecido | T01-T20, T39 |
+| 2 | Conversas: filtros e ordem | Pronto para teste | Painel ☷ com ordem, direção, meio, situação (aguardando ACK/falha) e período, combináveis e persistidos | T21 |
+| 3 | Estações: ordenação e tipos | Pronto para teste | Novos tipos Pessoa, Aeronave e Embarcação no filtro; lista reativa | T07, T13 |
+| 4 | Meus enlaces RF | Pronto para teste | Rádio → "Meus enlaces RF (TNC)" com via, quantidade, última vez e distância; no mapa em verde (ouvi) e roxo (meu pacote repetido); camada "Somente meus enlaces" | T40 |
+| 5 | Tracklog e estilo | Pronto para teste | Cor (6), espessura, opacidade, contínua/tracejada, retenção 1-365 dias e exportação GPX | T08, T41 |
+| 6 | Configurações nível APRSdroid | Parcial | Feito: seções, seletor visual de símbolo, frequência de voz, ambiguidade 0-4, rumo/velocidade e altitude opcionais, corner pegging e intervalo parado, tela ligada, idade máxima das estações, notificações, monitor. Falta: posição manual digitada/no mapa, precisão do GPS, AFSK e USB-OTG | T42 |
+| 7 | Persistência de estações/enlaces | Pronto para teste | Sem mudança na 0.1.8 | T06 |
+| 8 | Cabeçalho verde/vermelho | Pronto para teste | Sem mudança na 0.1.8 | T02-T04 |
+| 9 | APRS-IS automático | Pronto para teste | Sem mudança na 0.1.8 | T03 |
+| 10 | Perfis Base/Móvel/Portátil/Somente recepção | Pronto para teste | Perfis em Configurações e troca rápida no Rastreador (com confirmação, sem ligar TX); cada perfil guarda SSID, símbolo, comentário, beacon, path, TX e TNC; Somente recepção bloqueia beacon, mensagem e ACK | T43 |
+| 11 | Seguir estação móvel | Pronto para teste | Trilha tracejada da estação seguida (recebida nesta sessão), painel com velocidade, rumo, distância e idade, aviso após 10 min sem atualização | T09, T44 |
+| 12 | Favoritos e alertas | Pronto para teste | Alertas de primeira aparição, retorno após N min, nova posição, RF direto e meu pacote digipeado; cooldown de 10 min, silêncio no 1º minuto após conectar e horário silencioso | T45 |
+| 13 | Centro de diagnóstico | Pronto para teste | Verificado desde, reconexões, ACK pendentes, transições recentes, filtro do monitor (RX/TX/RF/texto) e exportação .txt com anonimização | T46 |
+| 14 | Alcance e recordes RF | Pronto para teste | Rádio → "Alcance e recordes RF" (direto e via digi, por período) e camada "Cobertura RF" no mapa, só com pacotes do TNC | T47 |
+| 15 | API para outros apps | Pronto para teste | Desligada por padrão; permissão `com.pt2vhf.aprs.permission.API`; eventos de posição/estado e comandos de status, rastreador e beacon, cada um com chave própria. Contrato em [API.md](API.md) | T48 |
+| 16 | Confirmar saída | Pronto para teste | Sem mudança | T14 |
+| 17 | Restaurar mapa | Pronto para teste | Sem mudança | T15 |
+| 18 | Aviso do site com versão | **Cancelado** | Substituído pelo #38; versão instalada e link do site agora em Configurações → Sobre | — |
+| 19 | Enviar mensagem pela estação | Pronto para teste | Sem mudança | T17 |
+| 20 | Pressão longa: responder ou mensagem direta | Pronto para teste | Menu ao segurar o balão: Responder (com faixa de contexto), Responder em público (CQ), Responder em privado, Mensagem direta e Copiar; destino sempre visível; nada transmite até Enviar | T18 |
+| 21 | Buscar indicativo para nova conversa | Pronto para teste | "Nova mensagem" com busca parcial/SSID em estações (inclusive cache) e histórico, mais opção de abrir o indicativo digitado | T19 |
+| 22 | Brilho do mapa | Pronto para teste | Botão ☀ com 50-150%, Restaurar 100%; só os tiles mudam | T22 |
+| 23 | Ordem cronológica das mensagens | Pronto para teste | Sem mudança | T23 |
+| 24 | Largura dos balões | Pronto para teste | Sem mudança | T24 |
+| 25 | Envio pelo APRS-IS | Pronto para teste | Sem mudança | T25 |
+| 26 | Retenção de mensagens | Pronto para teste | Histórico migrado do `messages.json` para SQLite (backup `messages.json.migrated`); prazo e quantidade por categoria ou iguais para todas; prévia e confirmação; pendentes de ACK protegidas | T26 |
+| 27 | Caracteres estranhos | Pronto para teste | Exibição reconhece UTF-8 válido, senão CP1252/Latin-1; controles viram "�"; pacote bruto e ACK intactos | T27 |
+| 28 | Teclado em Mensagens | Pronto para teste | Sem mudança | T28 |
+| 29 | www.PT2VHF.com no comentário | Pronto para teste | Mantido; frequência e altitude entram antes da descrição dentro dos 43 caracteres | T29 |
+| 30 | Rastreador ligado por padrão | Pronto para teste | Sem mudança (no perfil Somente recepção não liga) | T30 |
+| 33 | Estações em linha única | Pronto para teste | Sem mudança | T33 |
+| 34 | Chips APRS-IS/TNC clicáveis | Pronto para teste | Chip TNC também retoma KISS TCP | T34 |
+| 35 | Busca compacta em Estações | Pronto para teste | Sem mudança | T35 |
+| 36 | Cor do botão Enviar beacon | Pronto para teste | Botão desabilitado em Somente recepção | T36 |
+| 37 | **P0** queda do APRS-IS ao transmitir | Pronto para teste | Correção da 0.1.7 mantida; **bloqueia publicação** até teste real | T37 |
+| 38 | Remover aviso de abertura (ex-31) | Pronto para teste | Popup removido; aviso OTA mantido; versão e site em Configurações → Sobre | T38 |
+| — | KISS TCP (herdado 0.1.0) | Pronto para teste | Rádio → KISS TCP com servidor/porta (ex.: Direwolf 8001), reconexão automática | T49 |
+| — | USB-OTG, AFSK, mapa offline em massa, modo carro, rotas | Não implementado | Dependem de hardware ou de fonte de mapas que permita download | — |
 
 ## Acompanhamento de implementação e baixa (31/10/2026)
+
+> Tabela histórica (até a 0.1.7). O status vigente está em "Status para teste — 0.1.8 QA" acima.
 
 Aprovada a implementação integral, mas **não confundir código no PR com funcionalidade homologada**.
 A release **v0.1.3** foi gerada e assinada no GitHub ([tag v0.1.3](../../releases/tag/v0.1.3)) e disponibilizada no site.
@@ -544,7 +599,7 @@ _Registrado em 31/10/2026 (solicitação do usuário na v0.1.2)._
 - **Critérios de aceite:** (1) abrir mapa e navegar para outra região com zoom personalizado; fechar totalmente e reabrir: mesmo centro/zoom, sem deslocamento automático pelo primeiro GPS; (2) usar "Minha localização" e verificar recentralização na posição atual; (3) mover o mapa manualmente e confirmar que o GPS não o recentraliza sozinho; (4) repetir sem GPS/internet e após mudança de aba/rotação; (5) testar Seguimento de estação e retorno ao enquadramento manual; (6) instalação limpa (sem preferências salvas) deve usar posição atual quando disponível.
 - **Status:** pendente no backlog; implementar somente mediante solicitação de nova versão.
 
-### 18. Anúncio do site oficial com a versão atualmente instalada
+### 18. Anúncio do site oficial com a versão atualmente instalada (CANCELADO — substituído pelo #38)
 _Solicitado em 31/10/2026 durante o desenvolvimento da v0.1.3._
 
 - **Na abertura do app**, apresentar o popup já existente de anúncio de downloads no site oficial, acrescentando uma linha **"Versão instalada: X.Y.Z"**, obtida dinamicamente de `BuildConfig.VERSION_NAME`, sem número fixo no texto.
@@ -1168,7 +1223,7 @@ _Solicitado em 31/10/2026: "Backlog: iniciar o rastreamento ligado por default".
 - **Status:** registrado no backlog, **não implementado e
   não homologado** nesta solicitação. Nenhum APK novo gerado.
 
-### 31. Remover o aviso de anúncio exibido ao abrir o aplicativo
+### 38. Remover o aviso de anúncio exibido ao abrir o aplicativo (antigo 31 duplicado)
 _Solicitado em 04/11/2026: "Backlog: Tire a mensagem de anúncio ao abrir o aplicativo"._
 
 **Onde está no código (main atual):**
@@ -1193,7 +1248,7 @@ _Solicitado em 04/11/2026: "Backlog: Tire a mensagem de anúncio ao abrir o apli
 - **Critério de aceite:** instalação nova e atualização: abrir o app, sem popup de
   anúncio; botão Voltar não precisa fechar aviso extra; com versão remota mais
   nova, o aviso OTA aparece normalmente; sem strings não usadas no lint.
-- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+- **Status:** implementado na 0.1.8 QA (PR #13); aguarda teste físico (T38). Item 18 cancelado/substituído.
 
 ## Consolidação das sugestões aprovadas com itens já existentes
 

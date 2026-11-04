@@ -1,6 +1,10 @@
 # Homologação do PT2VHF APRS Client for Android
 
-Atualizado em 31/10/2026. **Esta matriz não é um release.**
+Atualizado em 04/11/2026. **Esta matriz não é um release.**
+
+> **0.1.8 QA:** o status vigente de cada item está em `BACKLOG.md` → "Status para teste — 0.1.8 QA".
+> Instale o APK QA assinado do PR #13 por cima da versão atual (sem desinstalar) e use os roteiros T38–T49
+> abaixo, além dos anteriores. Responda com `Txx OK` ou `Txx FALHA — descrição`.
 
 - Release **v0.1.3** gerada e assinada no GitHub e distribuída pelo site oficial; homologação física de itens do backlog continua pendente.
 - Desenvolvimento integrado à `main` por meio do PR [#7](../../pull/7); release [v0.1.2](../../releases/tag/v0.1.2).
@@ -122,3 +126,32 @@ Após cada resultado, reavaliar o item, corrigir erros se houver e atualizar os 
 **T35 — Campo Buscar indicativo compacto na aba Estações (item #35):** comparar antes/depois em 320/360/412 dp, paisagem e fonte ampliada. Verificar que o campo ocupa menos altura e largura útil sem prejudicar o toque/edição, permanece numa linha com o botão/ícone de filtros quando houver espaço, não sobrepõe componentes e permite visualizar mais estações. Pesquisar por indicativo completo, prefixo e SSID, editar, limpar, abrir filtros e mudar ordenação; confirmar a combinação com filtros já ativos e preservação do estado após mudar aba ou reabrir. Testar teclado aberto/fechado e leitor de tela. O item #31 refere-se à pesquisa em Mensagens e não deve ser afetado.
 **T36 — Feedback de cor no botão Enviar beacon (item #36):** iniciar com botão amarelo e GPS válido, clicar uma vez e conferir mudança imediata para cor de envio em andamento e texto/semântica acessível; novo toque enquanto pendente não deve gerar segundo beacon. Em APRS-IS verificado com TX autorizado, monitorar ação do serviço e escrita do pacote no socket: somente após sucesso dessa escrita o botão volta ao amarelo e informa sucesso local. Repetir com TNC/KISS real, distinguindo aceite pelo transporte da recepção RF comprovada por estação independente. Testar ambos os meios simultâneos com êxito total e parcial, deixando explícita a rota usada; TX desabilitado, APRS-IS não verificado, TNC desconectado, GPS ausente, socket quebrado, latência e timeout devem exibir falha/indisponibilidade sem restaurar amarelo como falso sucesso antes do resultado; permitir retry. Validar que beacon automático do tracker e incremento de contadores não confirmam indevidamente uma solicitação manual anterior; correlacionar evento de resultado por ID, não disparar beacon extra ao tocar em UI e conferir TalkBack, contraste e rotação. **Não confundir escrita bem-sucedida em APRS-IS/TNC com ACK remoto ou recepção over-the-air.**
 **T37 — Regressão crítica: APRS-IS desconecta ao transmitir (item #37, reportada na v0.1.6):** começar com `aprsIsConnected=true` e `aprsIsVerified=true` confirmados no `logresp` do servidor; registrar timestamp e motivo real de cada evento de `onState`/EOF/IOException/timeout/close/reconnect (sem expor passcode); aguardar estabilidade em RX por 3 minutos e transmitir separadamente 10 beacons manuais, 10 mensagens privadas e, com tracker autorizado, beacons automáticos. Repetir com RF/TNC desativado e com TNC conectado, 1 e 2 meios TX autorizados, Wi-Fi estável e dados móveis, app aberto/segundo plano, primeiro GPS fix, troca de rede e 120 s de inatividade. Conferir que **nenhum TX válido provoca reset de socket, desconexão, perda de login ou tela verde falsa**, que a sessão permanece autenticada e RX continua; conferir monitor TX e pacotes recebidos em outra estação; ACK de mensagem quando aplicável. Injetar erro de escrita em socket e fechamento remoto para garantir aviso e reconexão controlada, nenhuma retransmissão ou beacon duplicado e nenhuma desconexão voluntária ignorada. Auditar o caminho `AprsIsClient.send() → reconnectNow()` e a interação de `start()/stop()` com `AprsService` e os callbacks de rede. **Não homologar/republicar como estável sem reproduzir e corrigir a falha em teste físico real.**
+
+
+## Roteiros da 0.1.8 QA
+
+**T38 — Sem aviso na abertura (#38):** abrir o app do zero e após atualização: nenhum popup "Downloads no site oficial". Com versão nova no site, o aviso OTA aparece. Configurações → Sobre mostra a versão instalada e o link www.PT2VHF.com.
+
+**T39 — Rótulos e símbolos (#1):** no mapa, cada estação mostra o ícone APRS e o indicativo ao lado; sua posição usa o seu símbolo e indicativo. Camadas → desligar "Rótulos" deixa só os ícones. Símbolo desconhecido aparece como "?" cinza.
+
+**T40 — Meus enlaces RF (#4):** com TNC real, receber estações direto e via digi e ouvir seu próprio beacon repetido. Rádio → "Meus enlaces RF" lista estação, direto/via, quantidade, última vez e distância. No mapa, linhas verdes (ouvi) e roxas (meu pacote repetido); "Somente meus enlaces RF" esconde os amarelos. Pacotes APRS-IS não podem aparecer.
+
+**T41 — Tracklog (#5):** mudar cor, espessura, opacidade e tracejado e ver no mapa; escolher retenção de 1 dia e conferir que pontos antigos somem; Exportar GPX e abrir o arquivo em outro app (ex.: OsmAnd/Google Earth).
+
+**T42 — Beacon e privacidade (#6):** com TX autorizado, ativar ambiguidade 2 e conferir no pacote bruto (monitor/aprs.fi) minutos com espaços; frequência 146.520 e altitude: comentário começa com `146.520MHz /A=…` e termina em `www.PT2VHF.com`, até 43 caracteres; desligar rumo/velocidade e conferir ausência do `CCC/SSS`. Escolher símbolo pela grade. Testar "manter tela ligada" e "idade máxima das estações".
+
+**T43 — Perfis (#10):** em Configurações escolher Móvel, Portátil e Base: SSID, símbolo e beacon mudam no formulário e só valem ao Salvar. No Rastreador trocar o perfil (pede confirmação) e conferir que o rastreador não liga sozinho. Somente recepção: botão Enviar beacon desabilitado, mensagens mostram "transmissão bloqueada", nenhum ACK enviado (monitor), estações e mensagens continuam chegando. Voltar ao perfil anterior recupera as escolhas dele.
+
+**T44 — Seguir estação (#11):** seguir uma móvel real: trilha tracejada laranja cresce a cada posição; painel mostra velocidade, rumo, distância e idade; após 10 min sem pacote aparece o aviso.
+
+**T45 — Alertas de favoritas (#12):** marcar favorita e aguardar: retorno após o tempo configurado gera notificação; RF direto pelo TNC gera alerta; mesmo evento não repete em menos de 10 min; nada aparece no 1º minuto após conectar ao APRS-IS; horário silencioso suprime.
+
+**T46 — Diagnóstico (#13):** Rádio → Diagnóstico mostra "Verificado desde", reconexões e transições (APRS-IS, TNC, GPS). Filtrar o monitor por RX/TX/RF e texto. Exportar diagnóstico com e sem anonimização e conferir que o passcode nunca aparece e que indicativo/coordenadas são mascarados quando marcado.
+
+**T47 — Alcance e recordes RF (#14):** com TNC real e GPS, receber estações a distâncias diferentes: recordes separados em RF direto e via digipeater, por período. Camada "Cobertura RF" mostra círculos verdes (direto) e laranja (via digi). APRS-IS não entra.
+
+**T48 — API (#15):** com a API desligada, um app de teste não recebe nada. Ligada e com a permissão concedida ao app de teste: `REQUEST_STATUS` devolve `event.STATUS`; posições chegam em `event.POSITION`; `TRACKER_START`/`SEND_BEACON` só funcionam com as chaves correspondentes ligadas e nunca em Somente recepção.
+
+**T49 — KISS TCP:** com Direwolf (ou outro TNC KISS em rede) na porta 8001: Rádio → KISS TCP → servidor/porta → Conectar; chip TNC verde, RX/TX contados, beacon por RF via Direwolf. Desligar o Direwolf: chip vermelho e reconexão automática ao voltar. Chip TNC desconecta/reconecta.
+
+**T18/T19/T21/T22/T26/T27** (já descritos acima) passam a valer para a 0.1.8: pressão longa, busca de indicativo, filtros de conversas, brilho do mapa, retenção (inclui migração do `messages.json` → `messages.db`, com backup `messages.json.migrated`) e caracteres.
