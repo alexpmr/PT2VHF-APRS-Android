@@ -1661,7 +1661,7 @@ entram só para exibição (`AprsService` ~linha 120).
 - **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
 
 ### 53. Modo satélite: passagens, apontador de antena (bússola + inclinômetro) e contatos APRS/voz
-_Solicitado em 05/11/2026: "BACKLOG: Sim, pode registrar. Implemente algum recurso que use a bússola e inclinômetro para ajudar a apontar uma antena portátil e fazer contatos por aprs e voz. Use os satélites que operam em aprs e voz", com captura de tela da lista de satélites._
+_Solicitado em 05/11/2026: "BACKLOG: Sim, pode registrar. Implemente algum recurso que use a bússola e inclinômetro para ajudar a apontar uma antena portátil e fazer contatos por aprs e voz. Use os satélites que operam em aprs e voz", com captura de tela da lista de satélites; IO-86 acrescentado a pedido em 05/11/2026._
 Inspiração: app ISS Detector (só a ideia, **sem copiar** nome, visual ou código).
 O mantenedor tem o **PT2VHF Sat Tool**: reaproveitar as ideias/algoritmos de
 previsão de lá.
@@ -1680,6 +1680,7 @@ path e a frequência configurados à mão no rádio.
 | JAS-2 (FO-29) | 24278 | Transponder linear **SSB/CW** (sobe 145.900–146.000 / desce 435.800–435.900, invertido) |
 | RS-44 | 44909 | Transponder linear **SSB/CW** (sobe 145.935–145.995 / desce 435.610–435.670, invertido) |
 | OSCAR 7 (AO-7) | 7530 | Transponder linear **SSB/CW** modos A e B; só funciona iluminado pelo sol (intermitente) |
+| LAPAN-A2 (IO-86) | 40931 | **Voz FM** (sobe 145.880, tom 88,5 Hz / desce 435.880) e **APRS digi** (sobe 145.825 / desce 435.880); órbita equatorial (~6°), só passa para latitudes até ~±20–25° (bom para o Norte/Nordeste do Brasil, raro no Sul) |
 
 Frequências acima são de referência e **devem ser conferidas** (AMSAT / fontes
 oficiais) antes da implementação; guardar em tabela editável, não fixa no código.
