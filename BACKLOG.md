@@ -2,17 +2,45 @@
 
 Itens registrados para as próximas versões. Não implementar até o pedido de versão nova.
 
-## Onde estamos (04/11/2026)
+## Onde estamos (05/11/2026)
 
-- Última versão **publicada**: **v0.1.8** (04/11/2026, beta), publicada a pedido do mantenedor **antes** dos
-  testes item a item. A v0.1.6 foi a anterior; a 0.1.7 (correção do P0 #37) nunca foi publicada e está contida na 0.1.8.
-- **Nenhum item da 0.1.8 tem baixa definitiva**: cada um aguarda o teste físico e o OK do mantenedor,
-  item a item, conforme a tabela "Status para teste — 0.1.8 QA". Correções que surgirem vão para a 0.1.9.
+- Versão em preparação/publicação: **v0.1.9** (beta), com **todos os itens pendentes** implementados (#6 restante,
+  #39 a #51, USB-OTG, modo carro e rotas). Última publicada antes dela: v0.1.8 (04/11/2026).
+- **Nenhum item tem baixa definitiva**: cada um aguarda teste físico e OK do mantenedor, item a item, pelas tabelas
+  "Status para teste — 0.1.9" (novos) e "Status para teste — 0.1.8 QA" (anteriores, ainda valem).
+- Dependem de hardware e **não puderam ser validados aqui** (só testes de unidade do código): AFSK no ar (#44),
+  adaptadores USB-OTG, widget (#46) e consumo de bateria (#49). O modem AFSK passa nos testes com ruído,
+  de-ênfase e 44,1 kHz, mas nível de áudio, VOX e rádios reais precisam do teste T52.
 - O P0 **#37** (queda do APRS-IS ao transmitir) ainda precisa de confirmação em servidor real.
-- Ainda **não implementados** (dependem de hardware ou ficam fora do escopo desta versão): TNC por USB-OTG,
-  AFSK pelo áudio, download em massa de mapas offline (a política de tiles do OpenStreetMap proíbe; o cache
-  do osmdroid já guarda as áreas visitadas), modo carro e rotas.
+- Fora do escopo: download em massa de mapas offline (a política de tiles do OpenStreetMap proíbe; o cache
+  do osmdroid já guarda as áreas visitadas).
 - Numeração: o item "31" duplicado (remover aviso de abertura, 04/11) passou a ser o **#38**. Não há #32.
+
+## Status para teste — 0.1.9 (05/11/2026)
+
+Mesma legenda da tabela 0.1.8. Roteiros T50-T66 em [HOMOLOGACAO.md](HOMOLOGACAO.md).
+**Hardware** = depende de equipamento real; não validado fora do aparelho.
+
+| # | Item | Status 0.1.9 | O que mudou / o que testar | Teste |
+|---|---|---|---|---|
+| 6 | Configurações nível APRSdroid (restante) | Pronto para teste | Posição fixa digitada ou por toque longo no mapa, "usar a última posição do GPS", precisão do GPS (alta/equilibrada/baixo consumo) e localização pela rede | T50 |
+| 39 | Aviso de nova versão | Pronto para teste | Verifica ao abrir/voltar (máx. 1×/h) e a cada 12 h pelo serviço; notificação uma vez por versão; botão ⬆ no topo; "Ignorar esta versão"; Sobre mostra última verificação e "Verificar agora" | T51 |
+| 44 | Modem AFSK 1200 pelo áudio | Pronto para teste (**hardware**) | Rádio → Áudio (AFSK): entrada/saída, volume, TX delay, tom de VOX, decodificador alta qualidade/leve, nível de entrada, tom de teste; PTT por VOX/interface | T52 |
+| — | TNC KISS por USB-OTG | Pronto para teste (**hardware**) | Rádio → USB-OTG: CDC-ACM, FTDI, CP210x; permissão, reconexão ao plugar, baud 1200-115200. CH340/PL2303 não suportados | T53 |
+| 51 | Aba Logs | Pronto para teste | Nova aba depois de Tracker: todos os pacotes RX/TX (RF e APRS-IS), filtros, pausa, detalhes, copiar/compartilhar, exportar TXT/CSV, retenção e limite | T54 |
+| 40 | Data e tempo decorrido | Pronto para teste | Conversas e balões: data + hora; nas de hoje também "há X h Y min" | T55 |
+| 41 | Apagar mensagens por tipo | Pronto para teste | Lixeira em Mensagens e Configurações: todas, boletins/gerais ou privadas, com contagem e confirmação | T56 |
+| 42 | Retenção "24 h" | Pronto para teste | Nova opção 24 h em "Manter por" | T56 |
+| 43 | Boletim de versão | Pronto para teste | Uma vez por versão, 5 s após APRS-IS verificado, **só APRS-IS** (BLN0); opção para desligar | T57 |
+| 45 | Enviar log | Pronto para teste | Sobre → Enviar log; após fechamento inesperado o app oferece o envio | T58 |
+| 46 | Widget | Pronto para teste (**hardware**) | Status APRS-IS/TNC/GPS, rastreador, último beacon; botões Beacon agora e Rastreador | T59 |
+| 47 | ACK e reenvio no balão | Pronto para teste | Tentativa N/M, contagem do próximo reenvio, Reenviar, Cancelar retentativas; tentativas e 1º intervalo em Configurações | T60 |
+| 48 | Objetos e itens | Pronto para teste | Toque longo no mapa → Criar objeto aqui; Tracker → Meus objetos (editar, pausar, enviar agora, encerrar) | T61 |
+| 49 | Economia de bateria | Pronto para teste (**hardware**) | Desligada / sempre / automática abaixo de X%; ativa com a tela apagada; cartão Bateria no Tracker | T62 |
+| 50 | Backup das configurações | Pronto para teste | Configurações → Backup: exportar (com/sem mensagens), importar com prévia; passcode nunca exportado | T63 |
+| — | Modo carro | Pronto para teste | Tracker → Modo carro: velocidade grande, conexões, próximo beacon, última mensagem, leitura em voz alta | T64 |
+| — | Rotas | Pronto para teste | Tracker → Rotas (GPX): importar, mostrar/ocultar, distância restante no mapa; linha direta até a estação seguida | T65 |
+| — | Textos em 5 idiomas | Pronto para teste | Todos os textos novos em pt, en, es, fr, it | T66 |
 
 ## Status para teste — 0.1.8 QA (04/11/2026)
 
@@ -1287,7 +1315,7 @@ _Solicitado em 04/11/2026: "backlog para a próxima versão: aviso no app quando
 - **Critério de aceite:** com `updates.json` publicando versão maior, o aviso
   aparece sem reabrir o app (primeiro plano e segundo plano); indicador some
   após atualizar; sem rede, nenhuma mensagem de erro intrusiva e nova tentativa.
-- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+- **Status:** implementado na **0.1.9**, aguardando teste físico e OK do mantenedor (ver "Status para teste — 0.1.9").
 
 ### 40. Mensagens: mostrar a data, além da hora, e tempo decorrido nas de hoje
 _Solicitado em 04/11/2026: "backlog: Mensagens, indicar a data, além da hora. Se a data for dentro do dia corrente, mostre a data e quanto tempo foi, ex: há 4 minutos, há 3h e 45min"._
@@ -1316,7 +1344,7 @@ _Solicitado em 04/11/2026: "backlog: Mensagens, indicar a data, além da hora. S
 - **Critério de aceite:** mensagem de agora → "04/11/2026 14:32 · há 0–1 min";
   de 3h45 atrás no mesmo dia → "… · há 3h e 45min"; de ontem → só data e hora;
   virada de meia-noite com o app aberto; fuso/horário de verão do aparelho.
-- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+- **Status:** implementado na **0.1.9**, aguardando teste físico e OK do mantenedor (ver "Status para teste — 0.1.9").
 
 ### 41. Mensagens: apagar todas, só boletins ou só mensagens pessoais
 _Solicitado em 04/11/2026: "Backlog: Opção para apagar todas as mensagens, boletins e mensagens pessoais."_
@@ -1343,7 +1371,7 @@ _Solicitado em 04/11/2026: "Backlog: Opção para apagar todas as mensagens, bol
 - Textos nas cinco línguas (PT/EN/ES/FR/IT).
 - **Critério de aceite:** com boletins e pessoais armazenados, cada opção apaga só
   o seu tipo; reiniciar o app e conferir; cancelar a confirmação não apaga nada.
-- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+- **Status:** implementado na **0.1.9**, aguardando teste físico e OK do mantenedor (ver "Status para teste — 0.1.9").
 
 ### 42. Configurações → Mensagens: retenção do histórico: opção "24 h" em "Manter por"
 _Solicitado em 04/11/2026: "Backlog: configurações, manter por, adicionar 24h."_
@@ -1365,7 +1393,7 @@ Geral e Boletins (item 26).
 - Preferências existentes continuam válidas (sem migração de valores).
 - **Critério de aceite:** com "24 h", mensagens com mais de 24 h somem (memória e
   banco) sem reiniciar o app; as mais novas ficam; reiniciar e conferir.
-- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+- **Status:** implementado na **0.1.9**, aguardando teste físico e OK do mantenedor (ver "Status para teste — 0.1.9").
 
 ### 43. Boletim automático anunciando a versão na 1ª conexão APRS-IS
 _Solicitado em 04/11/2026: "Backlog: ao logar no aprs-is pela primeira vez na versão, o app irá enviar um boletim no idioma corrente, anunciando que está usando versão X, com download em www.PT2VHF.com"._
@@ -1397,7 +1425,7 @@ mas não envia nada automaticamente ao conectar.
 - **Critério de aceite:** atualizar a versão, conectar → um boletim no APRS-IS
   (conferir em aprs.fi ou outro cliente); reconectar e reiniciar → nada novo;
   sem passcode/TX desativado → nada enviado e nenhuma marcação feita.
-- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+- **Status:** implementado na **0.1.9**, aguardando teste físico e OK do mantenedor (ver "Status para teste — 0.1.9").
 
 ### 44. Conexão pela interface de áudio (modem AFSK 1200), como no APRSdroid — PRIORIDADE próxima versão
 _Solicitado em 04/11/2026: "adicione conexão pela interface de áudio, como no aprsdroid"._
@@ -1437,7 +1465,7 @@ e tem **prioridade para a próxima versão**.
 - **Critério de aceite:** com rádio + cabo, decodificar pacotes reais e mostrá-los
   como RF; enviar beacon e mensagem que apareçam em aprs.fi via igate próximo;
   modo somente RX sem acionar VOX; troca entre KISS e Áudio sem reinstalar.
-- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+- **Status:** implementado na **0.1.9**, aguardando teste físico e OK do mantenedor (ver "Status para teste — 0.1.9").
 
 ### 45. Sobre: botão "Enviar log" para relatório de erros
 _Sugestão aprovada pelo usuário em 04/11/2026 ("Todas.")._
@@ -1456,7 +1484,7 @@ seletor de arquivos. Não há captura de travamentos nem envio direto.
 - Útil para casos como a queda do APRS-IS (#37).
 - **Critério de aceite:** relatório compartilhado por e-mail contém versão, eventos
   recentes e o último crash, sem passcode.
-- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+- **Status:** implementado na **0.1.9**, aguardando teste físico e OK do mantenedor (ver "Status para teste — 0.1.9").
 
 ### 46. Widget na tela inicial: último beacon, "beacon agora" e status da conexão
 _Sugestão aprovada pelo usuário em 04/11/2026 ("Todas.")._
@@ -1473,7 +1501,7 @@ que o widget pode reaproveitar.
   autorizações de TX existentes; tema claro/escuro; cinco línguas.
 - **Critério de aceite:** com o app fechado, beacon pelo widget aparece em aprs.fi;
   status muda no widget ao desconectar o APRS-IS.
-- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+- **Status:** implementado na **0.1.9**, aguardando teste físico e OK do mantenedor (ver "Status para teste — 0.1.9").
 
 ### 47. Mensagens: confirmação (ACK/REJ) e reenvio mais visíveis no balão
 _Sugestão aprovada pelo usuário em 04/11/2026 ("Todas.")._
@@ -1493,7 +1521,7 @@ Este item **complementa** o que existe, não cria outro mecanismo.
 - Número de tentativas e intervalo configuráveis (padrão atual 5 / 30 s × n).
 - **Critério de aceite:** mensagem sem destino responsivo mostra 1/5…5/5 e depois
   ✗ com Reenviar; ACK muda para ✓ na hora; REJ mostra ✗ distinto.
-- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+- **Status:** implementado na **0.1.9**, aguardando teste físico e OK do mantenedor (ver "Status para teste — 0.1.9").
 
 ### 48. Objetos e itens APRS: criar e transmitir pelo mapa
 _Sugestão aprovada pelo usuário em 04/11/2026 ("Todas.")._
@@ -1512,7 +1540,7 @@ estações, mas não cria nem transmite os próprios.
 - Formatos conforme especificação APRS (`;NOME_____*DDHHMMz...` e `)NOME!...`).
 - **Critério de aceite:** objeto criado aparece em aprs.fi com símbolo e
   comentário certos; editar move; encerrar remove dos outros clientes.
-- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+- **Status:** implementado na **0.1.9**, aguardando teste físico e OK do mantenedor (ver "Status para teste — 0.1.9").
 
 ### 49. Modo economia de bateria
 _Sugestão aprovada pelo usuário em 04/11/2026 ("Todas.")._
@@ -1530,7 +1558,7 @@ _Sugestão aprovada pelo usuário em 04/11/2026 ("Todas.")._
   precisão da trilha cai.
 - **Critério de aceite:** em 1 h de tracker com tela desligada, consumo menor que
   no modo normal (medir); mensagens continuam chegando.
-- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+- **Status:** implementado na **0.1.9**, aguardando teste físico e OK do mantenedor (ver "Status para teste — 0.1.9").
 
 ### 50. Backup e restauração das configurações em arquivo
 _Sugestão aprovada pelo usuário em 04/11/2026 ("Todas.")._
@@ -1550,7 +1578,7 @@ controlável pelo usuário nem serve para trocar de celular de forma garantida.
 - Versão do formato no arquivo; importar de versões antigas sem quebrar.
 - **Critério de aceite:** exportar no celular A, importar no B: mesmas
   configurações; arquivo inválido mostra erro sem alterar nada.
-- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+- **Status:** implementado na **0.1.9**, aguardando teste físico e OK do mantenedor (ver "Status para teste — 0.1.9").
 
 ### 51. Tela principal: nova aba "Logs" com todos os pacotes, depois de Tracker
 _Solicitado em 04/11/2026: "Backlog: página principal, adicione uma aba Logs, que mostra todas os pacotes, depois de Tracker."_
@@ -1580,7 +1608,7 @@ do diagnóstico (item 13) e o "Enviar log" (item 45) são relatórios, não a li
 - **Critério de aceite:** beacon enviado e pacotes recebidos de APRS-IS e TNC
   aparecem na aba Logs com direção e meio corretos; reiniciar o app mantém o
   histórico conforme a retenção; filtros combinados funcionam.
-- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+- **Status:** implementado na **0.1.9**, aguardando teste físico e OK do mantenedor (ver "Status para teste — 0.1.9").
 
 ## Consolidação das sugestões aprovadas com itens já existentes
 

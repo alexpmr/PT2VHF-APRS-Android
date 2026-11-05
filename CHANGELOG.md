@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.1.9 — (05/11/2026, beta; testes item a item pendentes)
+
+Implementa todos os itens pendentes do backlog. Itens que dependem de hardware (AFSK no ar, adaptadores USB, widget, consumo de bateria) foram testados só em código e precisam de teste físico.
+
+- **#44** Modem AFSK 1200 (Bell 202) pelo áudio do celular, código próprio: recepção com 3 decodificadores em paralelo (alta qualidade) ou 1 (leve), transmissão com TX delay, tom de VOX e volume, tom de teste de 3 s, escolha de entrada/saída (padrão, sem processamento, fone com fio, placa de som USB, Bluetooth), indicador de nível. PTT só por VOX ou interface externa.
+- **USB-OTG** TNC KISS por cabo USB: CDC-ACM (Mobilinkd, NinoTNC, rádios com USB nativo), FTDI e CP210x, com permissão, conexão automática ao plugar e velocidade configurável. CH340/PL2303 ainda não.
+- **#51** Nova aba **Logs** (depois de Tracker) com todos os pacotes RX/TX de RF e APRS-IS em SQLite: filtros por direção, meio, tipo e texto, pausa, detalhes do pacote, copiar/compartilhar, exportar TXT/CSV, retenção (24 h a 30 dias) e limite de quantidade.
+- **#39** Aviso de nova versão: verificação ao abrir/voltar (1 h) e pelo serviço a cada 12 h, notificação Android uma vez por versão, botão ⬆ no topo, "Ignorar esta versão" e estado da verificação em Sobre.
+- **#40** Mensagens com data e hora, e tempo decorrido nas de hoje.
+- **#41** Apagar mensagens: todas, só boletins/gerais ou só privadas, com contagem e confirmação.
+- **#42** Retenção de mensagens com opção "24 h".
+- **#43** Boletim automático anunciando a versão uma vez, só pelo APRS-IS verificado (nunca RF); pode ser desligado.
+- **#45** Enviar log (diagnóstico anonimizado + último travamento) em Sobre e oferta automática após fechamento inesperado.
+- **#46** Widget da tela inicial: APRS-IS/TNC/GPS, rastreador, último beacon, Beacon agora e Rastreador.
+- **#47** Balão mostra tentativa N/M e contagem para o próximo reenvio; Reenviar e Cancelar retentativas; tentativas e intervalo configuráveis.
+- **#48** Objetos e itens APRS: criar com toque longo no mapa, editar, pausar, repetir (10-60 min), encerrar (killed); enviados pelos meios autorizados.
+- **#49** Economia de bateria (desligada, sempre, automática abaixo de X%): GPS menos preciso e intervalos maiores com a tela apagada; cartão Bateria com nível e consumo estimado.
+- **#50** Backup e restauração das configurações (JSON), opcionalmente com mensagens; passcode nunca exportado.
+- **#6 (restante)** Posição fixa digitada ou por toque longo no mapa, precisão do GPS (alta/equilibrada/baixo consumo) e localização pela rede.
+- **Modo carro:** tela simplificada com velocidade grande, conexões, próximo beacon, última mensagem, botões grandes e leitura em voz alta opcional.
+- **Rotas:** importar GPX, mostrar no mapa, distância restante e linha direta até a estação seguida.
+- Textos novos em português, inglês, espanhol, francês e italiano.
+- **Fora desta versão:** download em massa de mapas offline (a política de tiles do OpenStreetMap proíbe).
+
+
 ## 0.1.8 — Publicada (04/11/2026, beta; testes item a item pendentes)
 
 Inclui a 0.1.7 QA (correção do P0 #37). Itens prontos para teste físico; nenhuma baixa sem o OK do mantenedor.

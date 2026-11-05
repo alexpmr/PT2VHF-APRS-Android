@@ -1,7 +1,8 @@
 # PT2VHF APRS Client for Android
 
 Cliente APRS para Android (8.0 ou superior) do projeto PT2VHF: mapa com estações e enlaces RF,
-mensagens, beacon, modo tracker com SmartBeaconing em segundo plano e TNC KISS por Bluetooth.
+mensagens, beacon, modo tracker com SmartBeaconing em segundo plano e TNC KISS por Bluetooth, TCP, USB-OTG
+ou pelo próprio áudio do celular (modem AFSK 1200).
 
 **Download oficial:** https://www.pt2vhf.com/android
 
@@ -17,7 +18,17 @@ mensagens, beacon, modo tracker com SmartBeaconing em segundo plano e TNC KISS p
 - TNC KISS por Bluetooth (Mobilinkd, BTECH UV-Pro, Radtel RT-950 Pro e similares) com monitor ao vivo.
 - Aviso de nova versão pelo site www.pt2vhf.com (o aviso de "Downloads no site oficial" na abertura saiu na 0.1.8).
 
-## Novidades da 0.1.8 (candidata QA)
+## Novidades da 0.1.9
+
+- **Modem AFSK 1200 pelo áudio** do celular (o celular vira o TNC; PTT por VOX ou interface) e **TNC KISS por USB-OTG**
+  (CDC-ACM, FTDI, CP210x).
+- Aba **Logs** com todos os pacotes, filtros, detalhes e exportação TXT/CSV.
+- Objetos e itens APRS criados pelo mapa; posição fixa; rotas GPX com distância restante; **modo carro**.
+- Aviso de nova versão com notificação e "Ignorar esta versão"; boletim de versão só via APRS-IS.
+- Widget na tela inicial, economia de bateria, backup das configurações, enviar log, reenvio de mensagens visível
+  e configurável, apagar mensagens por tipo, data e tempo decorrido nas mensagens.
+
+## Novidades da 0.1.8
 
 - Perfis Base, Móvel, Portátil e **Somente recepção** (nenhum beacon, mensagem ou ACK sai).
 - Mensagens em SQLite com retenção configurável; pressão longa para responder ou mandar mensagem direta;
