@@ -1660,7 +1660,11 @@ entram só para exibição (`AprsService` ~linha 120).
   e para estação não ouvida não sai; desligado, nada é retransmitido.
 - **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
 
-### 53. Modo satélite: passagens, apontador de antena (bússola + inclinômetro) e contatos APRS/voz
+### 53. ~~Modo satélite: passagens, apontador de antena (bússola + inclinômetro) e contatos APRS/voz~~ (CANCELADO — fora do escopo deste app)
+
+> **Cancelado em 05/11/2026** a pedido do usuário: "Melhor, tire essa parte de sat do app. Irei pensar em um outro específico para sat, para concorrer com o iss detector."
+> Não implementar no PT2VHF APRS Android. O texto abaixo e as telas de inspiração em
+> `docs/inspiracao/` ficam só como **referência para o futuro app de satélite**.
 _Solicitado em 05/11/2026: "BACKLOG: Sim, pode registrar. Implemente algum recurso que use a bússola e inclinômetro para ajudar a apontar uma antena portátil e fazer contatos por aprs e voz. Use os satélites que operam em aprs e voz", com captura de tela da lista de satélites; IO-86 acrescentado a pedido em 05/11/2026._
 Inspiração: app ISS Detector (só a ideia, **sem copiar** nome, visual ou código).
 O mantenedor tem o **PT2VHF Sat Tool**: reaproveitar as ideias/algoritmos de
@@ -1752,7 +1756,7 @@ cores próprios (tema PT2VHF), sem reproduzir o visual daquele app.
   (conferir com bússola real); numa passagem real, beacon APRS aparece em aprs.fi
   via `RS0ISS`/satélite, e o QSO de voz no SO-50 é possível seguindo as frequências
   e o apontamento mostrados.
-- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+- **Status:** **cancelado / fora de escopo** (vai para um app de satélite separado). Não implementar aqui.
 
 ## Consolidação das sugestões aprovadas com itens já existentes
 
