@@ -1660,6 +1660,71 @@ entram só para exibição (`AprsService` ~linha 120).
   e para estação não ouvida não sai; desligado, nada é retransmitido.
 - **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
 
+### 53. Modo satélite: passagens, apontador de antena (bússola + inclinômetro) e contatos APRS/voz
+_Solicitado em 05/11/2026: "BACKLOG: Sim, pode registrar. Implemente algum recurso que use a bússola e inclinômetro para ajudar a apontar uma antena portátil e fazer contatos por aprs e voz. Use os satélites que operam em aprs e voz", com captura de tela da lista de satélites._
+Inspiração: app ISS Detector (só a ideia, **sem copiar** nome, visual ou código).
+O mantenedor tem o **PT2VHF Sat Tool**: reaproveitar as ideias/algoritmos de
+previsão de lá.
+
+**Como está hoje (v0.1.9):** não há nada de satélite no app nem uso de sensores
+(bússola/acelerômetro). APRS via satélite só funcionaria hoje por acaso, com o
+path e a frequência configurados à mão no rádio.
+
+**Satélites iniciais (catálogo NORAD, lista do usuário):**
+
+| Satélite | NORAD | Modo (conferir status AMSAT antes de implementar) |
+|---|---|---|
+| ISS (ZARYA) | 25544 | **APRS digi** 145.825 MHz FM 1200 bd (path `ARISS`/`APRSAT`); **voz FM** repetidora cross-band (sobe 145.990, tom 67 Hz / desce 437.800) quando ativa |
+| SONATE-2 | 59112 | **APRS digi** 145.825 MHz FM 1200 bd (path `APRSAT`/`WIDE1-1`, conferir) |
+| SAUDISAT 1C (SO-50) | 27607 | **Voz FM**: sobe 145.850 (tom 67 Hz; 74,4 Hz arma o timer) / desce 436.795 |
+| JAS-2 (FO-29) | 24278 | Transponder linear **SSB/CW** (sobe 145.900–146.000 / desce 435.800–435.900, invertido) |
+| RS-44 | 44909 | Transponder linear **SSB/CW** (sobe 145.935–145.995 / desce 435.610–435.670, invertido) |
+| OSCAR 7 (AO-7) | 7530 | Transponder linear **SSB/CW** modos A e B; só funciona iluminado pelo sol (intermitente) |
+
+Frequências acima são de referência e **devem ser conferidas** (AMSAT / fontes
+oficiais) antes da implementação; guardar em tabela editável, não fixa no código.
+A lista é editável: o usuário pode adicionar/remover satélites por NORAD.
+
+**Comportamento exigido:**
+1. **Próximas passagens:** lista por satélite com início/fim (AOS/LOS), elevação
+   máxima, azimute de entrada/saída e duração, para a posição atual (GPS) ou
+   fixa; filtro por elevação mínima (ex.: 10°).
+2. **Alerta antes da passagem** (minutos configuráveis), notificação por satélite.
+3. **Radar do céu:** trajeto da passagem em gráfico polar (azimute × elevação),
+   posição atual do satélite e contagem regressiva.
+4. **Apontador de antena portátil:** usar **bússola (magnetômetro) e inclinômetro
+   (acelerômetro/vetor de rotação)** do celular preso/alinhado à antena; mostrar
+   seta "gire para a esquerda/direita" e "incline para cima/baixo", com indicação
+   de acerto (cor/vibração/bip opcional). Corrigir **declinação magnética** pela
+   posição (`GeomagneticField`), tela de calibração da bússola e aviso de
+   interferência magnética (metal da antena, rádio).
+5. **Doppler e frequências na passagem:** mostrar a frequência de subida e
+   descida corrigida em tempo real (passos de ajuste para rádio manual) para FM,
+   SSB e APRS. Opcional futuro: controle do rádio por CAT/CI-V (fora deste item).
+6. **APRS via satélite:** durante a passagem de satélite com digi APRS, modo de
+   envio que usa path do satélite (ex.: `ARISS`), beacon de posição e mensagens
+   curtas pelo TNC/AFSK; marcar no Logs e no mapa o que foi **ouvido via satélite**
+   (digipeado pelo indicativo do satélite, ex.: `RS0ISS`). Lembrete para mudar o
+   rádio para 145.825 MHz e voltar à frequência terrestre ao final.
+7. **Voz:** para satélites FM/SSB, a tela mostra só o guia (frequências, Doppler,
+   tom, apontamento); a voz é feita pelo rádio.
+
+**Observações:**
+- TLEs de fonte pública (ex.: **CelesTrak**), atualização automática ao abrir e a
+  cada 1–2 dias, funcionando offline com o último TLE (mostrar idade do TLE).
+- Propagação SGP4 com biblioteca de licença compatível ou implementação própria;
+  validar contra o PT2VHF Sat Tool / previsões públicas (erro de minutos = falha).
+- Celulares sem magnetômetro ou sem sensor de rotação: esconder o apontador e
+  manter a lista/radar.
+- Desligar beacon automático terrestre durante o modo satélite para não poluir o
+  canal (opcional, configurável). Responsabilidade do operador quanto à licença.
+- **Critério de aceite:** previsão de passagem da ISS coincide (± 1 min) com fonte
+  pública; com o celular na antena, a seta leva ao azimute/elevação corretos
+  (conferir com bússola real); numa passagem real, beacon APRS aparece em aprs.fi
+  via `RS0ISS`/satélite, e o QSO de voz no SO-50 é possível seguindo as frequências
+  e o apontamento mostrados.
+- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+
 ## Consolidação das sugestões aprovadas com itens já existentes
 
 A comparação com o APRSdroid também aprovou os recursos abaixo, que **já estavam
