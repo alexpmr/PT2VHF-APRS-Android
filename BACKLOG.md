@@ -1710,6 +1710,34 @@ A lista é editável: o usuário pode adicionar/remover satélites por NORAD.
 7. **Voz:** para satélites FM/SSB, a tela mostra só o guia (frequências, Doppler,
    tom, apontamento); a voz é feita pelo rádio.
 
+
+**Telas de inspiração (enviadas pelo usuário em 05/11/2026):**
+[Detalhes](docs/inspiracao/item53-iss-detector-detalhes.png) e
+[Radar](docs/inspiracao/item53-iss-detector-radar.png), capturas do ISS Detector.
+São **referência de conteúdo e organização**; o app deve ter layout, ícones e
+cores próprios (tema PT2VHF), sem reproduzir o visual daquele app.
+
+- **Cabeçalho comum** às abas do satélite: nome + descrição, contagem regressiva
+  até a próxima passagem ("Visível em 5d 5h 42m 56s") e duração; ações
+  compartilhar e adicionar ao calendário.
+- **Aba Detalhes:** data da passagem; grade com hora inicial/final, duração,
+  elevação inicial/máxima/final, direção inicial/final (ponto cardeal + graus,
+  ex.: "NNO (344,5°)"); **mapa** com a trajetória (ground track) e o círculo da
+  área de cobertura do satélite, botões tela cheia / minha posição; bloco
+  **"Agora"** com latitude, longitude, altitude, azimute, elevação, distância,
+  velocidade, hora local e UTC; abaixo, dados do TLE (idade, época).
+  No nosso app acrescentar ao bloco: **modo/frequências com Doppler** e
+  **path APRS** do satélite.
+- **Aba Radar:** gráfico polar (anéis de elevação 0/30/60°, cardeais N/L/S/O),
+  trajetória da passagem com ponto de início (AOS), posição atual e fim; rodapé
+  com direção e elevação iniciais. O radar **gira com a bússola** (o "N" fica
+  onde o norte real está em relação ao celular) e uma **seta** mostra para onde
+  apontar. No nosso caso, a seta e um indicador de inclinação vêm da **bússola +
+  inclinômetro** (apontador do passo 4), com aviso de acerto quando a antena
+  estiver no azimute/elevação do satélite.
+- Abas sugeridas no nosso app: **Radar**, **Detalhes** e **Operar** (frequências
+  com Doppler, envio APRS e log de estações ouvidas via satélite), no lugar de
+  "Vídeo ao vivo".
 **Observações:**
 - TLEs de fonte pública (ex.: **CelesTrak**), atualização automática ao abrir e a
   cada 1–2 dias, funcionando offline com o último TLE (mostrar idade do TLE).
