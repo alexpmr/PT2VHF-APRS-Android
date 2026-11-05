@@ -10,6 +10,7 @@ class Pt2vhfApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         UiText.initialize(this)
+        com.pt2vhf.aprs.data.CrashLog.install(this) // #45
     }
 }
 
@@ -59,6 +60,10 @@ object UiText {
         raw == "Enviando" -> text(R.string.msg_sending)
         raw == "Sem conexão para enviar" -> text(R.string.no_connection)
         raw == "Sem ACK após 5 tentativas" -> text(R.string.no_ack)
+        raw.startsWith("Sem ACK após ") && raw.endsWith(" tentativas") ->
+            raw.removePrefix("Sem ACK após ").removeSuffix(" tentativas").toIntOrNull()
+                ?.let { text(R.string.no_ack_n, it) } ?: raw
+        raw == "Cancelada" -> text(R.string.msg_cancelled)
         raw.startsWith("Enviada · ") -> text(R.string.msg_sent_via, raw.removePrefix("Enviada · "))
         raw.startsWith("Aguardando ACK · ") -> text(R.string.awaiting_ack, raw.removePrefix("Aguardando ACK · "))
         raw.startsWith("Aguardando ACK (") && raw.endsWith("ª tentativa)") -> {
@@ -80,6 +85,13 @@ object UiText {
         "Conexão Bluetooth encerrada" -> text(R.string.bt_closed)
         "Conexão KISS TCP encerrada" -> text(R.string.kiss_tcp_closed)
         "Falha ao conectar" -> text(R.string.connection_failed)
+        "Permissão de microfone negada" -> text(R.string.err_mic_permission)
+        "Falha ao abrir o áudio" -> text(R.string.err_audio_open)
+        "Permissão USB negada" -> text(R.string.err_usb_permission)
+        "Nenhum TNC USB conectado" -> text(R.string.err_usb_none)
+        "Adaptador USB não suportado" -> text(R.string.err_usb_unsupported)
+        "Falha ao abrir o USB" -> text(R.string.err_usb_open)
+        "USB desconectado" -> text(R.string.err_usb_detached)
         else -> raw
     }
 }

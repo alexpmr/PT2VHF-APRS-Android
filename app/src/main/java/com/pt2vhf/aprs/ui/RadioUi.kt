@@ -1,7 +1,10 @@
 package com.pt2vhf.aprs.ui
 
 import android.annotation.SuppressLint
+import android.Manifest
 import android.bluetooth.BluetoothManager
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -13,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Checkbox
@@ -88,6 +92,16 @@ fun RadioScreen(settings: Settings, onSettingsChanged: (Settings) -> Unit) {
             }.getOrElse { UiText.text(R.string.diag_export_failed) }
         }
     }
+    var micGranted by remember { mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) }
+    val micLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        micGranted = granted
+        if (granted && settings.tncType == "audio") AprsService.send(context, AprsService.ACTION_RELOAD)
+    }
+    fun change(updated: Settings) {
+        Settings.save(context, updated)
+        onSettingsChanged(updated)
+        AprsService.send(context, AprsService.ACTION_RELOAD)
+    }
     fun saveTnc(type: String, host: String = settings.tncHost, port: Int = settings.tncPort) {
         val updated = settings.copy(tncType = type, tncHost = host.trim(), tncPort = port)
         Settings.save(context, updated)
@@ -96,19 +110,30 @@ fun RadioScreen(settings: Settings, onSettingsChanged: (Settings) -> Unit) {
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         SectionCard(if (status.tncConnected) UiText.text(R.string.tnc_connected) else "TNC") {
-            val kind = if (settings.tncType == "tcp") "KISS TCP" else "KISS Bluetooth"
+            val kind = when (settings.tncType) {
+                "tcp" -> "KISS TCP"
+                "audio" -> UiText.text(R.string.tnc_audio)
+                "usb" -> UiText.text(R.string.tnc_usb)
+                else -> "KISS Bluetooth"
+            }
             Text(if (status.tncConnected) "${status.tncName} · $kind · ${status.tncRx} RX · ${status.tncTx} TX"
                 else UiText.connectionError(status.tncError).ifBlank { UiText.text(R.string.pair_tnc) },
                 color = if (status.tncConnected) Pal.green else Pal.muted, fontSize = 14.sp)
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 OutlinedChoice("Bluetooth", settings.tncType == "bt") { if (settings.tncType != "bt") saveTnc("bt") }
                 OutlinedChoice("KISS TCP", settings.tncType == "tcp") { if (settings.tncType != "tcp") saveTnc("tcp") }
+                OutlinedChoice(UiText.text(R.string.tnc_audio), settings.tncType == "audio") {
+                    if (settings.tncType != "audio") { saveTnc("audio"); if (!micGranted) micLauncher.launch(Manifest.permission.RECORD_AUDIO) }
+                }
+                OutlinedChoice(UiText.text(R.string.tnc_usb), settings.tncType == "usb") { if (settings.tncType != "usb") saveTnc("usb") }
             }
             if (status.tncConnected) OutlinedButton(onClick = { AprsService.send(context, AprsService.ACTION_BT_DISCONNECT) }) {
                 Text(UiText.text(R.string.disconnect))
             }
         }
-        if (settings.tncType == "tcp") SectionCard("KISS TCP") {
+        if (settings.tncType == "audio") AudioTncCard(settings, ::change, onRequestMic = { micLauncher.launch(Manifest.permission.RECORD_AUDIO) }, micGranted)
+        else if (settings.tncType == "usb") UsbTncCard(settings, ::change)
+        else if (settings.tncType == "tcp") SectionCard("KISS TCP") {
             Text(UiText.text(R.string.kiss_tcp_hint), color = Pal.muted, fontSize = 12.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(tcpHost, { tcpHost = it.trim() }, singleLine = true, modifier = Modifier.weight(2f),
@@ -220,6 +245,7 @@ fun RadioScreen(settings: Settings, onSettingsChanged: (Settings) -> Unit) {
             exportResult?.let { Text(it, color = Pal.muted, fontSize = 12.sp) }
         }
         SectionCard(UiText.text(R.string.live_monitor)) {
+            Text(UiText.text(R.string.live_monitor_logs_hint), color = Pal.muted, fontSize = 12.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
                 listOf("all" to R.string.filter_all, "rx" to R.string.monitor_rx, "tx" to R.string.monitor_tx,
                     "rf" to R.string.msg_filter_rf).forEach { (key, label) ->

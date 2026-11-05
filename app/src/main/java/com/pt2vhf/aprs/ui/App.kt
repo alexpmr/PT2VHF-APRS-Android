@@ -28,6 +28,11 @@ import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Info
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import com.pt2vhf.aprs.MainActivity
+import com.pt2vhf.aprs.data.CrashLog
+import com.pt2vhf.aprs.data.UpdateManager
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -97,7 +102,7 @@ private val scheme = darkColorScheme(
     secondary = Pal.yellow,
 )
 
-enum class Tab(val labelId: Int) { MAP(R.string.nav_map), MESSAGES(R.string.nav_messages), STATIONS(R.string.nav_stations), RADIO(R.string.nav_radio), TRACKER(R.string.nav_tracker) }
+enum class Tab(val labelId: Int) { MAP(R.string.nav_map), MESSAGES(R.string.nav_messages), STATIONS(R.string.nav_stations), RADIO(R.string.nav_radio), TRACKER(R.string.nav_tracker), LOGS(R.string.nav_logs) }
 
 @Composable
 fun App(onExit: () -> Unit) {
@@ -107,7 +112,12 @@ fun App(onExit: () -> Unit) {
     var showSettings by rememberSaveable { mutableStateOf(!settings.configured) }
     var selectedStation by rememberSaveable { mutableStateOf<String?>(null) }
     var chatWith by rememberSaveable { mutableStateOf<String?>(null) }
-    var update by remember { mutableStateOf<UpdateInfo?>(null) }
+    var updateDismissed by rememberSaveable { mutableStateOf<String?>(null) }
+    var forceUpdateDialog by remember { mutableStateOf(false) }
+    val updateState by UpdateManager.state.collectAsState()
+    val showUpdateRequests by MainActivity.showUpdateRequests.collectAsState()
+    var crashText by remember { mutableStateOf<String?>(null) }
+    var carMode by rememberSaveable { mutableStateOf(false) }
     var replyToId by rememberSaveable { mutableStateOf<Long?>(null) }
     var exitDialog by rememberSaveable { mutableStateOf(false) }
     val serviceStatus by AprsRepository.status.collectAsState()
@@ -117,12 +127,20 @@ fun App(onExit: () -> Unit) {
             selectedStation != null -> selectedStation = null
             chatWith != null -> chatWith = null
             showSettings && settings.configured -> showSettings = false
-            update != null -> update = null
+            carMode -> carMode = false
             else -> exitDialog = true
         }
     }
 
-    LaunchedEffect(Unit) { update = withContext(Dispatchers.IO) { runCatching { UpdateCheck.fetch() }.getOrNull() } }
+    // #39: verificação na abertura/retorno ao app (no máximo 1 vez por hora); o serviço verifica a cada 12 h.
+    LifecycleResumeEffect(Unit) {
+        UpdateManager.current(context)
+        UpdateManager.maybeCheck(context, UpdateManager.RESUME_MS)
+        onPauseOrDispose { }
+    }
+    LaunchedEffect(showUpdateRequests) { if (showUpdateRequests > 0) forceUpdateDialog = true }
+    // #48: falha anterior registrada → oferecer o envio do log.
+    LaunchedEffect(Unit) { crashText = withContext(Dispatchers.IO) { CrashLog.pending(context) } }
     // #6: manter a tela ligada (opcional), só enquanto o app está visível.
     val view = LocalView.current
     DisposableEffect(settings.keepScreenOn) {
@@ -133,7 +151,8 @@ fun App(onExit: () -> Unit) {
     MaterialTheme(colorScheme = scheme) {
         Scaffold(
             containerColor = Pal.ground,
-            topBar = { if (!keyboardVisible) TopBar(settings, onSettings = { showSettings = true }, onRadio = { tab = Tab.RADIO }) },
+            topBar = { if (!keyboardVisible) TopBar(settings, onSettings = { showSettings = true }, onRadio = { tab = Tab.RADIO },
+                updateAvailable = updateState.available != null, onUpdate = { forceUpdateDialog = true }) },
             bottomBar = {
                 if (!keyboardVisible) NavigationBar(containerColor = Pal.bar) {
                     Tab.entries.forEach { t ->
@@ -147,9 +166,11 @@ fun App(onExit: () -> Unit) {
                                     Tab.STATIONS -> Icons.Filled.List
                                     Tab.RADIO -> Icons.Filled.Share
                                     Tab.TRACKER -> Icons.Filled.LocationOn
+                                    Tab.LOGS -> Icons.Filled.Info
                                 }, contentDescription = null)
                             },
-                            label = { Text(UiText.text(t.labelId), fontSize = 11.sp) },
+                            label = { Text(UiText.text(t.labelId), fontSize = 10.sp, maxLines = 1, softWrap = false) },
+                            alwaysShowLabel = true,
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = Pal.accent, selectedTextColor = Pal.accent,
                                 unselectedIconColor = Pal.muted, unselectedTextColor = Pal.muted, indicatorColor = Pal.card,
@@ -167,7 +188,8 @@ fun App(onExit: () -> Unit) {
                         onStation = { selectedStation = it })
                     Tab.STATIONS -> StationsScreen(settings.stationMaxAgeHours, onStation = { selectedStation = it })
                     Tab.RADIO -> RadioScreen(settings, onSettingsChanged = { settings = it })
-                    Tab.TRACKER -> TrackerScreen(settings, onSettingsChanged = { settings = it })
+                    Tab.TRACKER -> TrackerScreen(settings, onSettingsChanged = { settings = it }, onCarMode = { carMode = true })
+                    Tab.LOGS -> LogsScreen(onStation = { selectedStation = it })
                 }
             }
         }
@@ -213,28 +235,33 @@ fun App(onExit: () -> Unit) {
                 },
             )
         }
-        val pending = update
-        // #38: sem aviso de anúncio na abertura; o aviso OTA de nova versão é o único possível.
-        if (!showSettings && pending != null) {
+        val available = updateState.available
+        if (!showSettings && available != null && (forceUpdateDialog ||
+                (updateDismissed != available.version && UpdateManager.ignoredVersion(context) != available.version))) {
+            UpdateDialog(available, onDismiss = { updateDismissed = available.version; forceUpdateDialog = false })
+        }
+        crashText?.let {
             AlertDialog(
-                onDismissRequest = { update = null },
+                onDismissRequest = { CrashLog.markSeen(context); crashText = null },
                 containerColor = Pal.bar,
-                title = { Text(UiText.text(R.string.new_version, pending.version)) },
-                text = { Text(pending.notes.ifBlank { UiText.text(R.string.new_version_notice) }) },
+                title = { Text(UiText.text(R.string.crash_title)) },
+                text = { Text(UiText.text(R.string.crash_body)) },
                 confirmButton = {
-                    TextButton(onClick = {
-                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(pending.downloadUrl)))
-                        update = null
-                    }) { Text(UiText.text(R.string.download_install)) }
+                    TextButton(onClick = { sendLog(context, settings); crashText = null }) { Text(UiText.text(R.string.send_log)) }
                 },
-                dismissButton = { TextButton(onClick = { update = null }) { Text(UiText.text(R.string.later)) } },
+                dismissButton = {
+                    TextButton(onClick = { CrashLog.markSeen(context); crashText = null }) { Text(UiText.text(R.string.later)) }
+                },
             )
+        }
+        if (carMode) {
+            Box(Modifier.fillMaxSize().background(Pal.ground)) { CarModeScreen(settings, onExit = { carMode = false }) }
         }
     }
 }
 
 @Composable
-private fun TopBar(settings: Settings, onSettings: () -> Unit, onRadio: () -> Unit) {
+private fun TopBar(settings: Settings, onSettings: () -> Unit, onRadio: () -> Unit, updateAvailable: Boolean, onUpdate: () -> Unit) {
     val context = LocalContext.current
     val status by AprsRepository.status.collectAsState()
     val beaconResults by AprsRepository.beaconResults.collectAsState()
@@ -299,6 +326,10 @@ private fun TopBar(settings: Settings, onSettings: () -> Unit, onRadio: () -> Un
                     else -> R.string.send_beacon
                 }), fontWeight = FontWeight.SemiBold)
             }
+            if (updateAvailable) TextButton(onClick = onUpdate) {
+                Text("⬆", color = Pal.yellow, fontSize = 18.sp, fontWeight = FontWeight.Bold,
+                    modifier = Modifier.semantics { contentDescription = UiText.text(R.string.update_badge) })
+            }
             IconButton(onClick = onSettings) { Icon(Icons.Filled.Settings, contentDescription = UiText.text(R.string.settings), tint = Pal.text) }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -309,11 +340,11 @@ private fun TopBar(settings: Settings, onSettings: () -> Unit, onRadio: () -> Un
             Chip("TNC", status.tncConnected, onClick = {
                 when {
                     status.tncConnected -> AprsService.send(context, AprsService.ACTION_BT_PAUSE)
-                    settings.btAddress.isNotBlank() -> AprsService.send(context, AprsService.ACTION_BT_RESUME)
+                    settings.tncType != "bt" || settings.btAddress.isNotBlank() -> AprsService.send(context, AprsService.ACTION_BT_RESUME)
                     else -> onRadio()
                 }
             })
-            Chip("GPS", status.gpsAccuracyM != null &&
+            Chip("GPS", status.manualPosition || status.gpsAccuracyM != null &&
                 status.gpsFixTimeMs > 0 && System.currentTimeMillis() - status.gpsFixTimeMs <= 120_000L)
         }
     }

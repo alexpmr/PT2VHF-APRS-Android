@@ -25,7 +25,20 @@ class MainActivity : ComponentActivity() {
         AprsRepository.init(this)
         requestPermissions()
         if (Settings.load(this).configured) AprsService.send(this, AprsService.ACTION_RELOAD)
+        if (intent?.getBooleanExtra(EXTRA_SHOW_UPDATE, false) == true) showUpdateRequests.value = showUpdateRequests.value + 1
         setContent { App(onExit = { finish() }) }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent.getBooleanExtra(EXTRA_SHOW_UPDATE, false)) showUpdateRequests.value = showUpdateRequests.value + 1
+    }
+
+    companion object {
+        /** #39: a notificação de nova versão abre o app já com o aviso. */
+        const val EXTRA_SHOW_UPDATE = "show_update"
+        val showUpdateRequests = kotlinx.coroutines.flow.MutableStateFlow(0)
     }
 
     fun requestPermissions() {

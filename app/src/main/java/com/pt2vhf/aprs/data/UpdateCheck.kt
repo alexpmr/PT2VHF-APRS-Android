@@ -13,25 +13,34 @@ object UpdateCheck {
     const val ENDPOINT = "https://www.pt2vhf.com/update.php?product=aprs-android"
     const val SITE = "https://www.pt2vhf.com/aprs-android"
 
-    fun fetch(): UpdateInfo? {
+    sealed class Result {
+        data class Available(val info: UpdateInfo) : Result()
+        object UpToDate : Result()
+        object Failure : Result()
+    }
+
+    fun fetch(): UpdateInfo? = (fetchResult() as? Result.Available)?.info
+
+    /** Distingue "atualizado" de "falha de rede" (#39), para a nova tentativa e o resultado em Sobre. */
+    fun fetchResult(): Result {
         val conn = URL(ENDPOINT).openConnection() as HttpURLConnection
         conn.instanceFollowRedirects = false
         conn.connectTimeout = 10_000
         conn.readTimeout = 10_000
         conn.setRequestProperty("User-Agent", "PT2VHF-APRS-Android/${BuildConfig.VERSION_NAME}")
         return try {
-            if (conn.responseCode != 200) return null
+            if (conn.responseCode != 200) return Result.Failure
             val json = JSONObject(conn.inputStream.bufferedReader().readText())
-            if (json.optString("status") != "available") return null
+            if (json.optString("status") != "available") return Result.UpToDate
             val version = json.optString("version")
-            if (!isNewerVersion(version, BuildConfig.VERSION_NAME)) return null
+            if (!isNewerVersion(version, BuildConfig.VERSION_NAME)) return Result.UpToDate
             val files = json.optJSONArray("files")
             val url = (0 until (files?.length() ?: 0)).map { files!!.getJSONObject(it) }
                 .firstOrNull { it.optString("name").endsWith(".apk") }?.optString("url")
                 ?.takeIf { it.startsWith("https://www.pt2vhf.com/") } ?: SITE
-            UpdateInfo(version, json.optString("notes"), url, json.optString("page", SITE))
+            Result.Available(UpdateInfo(version, json.optString("notes"), url, json.optString("page", SITE)))
         } catch (e: Exception) {
-            null
+            Result.Failure
         } finally {
             conn.disconnect()
         }
