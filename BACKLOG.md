@@ -1610,6 +1610,56 @@ do diagnóstico (item 13) e o "Enviar log" (item 45) são relatórios, não a li
   histórico conforme a retenção; filtros combinados funcionam.
 - **Status:** implementado na **0.1.9**, aguardando teste físico e OK do mantenedor (ver "Status para teste — 0.1.9").
 
+### 52. Digipeater e iGate no app, configuráveis
+_Solicitado em 05/11/2026: "Backlog: implemente um digi e igate ao app, configuráveis."_
+
+**Como está hoje (v0.1.9):** o app só **observa** digipeaters e iGates de terceiros:
+classifica estações como Digipeater/iGate (filtro de tipos), conta "meu pacote
+digipeado" e mostra enlaces RF (`data/RfStats.kt`, `AprsRepository` ~linha 447).
+Não retransmite pacotes de outros em RF nem encaminha RF↔APRS-IS. Pacotes do TNC
+entram só para exibição (`AprsService` ~linha 120).
+
+**Comportamento exigido — Digipeater (RF→RF):**
+- Liga/desliga em Configurações → Digipeater (padrão **desligado**); usa o TNC
+  ativo (KISS Bluetooth/TCP e, quando houver, AFSK do item 44).
+- Aliases configuráveis: próprio indicativo, `WIDE1-1` (fill-in, padrão), opção
+  `WIDEn-N` com limite de N (ex.: até WIDE2-2), aliases extras (ex.: regionais).
+- Marcar `*`/substituir o alias pelo indicativo (trace) conforme a prática APRS;
+  **dedupe** (não repetir o mesmo pacote em ~30 s, tempo configurável);
+  descartar pacotes com path excessivo; não digipetar os próprios pacotes de volta.
+- Atraso/slot e limite de taxa para não congestionar a frequência.
+
+**Comportamento exigido — iGate:**
+- Liga/desliga em Configurações → iGate (padrão **desligado**); **exige APRS-IS
+  verificado com passcode válido**.
+- **RF→IS:** encaminhar pacotes ouvidos no TNC ao APRS-IS no formato de gateway
+  (`...,qAR,MEUCALL:`), sem pacotes com `TCPIP`/`NOGATE`/`RFONLY` no path,
+  sem terceiros (`}`) mal formados, e com dedupe.
+- **IS→RF (opcional, padrão desligado):** só mensagens para estações ouvidas
+  recentemente em RF (janela configurável, ex.: 30 min), encapsuladas como
+  terceiros, com limite de taxa; opcionalmente posição de quem enviou a mensagem.
+- Beacon próprio de iGate/digi (símbolo `I`/`#` com overlay, comentário,
+  intervalo), separado do beacon do tracker, ou aviso para usar perfil "Base".
+
+**Telas e monitoramento:**
+- Contadores: digipetados, RF→IS, IS→RF, descartados (por motivo); visíveis em
+  Rádio e na aba Logs (item 51) com marcação "DIGI"/"IGATE".
+- Indicação no cabeçalho quando digi/iGate estão ativos.
+- Bloqueado no perfil "Somente recepção"; respeita autorizações de TX RF.
+
+**Observações:**
+- Exige app em primeiro plano/serviço contínuo e celular ligado à energia
+  (aviso de consumo); combinar com o item 49 (economia de bateria) desativando-o.
+- Responsabilidade do operador (licença, frequência e regras locais); mostrar
+  aviso ao ligar.
+- Referência de comportamento: APRSdroid/aprx/Direwolf **só como ideias**, sem
+  copiar código GPL.
+- **Critério de aceite:** com rádio real, pacote WIDE1-1 de outra estação é
+  digipetado uma vez (sem loop/duplicata); pacote RF aparece em aprs.fi com
+  `qAR,MEUCALL`; com IS→RF ligado, mensagem para estação ouvida localmente sai em RF
+  e para estação não ouvida não sai; desligado, nada é retransmitido.
+- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+
 ## Consolidação das sugestões aprovadas com itens já existentes
 
 A comparação com o APRSdroid também aprovou os recursos abaixo, que **já estavam
