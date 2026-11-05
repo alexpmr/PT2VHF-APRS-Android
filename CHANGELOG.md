@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.9 — (05/11/2026, beta; testes item a item pendentes)
+## 0.1.9 — Publicada (05/11/2026, beta; testes item a item pendentes)
 
 Implementa todos os itens pendentes do backlog. Itens que dependem de hardware (AFSK no ar, adaptadores USB, widget, consumo de bateria) foram testados só em código e precisam de teste físico.
 

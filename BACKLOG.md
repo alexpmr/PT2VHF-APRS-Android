@@ -4,7 +4,7 @@ Itens registrados para as próximas versões. Não implementar até o pedido de 
 
 ## Onde estamos (05/11/2026)
 
-- Versão em preparação/publicação: **v0.1.9** (beta), com **todos os itens pendentes** implementados (#6 restante,
+- Última versão **publicada**: **v0.1.9** (05/11/2026, beta), com **todos os itens pendentes** implementados (#6 restante,
   #39 a #51, USB-OTG, modo carro e rotas). Última publicada antes dela: v0.1.8 (04/11/2026).
 - **Nenhum item tem baixa definitiva**: cada um aguarda teste físico e OK do mantenedor, item a item, pelas tabelas
   "Status para teste — 0.1.9" (novos) e "Status para teste — 0.1.8 QA" (anteriores, ainda valem).
