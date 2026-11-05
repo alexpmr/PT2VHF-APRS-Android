@@ -181,8 +181,12 @@ private fun LayerToggle(label: String, checked: Boolean, onChange: (Boolean) -> 
 }
 
 @Composable
-fun MapScreen(settings: Settings, onStation: (String) -> Unit) {
+fun MapScreen(settings: Settings, onStation: (String) -> Unit, onSettingsChanged: (Settings) -> Unit = {}) {
     val allStations by AprsRepository.stations.collectAsState()
+    val myObjects by AprsRepository.myObjects.collectAsState()
+    val routes by AprsRepository.routes.collectAsState()
+    var longPress by remember { mutableStateOf<GeoPoint?>(null) }
+    var editObject by remember { mutableStateOf<com.pt2vhf.aprs.data.MyObject?>(null) }
     val links by AprsRepository.links.collectAsState()
     val ownTrack by AprsRepository.track.collectAsState()
     val trails by AprsRepository.trails.collectAsState()
@@ -260,7 +264,20 @@ fun MapScreen(settings: Settings, onStation: (String) -> Unit) {
         update = { map ->
             map.overlayManager.tilesOverlay.setColorFilter(brightnessFilter(brightness))
             map.overlays.clear()
+            // Toque longo no mapa: definir posição fixa ou criar objeto neste ponto (#6, #43).
+            map.overlays.add(org.osmdroid.views.overlay.MapEventsOverlay(object : org.osmdroid.events.MapEventsReceiver {
+                override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean = false
+                override fun longPressHelper(p: GeoPoint?): Boolean { longPress = p; return p != null }
+            }))
             val now = System.currentTimeMillis()
+            // Rotas GPX importadas e visíveis.
+            routes.filter { it.visible && it.points.size > 1 }.forEach { r ->
+                map.overlays.add(Polyline(map).apply {
+                    setPoints(r.points.map { GeoPoint(it.lat, it.lon) })
+                    outlinePaint.color = 0xCCB57CFF.toInt()
+                    outlinePaint.strokeWidth = 4f * density
+                })
+            }
             // #14 heat map: coverage observed only through this device's TNC.
             if (showCoverage) {
                 rfEvents.asSequence().filter { it.kind == "heard" && it.lat != null && it.lon != null }
@@ -347,7 +364,27 @@ fun MapScreen(settings: Settings, onStation: (String) -> Unit) {
                     map.controller.setCenter(GeoPoint(myLat, myLon)); centered = true
                 }
             }
+            // Meus objetos/itens (#43).
+            myObjects.forEach { o ->
+                map.overlays.add(Marker(map).apply {
+                    position = GeoPoint(o.lat, o.lon)
+                    title = o.name
+                    val (drawable, anchorU) = AprsSymbolIcons.labeled(context, o.symbolTable, o.symbol,
+                        if (showLabels) o.name + if (o.active) "" else " ✕" else "", density)
+                    icon = drawable
+                    alpha = if (o.active) 1f else 0.5f
+                    setAnchor(anchorU, Marker.ANCHOR_CENTER)
+                    setOnMarkerClickListener { _, _ -> editObject = o; true }
+                })
+            }
             val followed = followedCall?.let { stations[it] }
+            // Linha direta até a estação seguida.
+            if (followed != null && myLat != null && myLon != null) map.overlays.add(Polyline(map).apply {
+                setPoints(listOf(GeoPoint(myLat, myLon), GeoPoint(followed.lat, followed.lon)))
+                outlinePaint.color = 0xAAF5C400.toInt()
+                outlinePaint.strokeWidth = 3f * density
+                outlinePaint.pathEffect = android.graphics.DashPathEffect(floatArrayOf(6f * density, 6f * density), 0f)
+            })
             if (followed != null && !followPaused)
                 map.controller.setCenter(GeoPoint(followed.lat, followed.lon))
             map.invalidate()
@@ -408,6 +445,45 @@ fun MapScreen(settings: Settings, onStation: (String) -> Unit) {
                 onValueChangeFinished = { Settings.saveOption(context, "map_brightness", brightness.toString()) },
                 valueRange = 50f..150f, steps = 19)
         }
+    }
+    val visibleRoutes = routes.filter { it.visible && it.points.size > 1 }
+    if (visibleRoutes.isNotEmpty() && status.lat != null && status.lon != null) {
+        Column(Modifier.align(Alignment.TopStart).padding(top = 56.dp, start = 8.dp)
+            .background(Pal.bar, RoundedCornerShape(10.dp)).padding(horizontal = 10.dp, vertical = 6.dp)) {
+            visibleRoutes.take(3).forEach { r ->
+                com.pt2vhf.aprs.core.routeRemainingKm(r.points, status.lat!!, status.lon!!)?.let { (km, off) ->
+                    Text(UiText.text(R.string.route_remaining, r.name, km, off), fontSize = 12.sp, color = Pal.text)
+                }
+            }
+        }
+    }
+    longPress?.let { p ->
+        AlertDialog(
+            onDismissRequest = { longPress = null },
+            containerColor = Pal.bar,
+            title = { Text("%.5f, %.5f".format(java.util.Locale.ROOT, p.latitude, p.longitude)) },
+            text = {
+                Column {
+                    TextButton(onClick = {
+                        val updated = settings.copy(positionSource = "manual", manualLat = p.latitude, manualLon = p.longitude)
+                        Settings.save(context, updated)
+                        onSettingsChanged(updated)
+                        AprsService.send(context, AprsService.ACTION_RELOAD)
+                        android.widget.Toast.makeText(context, UiText.text(R.string.map_position_set), android.widget.Toast.LENGTH_SHORT).show()
+                        longPress = null
+                    }) { Text(UiText.text(R.string.map_set_position)) }
+                    TextButton(enabled = settings.configured, onClick = {
+                        editObject = newObjectAt(p.latitude, p.longitude)
+                        longPress = null
+                    }) { Text(UiText.text(R.string.map_create_object)) }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { longPress = null }) { Text(UiText.text(R.string.cancel)) } },
+        )
+    }
+    editObject?.let { o ->
+        ObjectDialog(o, isNew = myObjects.none { it.id == o.id }, settings = settings, onDismiss = { editObject = null })
     }
     if (followedCall != null) {
         val target = allStations[followedCall]
@@ -710,7 +786,7 @@ private fun gpx(points: List<com.pt2vhf.aprs.data.TrackPoint>, call: String): St
 }
 
 @Composable
-fun TrackerScreen(settings: Settings, onSettingsChanged: (Settings) -> Unit) {
+fun TrackerScreen(settings: Settings, onSettingsChanged: (Settings) -> Unit, onCarMode: () -> Unit = {}) {
     val context = LocalContext.current
     val status by AprsRepository.status.collectAsState()
     val track by AprsRepository.track.collectAsState()
@@ -769,6 +845,14 @@ fun TrackerScreen(settings: Settings, onSettingsChanged: (Settings) -> Unit) {
                 enabled = settings.configured && status.lat != null) { Text(UiText.text(R.string.start_tracker)) }
         }
         Text(UiText.text(R.string.tracker_notice), color = Pal.muted, fontSize = 12.sp)
+        OutlinedButton(onClick = onCarMode, modifier = Modifier.fillMaxWidth().height(52.dp)) {
+            Text("🚗 " + UiText.text(R.string.car_mode))
+        }
+        if (settings.manualPosition) Text(UiText.text(R.string.position_source_manual) + ": %.5f, %.5f".format(
+            java.util.Locale.ROOT, settings.manualLat, settings.manualLon), color = Pal.orange, fontSize = 12.sp)
+        MyObjectsCard(settings)
+        RoutesCard()
+        BatteryCard(settings)
         // #5: tracklog com estilo configurável, retenção e exportação GPX.
         SectionCard(UiText.text(R.string.track_line)) {
             Row(verticalAlignment = Alignment.CenterVertically) {

@@ -182,7 +182,7 @@ fun App(onExit: () -> Unit) {
         ) { padding ->
             Box(Modifier.padding(padding).fillMaxSize()) {
                 when (tab) {
-                    Tab.MAP -> MapScreen(settings, onStation = { selectedStation = it })
+                    Tab.MAP -> MapScreen(settings, onStation = { selectedStation = it }, onSettingsChanged = { settings = it })
                     Tab.MESSAGES -> MessagesScreen(settings, chatWith, replyToId,
                         onOpenChat = { call, reply -> chatWith = call; replyToId = reply },
                         onStation = { selectedStation = it })
