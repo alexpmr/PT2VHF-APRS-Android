@@ -111,6 +111,9 @@ fun MessagesScreen(
     var tab by rememberSaveable { mutableStateOf(0) }
     var filterOpen by remember { mutableStateOf(false) }
     var newChatOpen by rememberSaveable { mutableStateOf(false) }
+    var deleteOpen by remember { mutableStateOf(false) }
+    var deleteResult by remember { mutableStateOf<String?>(null) }
+    val clock = minuteClock()
     val keyboardVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     Column(Modifier.fillMaxSize()) {
         if (!keyboardVisible) Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp),
@@ -124,7 +127,13 @@ fun MessagesScreen(
                 modifier = Modifier.semantics { contentDescription = UiText.text(R.string.messages_filters_title) }) {
                 Text("☷" + if (criteria.copy(text = "").active) " ●" else "", fontSize = 20.sp)
             }
+            // #41: apagar todas, só boletins/gerais ou só pessoais.
+            TextButton(onClick = { deleteOpen = true; deleteResult = null },
+                modifier = Modifier.semantics { contentDescription = UiText.text(R.string.msg_delete_title) }) {
+                Text("🗑", fontSize = 18.sp)
+            }
         }
+        deleteResult?.let { Text(it, color = Pal.muted, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 12.dp)) }
         TabRow(selectedTabIndex = tab, containerColor = Pal.bar, contentColor = Pal.accent) {
             listOf(UiText.text(R.string.chats), UiText.text(R.string.general), UiText.text(R.string.bulletins)).forEachIndexed { i, label ->
                 Tab(selected = tab == i, onClick = { tab = i }, text = { Text(label) })
@@ -142,9 +151,9 @@ fun MessagesScreen(
                     items(byContact, key = { it.first }) { (contact, list) ->
                         val last = list.maxBy { it.time }
                         Column(Modifier.fillMaxWidth().clickable { onOpenChat(contact, null) }.padding(16.dp, 12.dp)) {
-                            Row {
-                                Text(contact, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                                Text(ago(last.time), color = Pal.muted, fontSize = 12.sp)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(contact, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), maxLines = 1)
+                                Text(messageTimeLabel(last.time, clock), color = Pal.muted, fontSize = 12.sp, maxLines = 1)
                             }
                             Text((if (last.outgoing) "↗ " else "") + last.text, color = Pal.muted, maxLines = 1,
                                 overflow = TextOverflow.Ellipsis, fontSize = 14.sp)
@@ -170,6 +179,7 @@ fun MessagesScreen(
         Settings.saveOption(context, "messages_order", if (newest) "newest" else "oldest")
         filterOpen = false
     }
+    if (deleteOpen) DeleteMessagesDialog(onDismiss = { deleteOpen = false }, onResult = { deleteResult = it })
     if (newChatOpen) NewMessageDialog(settings, onDismiss = { newChatOpen = false }) { call ->
         newChatOpen = false
         onOpenChat(call, null)
@@ -275,7 +285,23 @@ private fun NewMessageDialog(settings: Settings, onDismiss: () -> Unit, onOpen: 
 }
 
 /** Ações da pressão longa (#20). Nenhuma delas transmite; só o botão Enviar transmite. */
-private enum class BubbleAction { REPLY, REPLY_PUBLIC, REPLY_PRIVATE, DIRECT, COPY }
+private enum class BubbleAction { REPLY, REPLY_PUBLIC, REPLY_PRIVATE, DIRECT, COPY, RESEND, CANCEL }
+
+/** #47: ícone, cor e texto do estado de entrega; null para mensagens recebidas ou sem confirmação. */
+private fun deliveryIcon(m: ChatMessage): Pair<String, androidx.compose.ui.graphics.Color>? = when {
+    !m.outgoing -> null
+    m.status == "ACK recebido" -> "✓" to Pal.green
+    m.status == "Rejeitada" -> "⛔" to androidx.compose.ui.graphics.Color(0xFFF26F70)
+    m.status.startsWith("Sem ACK") || m.status == "Sem conexão para enviar" -> "✗" to Pal.orange
+    m.status == "Cancelada" -> "⊘" to Pal.muted
+    m.status.startsWith("Aguardando") || m.status == "Enviando" -> "🕓" to Pal.yellow
+    else -> null
+}
+
+private fun canResend(m: ChatMessage) = m.outgoing && m.msgId != null &&
+    (m.status.startsWith("Sem ACK") || m.status == "Rejeitada" || m.status == "Sem conexão para enviar" || m.status == "Cancelada")
+
+private fun canCancel(m: ChatMessage) = m.outgoing && (m.status.startsWith("Aguardando") || m.status == "Enviando")
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -284,6 +310,9 @@ private fun Bubble(
     showSender: Boolean,
     actions: List<BubbleAction>,
     onStation: (String) -> Unit,
+    clock: Long = System.currentTimeMillis(),
+    retryInfo: Pair<Int, Long>? = null,
+    maxAttempts: Int = 5,
     onAction: (BubbleAction) -> Unit,
 ) {
     var menu by remember { mutableStateOf(false) }
@@ -306,14 +335,28 @@ private fun Bubble(
                     if (quoted != null) Text("↪ ${quoted.from}: ${quoted.text}", color = Pal.muted, fontSize = 12.sp,
                         maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(m.text, fontSize = 15.sp)
-                    val meta = if (m.outgoing) "${hhmm(m.time)} · ${m.to} · ${UiText.messageStatus(m.status)}"
-                        else "${hhmm(m.time)} · ${UiText.receptionVia(m.via)}"
-                    Text(meta, color = if (m.outgoing && m.status.startsWith("Aguardando")) Pal.yellow else Pal.muted, fontSize = 11.sp)
+                    val stamp = messageTimeLabel(m.time, clock)
+                    val retry = retryInfo?.takeIf { m.status.startsWith("Aguardando") }
+                    val retryText = retry?.let { (attempt, at) ->
+                        " · " + UiText.text(R.string.msg_attempt, attempt, maxAttempts) + " · " +
+                            UiText.text(R.string.msg_next_retry, ((at - clock) / 1000).coerceAtLeast(0))
+                    }.orEmpty()
+                    val meta = if (m.outgoing) "$stamp · ${m.to} · ${UiText.messageStatus(m.status)}$retryText"
+                        else "$stamp · ${UiText.receptionVia(m.via)}"
+                    val icon = deliveryIcon(m)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (icon != null) Text(icon.first + " ", color = icon.second, fontSize = 13.sp,
+                            modifier = Modifier.clickable(enabled = actions.contains(BubbleAction.RESEND) ||
+                                actions.contains(BubbleAction.CANCEL)) { menu = true })
+                        Text(meta, color = icon?.second?.takeIf { m.status != "Enviando" } ?: Pal.muted, fontSize = 11.sp)
+                    }
                 }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                     actions.forEach { action ->
                         DropdownMenuItem(text = {
                             Text(when (action) {
+                                BubbleAction.RESEND -> UiText.text(R.string.msg_resend)
+                                BubbleAction.CANCEL -> UiText.text(R.string.msg_cancel_retries)
                                 BubbleAction.REPLY -> UiText.text(R.string.reply_to_message)
                                 BubbleAction.REPLY_PUBLIC -> UiText.text(R.string.reply_public_cq)
                                 BubbleAction.REPLY_PRIVATE -> UiText.text(R.string.reply_private, m.from)
@@ -412,6 +455,12 @@ private fun Conversation(
         ((it.outgoing && it.to == contact) || (!it.outgoing && it.from == contact && it.to == settings.fullCall)) }
         .sortedWith(compareBy<ChatMessage> { it.time }.thenBy { it.id })
     val replyContext = messages.firstOrNull { it.id == replyToId }
+    val retries by AprsRepository.retryAt.collectAsState()
+    var tick by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(retries.isNotEmpty()) {
+        while (retries.isNotEmpty()) { kotlinx.coroutines.delay(1000); tick = System.currentTimeMillis() }
+    }
+    val clock = maxOf(minuteClock(), tick)
     val state = rememberLazyListState()
     LaunchedEffect(list.size) { if (list.isNotEmpty()) state.animateScrollToItem(list.size - 1) }
     Column(Modifier.fillMaxSize()) {
@@ -424,13 +473,19 @@ private fun Conversation(
         }
         LazyColumn(Modifier.weight(1f).padding(horizontal = 12.dp), state = state, verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(list, key = { it.id }) { m ->
-                val actions = if (m.outgoing) listOf(BubbleAction.COPY)
+                val actions = if (m.outgoing) listOfNotNull(
+                    BubbleAction.RESEND.takeIf { canResend(m) && !settings.rxOnly },
+                    BubbleAction.CANCEL.takeIf { canCancel(m) }, BubbleAction.COPY)
                     else listOf(BubbleAction.REPLY, BubbleAction.DIRECT, BubbleAction.COPY)
-                Bubble(m, false, actions, onStation) { action ->
+                Bubble(m, false, actions, onStation, clock, retries[m.id], settings.msgRetries) { action ->
                     when (action) {
                         BubbleAction.REPLY -> onReplyChange(m.id)
                         BubbleAction.DIRECT -> onReplyChange(null)
                         BubbleAction.COPY -> clipboard.setText(AnnotatedString(m.text))
+                        BubbleAction.RESEND -> AprsService.send(context, AprsService.ACTION_MSG_RESEND,
+                            mapOf(AprsService.EXTRA_MESSAGE_ID to m.id.toString()))
+                        BubbleAction.CANCEL -> AprsService.send(context, AprsService.ACTION_MSG_CANCEL,
+                            mapOf(AprsService.EXTRA_MESSAGE_ID to m.id.toString()))
                         else -> {}
                     }
                 }
@@ -458,6 +513,7 @@ private fun GroupChat(
     var publicReplyId by rememberSaveable(defaultTo) { mutableStateOf<Long?>(null) }
     val publicReply = list.firstOrNull { it.id == publicReplyId }
     val isCq = defaultTo == "CQ"
+    val clock = minuteClock()
     LaunchedEffect(list.size) { if (list.isNotEmpty()) state.animateScrollToItem(list.size - 1) }
     Column(Modifier.fillMaxSize()) {
         if (list.isEmpty()) Empty(if (isCq) UiText.text(R.string.no_general) else UiText.text(R.string.no_bulletins))
@@ -470,7 +526,7 @@ private fun GroupChat(
                     // Bulletins: never answer to BLN0 silently; the safe reply is private to the sender.
                     else -> listOf(BubbleAction.REPLY_PRIVATE, BubbleAction.DIRECT, BubbleAction.COPY)
                 }
-                Bubble(m, true, actions, onStation) { action ->
+                Bubble(m, true, actions, onStation, clock) { action ->
                     when (action) {
                         BubbleAction.REPLY_PUBLIC -> publicReplyId = m.id
                         BubbleAction.REPLY_PRIVATE -> onPrivate(m.from, m.id)

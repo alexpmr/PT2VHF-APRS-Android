@@ -71,12 +71,38 @@ data class Settings(
     val retPrivateMax: Int = 5000,
     val retGeneralMax: Int = 5000,
     val retBulletinMax: Int = 5000,
+    // #44 TNC por áudio (AFSK 1200) e USB-OTG
+    val audioInput: String = "default", // default | unprocessed | wired | usb | bt
+    val audioOutput: String = "default", // default | wired | usb | bt
+    val audioVolume: Int = 70,
+    val audioTxDelayMs: Int = 300,
+    val audioVoxLeadMs: Int = 0,
+    val audioHighQuality: Boolean = true,
+    val usbBaud: Int = 9600,
+    // #6 fonte de posição e precisão do GPS
+    val positionSource: String = "gps", // gps | manual
+    val manualLat: Double? = null,
+    val manualLon: Double? = null,
+    val gpsPrecision: String = "high", // high | balanced | low
+    val useNetworkLocation: Boolean = true,
+    // #43 boletim de versão (somente APRS-IS)
+    val announceVersion: Boolean = true,
+    // #47 reenvio de mensagens
+    val msgRetries: Int = 5,
+    val msgRetryBaseSec: Int = 30,
+    // #49 economia de bateria: off | on | auto
+    val batterySaver: String = "off",
+    val batteryAutoPercent: Int = 20,
+    // #39 notificação de nova versão
+    val updateNotify: Boolean = true,
 ) {
     val fullCall: String get() = fullCallsign(callsign, ssid)
     val passcode: Int get() = aprsPasscode(callsign)
     val configured: Boolean get() = callsign.isNotBlank()
     /** Perfil Somente recepção: nenhum beacon, mensagem ou ACK sai por nenhum meio. */
     val rxOnly: Boolean get() = profile == PROFILE_RX
+    /** #6: posição fixa digitada ou escolhida no mapa, usada no lugar do GPS. */
+    val manualPosition: Boolean get() = positionSource == "manual" && manualLat != null && manualLon != null
 
     val retention: RetentionPolicy get() = RetentionPolicy(
         RetentionRule(retPrivateDays, retPrivateMax),
@@ -91,6 +117,10 @@ data class Settings(
         const val PROFILE_MOBILE = "mobile"
         const val PROFILE_PORTABLE = "portable"
         const val PROFILE_RX = "rx"
+        val TNC_TYPES = setOf("bt", "tcp", "audio", "usb")
+        val AUDIO_INPUTS = listOf("default", "unprocessed", "wired", "usb", "bt")
+        val AUDIO_OUTPUTS = listOf("default", "wired", "usb", "bt")
+        val USB_BAUDS = listOf(1200, 4800, 9600, 19200, 38400, 57600, 115200)
         val PROFILES = listOf(PROFILE_CUSTOM, PROFILE_BASE, PROFILE_MOBILE, PROFILE_PORTABLE, PROFILE_RX)
 
         fun load(context: Context): Settings {
@@ -143,7 +173,7 @@ data class Settings(
                 quietHours = b("quiet_hours", d.quietHours),
                 quietStart = i("quiet_start", d.quietStart).coerceIn(0, 23),
                 quietEnd = i("quiet_end", d.quietEnd).coerceIn(0, 23),
-                tncType = s("tnc_type", d.tncType).takeIf { it == "bt" || it == "tcp" } ?: d.tncType,
+                tncType = s("tnc_type", d.tncType).takeIf { it in TNC_TYPES } ?: d.tncType,
                 tncHost = s("tnc_host", d.tncHost),
                 tncPort = i("tnc_port", d.tncPort).coerceIn(1, 65535),
                 apiEnabled = b("api_enabled", d.apiEnabled),
@@ -155,6 +185,24 @@ data class Settings(
                 retPrivateMax = i("ret_private_max", d.retPrivateMax).coerceAtLeast(0),
                 retGeneralMax = i("ret_general_max", d.retGeneralMax).coerceAtLeast(0),
                 retBulletinMax = i("ret_bulletin_max", d.retBulletinMax).coerceAtLeast(0),
+                audioInput = s("audio_input", d.audioInput).takeIf { it in AUDIO_INPUTS } ?: d.audioInput,
+                audioOutput = s("audio_output", d.audioOutput).takeIf { it in AUDIO_OUTPUTS } ?: d.audioOutput,
+                audioVolume = i("audio_volume", d.audioVolume).coerceIn(5, 100),
+                audioTxDelayMs = i("audio_txdelay", d.audioTxDelayMs).coerceIn(50, 1500),
+                audioVoxLeadMs = i("audio_vox_lead", d.audioVoxLeadMs).coerceIn(0, 1500),
+                audioHighQuality = b("audio_hq", d.audioHighQuality),
+                usbBaud = i("usb_baud", d.usbBaud).takeIf { it in USB_BAUDS } ?: d.usbBaud,
+                positionSource = s("position_source", d.positionSource).takeIf { it == "gps" || it == "manual" } ?: d.positionSource,
+                manualLat = s("manual_lat", "").toDoubleOrNull()?.takeIf { it in -90.0..90.0 },
+                manualLon = s("manual_lon", "").toDoubleOrNull()?.takeIf { it in -180.0..180.0 },
+                gpsPrecision = s("gps_precision", d.gpsPrecision).takeIf { it in setOf("high", "balanced", "low") } ?: d.gpsPrecision,
+                useNetworkLocation = b("use_network_location", d.useNetworkLocation),
+                announceVersion = b("announce_version", d.announceVersion),
+                msgRetries = i("msg_retries", d.msgRetries).coerceIn(1, 10),
+                msgRetryBaseSec = i("msg_retry_base", d.msgRetryBaseSec).coerceIn(10, 300),
+                batterySaver = s("battery_saver", d.batterySaver).takeIf { it in setOf("off", "on", "auto") } ?: d.batterySaver,
+                batteryAutoPercent = i("battery_auto_percent", d.batteryAutoPercent).coerceIn(5, 80),
+                updateNotify = b("update_notify", d.updateNotify),
             )
         }
 
@@ -214,6 +262,24 @@ data class Settings(
                 .putInt("ret_private_max", s.retPrivateMax)
                 .putInt("ret_general_max", s.retGeneralMax)
                 .putInt("ret_bulletin_max", s.retBulletinMax)
+                .putString("audio_input", s.audioInput)
+                .putString("audio_output", s.audioOutput)
+                .putInt("audio_volume", s.audioVolume.coerceIn(5, 100))
+                .putInt("audio_txdelay", s.audioTxDelayMs.coerceIn(50, 1500))
+                .putInt("audio_vox_lead", s.audioVoxLeadMs.coerceIn(0, 1500))
+                .putBoolean("audio_hq", s.audioHighQuality)
+                .putInt("usb_baud", s.usbBaud)
+                .putString("position_source", s.positionSource)
+                .putString("manual_lat", s.manualLat?.toString() ?: "")
+                .putString("manual_lon", s.manualLon?.toString() ?: "")
+                .putString("gps_precision", s.gpsPrecision)
+                .putBoolean("use_network_location", s.useNetworkLocation)
+                .putBoolean("announce_version", s.announceVersion)
+                .putInt("msg_retries", s.msgRetries.coerceIn(1, 10))
+                .putInt("msg_retry_base", s.msgRetryBaseSec.coerceIn(10, 300))
+                .putString("battery_saver", s.batterySaver)
+                .putInt("battery_auto_percent", s.batteryAutoPercent.coerceIn(5, 80))
+                .putBoolean("update_notify", s.updateNotify)
                 .apply()
             // Each profile keeps its own transmission-related choices (#10).
             saveProfileSnapshot(context, s.profile, s)
@@ -247,6 +313,7 @@ data class Settings(
             .put("filter", s.filter).put("ambiguity", s.ambiguity).put("send_course_speed", s.sendCourseSpeed)
             .put("send_altitude", s.sendAltitude).put("tracker_auto_start", s.trackerAutoStart)
             .put("tnc_type", s.tncType).put("tnc_host", s.tncHost).put("tnc_port", s.tncPort)
+            .put("position_source", s.positionSource).put("gps_precision", s.gpsPrecision)
             .toString()
 
         private fun applySnapshot(base: Settings, json: String): Settings? = runCatching {
@@ -277,9 +344,13 @@ data class Settings(
                 sendCourseSpeed = o.optBoolean("send_course_speed", base.sendCourseSpeed),
                 sendAltitude = o.optBoolean("send_altitude", base.sendAltitude),
                 trackerAutoStart = o.optBoolean("tracker_auto_start", base.trackerAutoStart),
-                tncType = o.optString("tnc_type", base.tncType).takeIf { it == "bt" || it == "tcp" } ?: base.tncType,
+                tncType = o.optString("tnc_type", base.tncType).takeIf { it in TNC_TYPES } ?: base.tncType,
                 tncHost = o.optString("tnc_host", base.tncHost),
                 tncPort = o.optInt("tnc_port", base.tncPort).coerceIn(1, 65535),
+                positionSource = o.optString("position_source", base.positionSource)
+                    .takeIf { it == "gps" || it == "manual" } ?: base.positionSource,
+                gpsPrecision = o.optString("gps_precision", base.gpsPrecision)
+                    .takeIf { it in setOf("high", "balanced", "low") } ?: base.gpsPrecision,
             )
         }.getOrNull()
 

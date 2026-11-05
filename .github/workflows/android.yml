@@ -32,6 +32,7 @@ jobs:
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
+        continue-on-error: true # cota de armazenamento de artefatos pode estar cheia; o APK oficial vai na release
         with:
           name: debug-apk
           path: app/build/outputs/apk/debug/*.apk
@@ -75,6 +76,7 @@ jobs:
           sha256sum dist/*.apk > dist/SHA256SUMS.txt
           rm -f "$RUNNER_TEMP/qa.jks"
       - uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: android-signed-qa
           path: dist/
@@ -132,6 +134,7 @@ jobs:
 
       - name: Upload signed release APK for site synchronization
         uses: actions/upload-artifact@v4
+        continue-on-error: true # cota de armazenamento de artefatos pode estar cheia; o APK oficial vai na release
         with:
           name: signed-release-apk
           path: dist/*.apk

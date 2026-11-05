@@ -115,7 +115,7 @@ private fun RetentionRow(
 
 /** Seletor visual de símbolo (#6): tabelas primária e alternativa com os ícones embutidos no APK. */
 @Composable
-private fun SymbolPicker(current: String, onPick: (String) -> Unit, onDismiss: () -> Unit) {
+internal fun SymbolPicker(current: String, onPick: (String) -> Unit, onDismiss: () -> Unit) {
     val context = LocalContext.current
     var table by remember { mutableStateOf(if (current.firstOrNull() == '/') '/' else '\\') }
     val codes = remember { ('!'..'~').toList() }
@@ -207,6 +207,38 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
     var retGenMax by remember { mutableStateOf(current.retGeneralMax) }
     var retBlnMax by remember { mutableStateOf(current.retBulletinMax) }
     var retentionConfirmedFor by remember { mutableStateOf<Int?>(null) }
+    // 0.1.9: posição (#6), bateria (#49), boletim (#43), reenvio (#47), aviso de versão (#39)
+    var positionSource by remember { mutableStateOf(current.positionSource) }
+    var manualLat by remember { mutableStateOf(current.manualLat?.let { "%.5f".format(java.util.Locale.ROOT, it) } ?: "") }
+    var manualLon by remember { mutableStateOf(current.manualLon?.let { "%.5f".format(java.util.Locale.ROOT, it) } ?: "") }
+    var gpsPrecision by remember { mutableStateOf(current.gpsPrecision) }
+    var useNetwork by remember { mutableStateOf(current.useNetworkLocation) }
+    var batterySaver by remember { mutableStateOf(current.batterySaver) }
+    var batteryAuto by remember { mutableStateOf(current.batteryAutoPercent.toString()) }
+    var announce by remember { mutableStateOf(current.announceVersion) }
+    var retries by remember { mutableStateOf(current.msgRetries.toString()) }
+    var retryBase by remember { mutableStateOf(current.msgRetryBaseSec.toString()) }
+    var updateNotify by remember { mutableStateOf(current.updateNotify) }
+    var deleteMessagesOpen by remember { mutableStateOf(false) }
+    var backupIncludeMessages by remember { mutableStateOf(false) }
+    var backupMessage by remember { mutableStateOf<String?>(null) }
+    var importPreview by remember { mutableStateOf<com.pt2vhf.aprs.data.SettingsBackup.Preview?>(null) }
+    var importMessages by remember { mutableStateOf(true) }
+    val backupExporter = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri != null) backupMessage = runCatching {
+            val text = com.pt2vhf.aprs.data.SettingsBackup.export(context, backupIncludeMessages)
+            context.contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray()) }
+            UiText.text(R.string.backup_done)
+        }.getOrElse { UiText.text(R.string.backup_failed) }
+    }
+    val backupImporter = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) runCatching {
+            val text = context.contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) }.orEmpty()
+            importPreview = com.pt2vhf.aprs.data.SettingsBackup.preview(text)
+        }.onFailure { backupMessage = UiText.text(R.string.backup_invalid) }
+    }
     var expanded by remember { mutableStateOf(false) }
     var symbolPicker by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf("") }
@@ -229,6 +261,10 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
             symbol.length != 2 -> { error = UiText.text(R.string.invalid_symbol); return null }
             voiceFreq.isNotBlank() && formatVoiceFrequency(voiceFreq) == null -> {
                 error = UiText.text(R.string.invalid_frequency); return null
+            }
+            positionSource == "manual" && (manualLat.replace(',', '.').toDoubleOrNull()?.takeIf { it in -90.0..90.0 } == null ||
+                manualLon.replace(',', '.').toDoubleOrNull()?.takeIf { it in -180.0..180.0 } == null) -> {
+                error = UiText.text(R.string.manual_invalid); return null
             }
         }
         val pd = retPrivDays
@@ -257,7 +293,16 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
             retPrivateDays = pd, retGeneralDays = if (retSame) pd else retGenDays,
             retBulletinDays = if (retSame) pd else retBlnDays,
             retPrivateMax = retPrivMax, retGeneralMax = if (retSame) retPrivMax else retGenMax,
-            retBulletinMax = if (retSame) retPrivMax else retBlnMax)
+            retBulletinMax = if (retSame) retPrivMax else retBlnMax,
+            positionSource = positionSource,
+            manualLat = manualLat.replace(',', '.').toDoubleOrNull()?.takeIf { it in -90.0..90.0 },
+            manualLon = manualLon.replace(',', '.').toDoubleOrNull()?.takeIf { it in -180.0..180.0 },
+            gpsPrecision = gpsPrecision, useNetworkLocation = useNetwork,
+            batterySaver = batterySaver, batteryAutoPercent = (batteryAuto.toIntOrNull() ?: 20).coerceIn(5, 80),
+            announceVersion = announce,
+            msgRetries = (retries.toIntOrNull() ?: 5).coerceIn(1, 10),
+            msgRetryBaseSec = (retryBase.toIntOrNull() ?: 30).coerceIn(10, 300),
+            updateNotify = updateNotify)
     }
 
     /** Loads the chosen profile into the form; nothing is saved or transmitted until Save. */
@@ -275,7 +320,12 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
         courseSpeed = p.sendCourseSpeed; altitude = p.sendAltitude; autoTracker = p.trackerAutoStart
     }
 
-    val dayOptions = listOf(0, 7, 30, 90, 180, 365).map { it to (if (it == 0) UiText.text(R.string.retention_no_limit) else UiText.text(R.string.days_n, it)) }
+    // #42: "24 h" = 1 dia corrido, contado do horário de cada mensagem.
+    val dayOptions = listOf(1, 7, 30, 90, 180, 365, 0).map { it to when (it) {
+        0 -> UiText.text(R.string.retention_no_limit)
+        1 -> UiText.text(R.string.retention_24h)
+        else -> UiText.text(R.string.days_n, it)
+    } }
     val maxOptions = listOf(500, 1000, 5000, 0).map { it to (if (it == 0) UiText.text(R.string.retention_no_limit) else "%,d".format(it)) }
 
     AlertDialog(
@@ -368,6 +418,37 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
                     NumberField(UiText.text(R.string.smart_stopped_minutes), stoppedMin, { stoppedMin = it })
                 }
 
+                // ----- Posição (#6) -----
+                SectionTitle(UiText.text(R.string.position_section))
+                Choices(listOf("gps" to UiText.text(R.string.position_source_gps), "manual" to UiText.text(R.string.position_source_manual)),
+                    positionSource) { positionSource = it }
+                if (positionSource == "manual") {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        OutlinedTextField(manualLat, { manualLat = it.take(12) }, singleLine = true, modifier = Modifier.weight(1f),
+                            label = { Text(UiText.text(R.string.manual_lat)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                        OutlinedTextField(manualLon, { manualLon = it.take(12) }, singleLine = true, modifier = Modifier.weight(1f),
+                            label = { Text(UiText.text(R.string.manual_lon)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                    }
+                    val known = AprsRepository.status.value
+                    TextButton(enabled = known.lat != null && known.lon != null, onClick = {
+                        manualLat = "%.5f".format(java.util.Locale.ROOT, known.lat ?: 0.0)
+                        manualLon = "%.5f".format(java.util.Locale.ROOT, known.lon ?: 0.0)
+                    }) { Text(UiText.text(R.string.manual_use_last)) }
+                    Text(UiText.text(R.string.manual_map_hint), color = Pal.muted, fontSize = 12.sp)
+                } else {
+                    Text(UiText.text(R.string.gps_precision), fontSize = 13.sp)
+                    Choices(listOf("high" to UiText.text(R.string.gps_high), "balanced" to UiText.text(R.string.gps_balanced),
+                        "low" to UiText.text(R.string.gps_low)), gpsPrecision) { gpsPrecision = it }
+                    CheckRow(UiText.text(R.string.use_network_location), useNetwork) { useNetwork = it }
+                }
+
+                // ----- Economia de bateria (#49) -----
+                SectionTitle(UiText.text(R.string.battery_section))
+                Choices(listOf("off" to UiText.text(R.string.battery_off), "on" to UiText.text(R.string.battery_on),
+                    "auto" to UiText.text(R.string.battery_auto)), batterySaver) { batterySaver = it }
+                if (batterySaver == "auto") NumberField(UiText.text(R.string.battery_auto_percent), batteryAuto, { batteryAuto = it.take(2) })
+                Text(UiText.text(R.string.battery_notice), color = Pal.muted, fontSize = 12.sp)
+
                 // ----- Privacidade -----
                 SectionTitle(UiText.text(R.string.privacy_section))
                 Text(UiText.text(R.string.ambiguity_label), fontSize = 13.sp)
@@ -386,6 +467,7 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
                 // ----- Notificações e alertas (#6, #12) -----
                 SectionTitle(UiText.text(R.string.notifications_section))
                 CheckRow(UiText.text(R.string.notify_messages), notifyMsg) { notifyMsg = it }
+                CheckRow(UiText.text(R.string.update_notify), updateNotify) { updateNotify = it }
                 Text(UiText.text(R.string.alerts_favorites), fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 CheckRow(UiText.text(R.string.alert_opt_first), favFirst) { favFirst = it }
                 CheckRow(UiText.text(R.string.alert_opt_return), favReturn) { favReturn = it }
@@ -413,6 +495,12 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
                     RetentionRow(UiText.text(R.string.bulletins), retBlnDays, retBlnMax, dayOptions, maxOptions, { retBlnDays = it }, { retBlnMax = it })
                 }
                 Text(UiText.text(R.string.retention_notice), color = Pal.muted, fontSize = 12.sp)
+                // #47 reenvio e #43 boletim de versão
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    NumberField(UiText.text(R.string.msg_retries), retries, { retries = it.take(2) }, Modifier.weight(1f))
+                    NumberField(UiText.text(R.string.msg_retry_base), retryBase, { retryBase = it.take(3) }, Modifier.weight(1f))
+                }
+                CheckRow(UiText.text(R.string.announce_version), announce) { announce = it }
                 val preview = build(force = true)?.let { AprsRepository.retentionPreview(it.retention) } ?: 0
                 if (preview > 0) Text(UiText.text(R.string.retention_preview, preview), color = Pal.orange, fontSize = 12.sp)
 
@@ -435,15 +523,30 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
                     enabled = !clearBusy, modifier = Modifier.fillMaxWidth()) {
                     Text(UiText.text(R.string.clear_all_stations), color = Pal.orange)
                 }
-                OutlinedButton(onClick = { clearTarget = 2; clearResult = null },
+                OutlinedButton(onClick = { deleteMessagesOpen = true; clearResult = null },
                     enabled = !clearBusy, modifier = Modifier.fillMaxWidth()) {
-                    Text(UiText.text(R.string.clear_all_messages), color = Pal.orange)
+                    Text(UiText.text(R.string.msg_delete_title), color = Pal.orange)
                 }
                 clearResult?.let { Text(it, color = Pal.muted, fontSize = 13.sp) }
 
+                // ----- Backup (#50) -----
+                SectionTitle(UiText.text(R.string.backup_section))
+                CheckRow(UiText.text(R.string.backup_include_messages), backupIncludeMessages) { backupIncludeMessages = it }
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    OutlinedButton(onClick = { backupMessage = null; backupExporter.launch("pt2vhf-aprs-config.json") }) {
+                        Text(UiText.text(R.string.backup_export))
+                    }
+                    OutlinedButton(onClick = { backupMessage = null; backupImporter.launch(arrayOf("application/json", "text/plain", "*/*")) }) {
+                        Text(UiText.text(R.string.backup_import))
+                    }
+                }
+                Text(UiText.text(R.string.backup_passcode_note), color = Pal.muted, fontSize = 12.sp)
+                backupMessage?.let { Text(it, color = Pal.green, fontSize = 13.sp) }
+
                 // ----- Sobre (substitui o aviso de abertura, #38) -----
                 SectionTitle(UiText.text(R.string.about_section))
-                Text(UiText.text(R.string.current_installed_version, BuildConfig.VERSION_NAME), color = Pal.text, fontSize = 13.sp)
+                UpdateStatusSection()
+                OutlinedButton(onClick = { sendLog(context, build(force = true) ?: current) }) { Text(UiText.text(R.string.send_log)) }
                 Text("www.PT2VHF.com", color = Pal.accent, fontWeight = FontWeight.Bold,
                     textDecoration = TextDecoration.Underline,
                     modifier = Modifier.clickable { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(UpdateCheck.SITE))) })
@@ -468,6 +571,34 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
         dismissButton = { if (current.configured) TextButton(onClick = onDismiss) { Text(UiText.text(R.string.cancel)) } },
     )
     if (symbolPicker) SymbolPicker(symbol, onPick = { symbol = it; symbolPicker = false }, onDismiss = { symbolPicker = false })
+    if (deleteMessagesOpen) DeleteMessagesDialog(onDismiss = { deleteMessagesOpen = false }, onResult = { clearResult = it })
+    importPreview?.let { preview ->
+        AlertDialog(
+            onDismissRequest = { importPreview = null },
+            containerColor = Pal.bar,
+            title = { Text(UiText.text(R.string.backup_confirm_title)) },
+            text = {
+                Column {
+                    Text(UiText.text(R.string.backup_confirm_body, preview.callsign.ifBlank { "—" }, preview.keys,
+                        preview.appVersion.ifBlank { "?" }, preview.messages))
+                    if (preview.messages > 0) CheckRow(UiText.text(R.string.backup_import_messages), importMessages) { importMessages = it }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val count = runCatching { com.pt2vhf.aprs.data.SettingsBackup.apply(context, preview, importMessages) }
+                    importPreview = null
+                    if (count.isSuccess) {
+                        backupMessage = UiText.text(R.string.backup_import_done, count.getOrDefault(0))
+                        val loaded = Settings.load(context)
+                        // Reload the form from what was imported; Save still has to be tapped to apply to the service.
+                        onSave(loaded)
+                    } else backupMessage = UiText.text(R.string.backup_invalid)
+                }) { Text(UiText.text(R.string.backup_import)) }
+            },
+            dismissButton = { TextButton(onClick = { importPreview = null }) { Text(UiText.text(R.string.cancel)) } },
+        )
+    }
     clearTarget?.let { target ->
         AlertDialog(
             onDismissRequest = { if (!clearBusy) clearTarget = null },

@@ -155,3 +155,40 @@ Após cada resultado, reavaliar o item, corrigir erros se houver e atualizar os 
 **T49 — KISS TCP:** com Direwolf (ou outro TNC KISS em rede) na porta 8001: Rádio → KISS TCP → servidor/porta → Conectar; chip TNC verde, RX/TX contados, beacon por RF via Direwolf. Desligar o Direwolf: chip vermelho e reconexão automática ao voltar. Chip TNC desconecta/reconecta.
 
 **T18/T19/T21/T22/T26/T27** (já descritos acima) passam a valer para a 0.1.8: pressão longa, busca de indicativo, filtros de conversas, brilho do mapa, retenção (inclui migração do `messages.json` → `messages.db`, com backup `messages.json.migrated`) e caracteres.
+
+
+## Roteiros da 0.1.9
+
+**T50 — Posição fixa e precisão do GPS (#6):** Configurações → Posição → Posição fixa, digitar lat/lon decimais e salvar: chip GPS verde, beacon sai com a posição digitada e o GPS não liga. "Usar a última posição do GPS" preenche os campos. No mapa, segurar o dedo → "Definir minha posição fixa aqui". Voltar para GPS. Trocar a precisão (alta/equilibrada/baixo consumo) e ligar "localização pela rede": conferir fix em ambiente interno.
+
+**T51 — Aviso de nova versão (#39):** com versão mais nova no site: abrir o app mostra o aviso uma vez; "Mais tarde" some até reabrir; "Ignorar esta versão" não volta a mostrar; o botão ⬆ no topo reabre. Com o app fechado e o serviço ativo, em até 12 h chega uma notificação (só uma por versão). Sobre mostra a última verificação e o resultado; sem internet, "falha" e nova tentativa em 30 min.
+
+**T52 — Modem AFSK pelo áudio (#44, hardware):** ligar o áudio do rádio na entrada do celular (cabo, placa USB ou Bluetooth). Rádio → Áudio (AFSK) → permitir microfone → Salvar e iniciar. Barra de nível reage ao sinal; pacotes de estações locais aparecem no Logs/monitor como RF. Com TX autorizado: tom de teste aciona o VOX; ajustar volume, TX delay e tom de VOX até o beacon ser decodificado por outra estação/digipeater (conferir em aprs.fi). Testar decodificador leve e alta qualidade, e saída por fone com fio.
+
+**T53 — TNC USB-OTG (hardware):** plugar o TNC (Mobilinkd/NinoTNC/rádio com USB ou adaptador FTDI/CP210x) com cabo OTG. Rádio → USB-OTG → escolher baud → Conectar → aceitar a permissão: chip TNC verde, RX/TX contados. Desplugar: chip vermelho com "USB desconectado"; replugar reconecta. Adaptador CH340/PL2303 mostra "não suportado".
+
+**T54 — Aba Logs (#51):** aba depois de Tracker lista todos os pacotes (RX/TX, RF/APRS-IS) com hora e tipo. Filtrar por direção, meio, tipo e texto; pausar; tocar num pacote para ver detalhes, copiar, compartilhar e abrir a estação. Opções: retenção 24 h/7/30 dias, limite, exportar TXT e CSV, apagar. Reabrir o app mantém os pacotes.
+
+**T55 — Data e tempo decorrido (#40):** mensagens de hoje mostram data, hora e "há X h Y min"; de dias anteriores só data e hora; o tempo atualiza sozinho a cada minuto.
+
+**T56 — Apagar mensagens e retenção 24 h (#41, #42):** Mensagens → lixeira: as três opções mostram a contagem; cada uma pede confirmação e apaga só o tipo escolhido. Configurações → retenção com "24 h": mensagens com mais de um dia somem (pendentes de ACK ficam).
+
+**T57 — Boletim de versão (#43):** após instalar a versão, conectar ao APRS-IS: em ~5 s sai um boletim BLN0 "Usando PT2VHF APRS Android v0.1.9 - download www.PT2VHF.com" (ver em aprs.fi/monitor). Nunca sai por RF; não repete na mesma versão; desligando a opção, não sai.
+
+**T58 — Enviar log (#45):** Sobre → Enviar log abre o compartilhamento com diagnóstico anonimizado e sem passcode. Após um fechamento inesperado, ao reabrir aparece o aviso oferecendo o envio.
+
+**T59 — Widget (#46, hardware):** adicionar o widget na tela inicial: cores de APRS-IS/TNC/GPS acompanham o app; último beacon com hora; "Beacon agora" envia (respeitando Somente recepção); "Rastreador" liga/desliga; tocar no widget abre o app.
+
+**T60 — Reenvio no balão (#47):** enviar mensagem a estação que não responde: balão mostra "tentativa N/M" e contagem do próximo reenvio; "Cancelar retentativas" para e marca Cancelada; "Reenviar" recomeça. Mudar tentativas e 1º intervalo em Configurações e conferir.
+
+**T61 — Objetos e itens (#48):** segurar o dedo no mapa → Criar objeto aqui: nome, tipo, símbolo, frequência, comentário e repetição → Salvar e enviar. Conferir em aprs.fi o símbolo e o comentário. Editar move; Pausar para a repetição; Encerrar envia "killed" e o objeto some dos outros clientes.
+
+**T62 — Economia de bateria (#49, hardware):** modo "sempre": apagar a tela e conferir intervalos de beacon maiores e GPS menos preciso; acender volta ao normal. Modo automático abaixo de 20%: só ativa com a bateria abaixo do limite. Cartão Bateria mostra nível e consumo estimado após algum tempo fora da tomada.
+
+**T63 — Backup (#50):** exportar com e sem mensagens; abrir o arquivo e confirmar que não há passcode. Importar em outro aparelho (ou após reinstalar): prévia com indicativo, versão e quantidades; importar, conferir o formulário e Salvar.
+
+**T64 — Modo carro:** Tracker → Modo carro: velocidade grande, chips de conexão, próximo beacon, última mensagem; botões grandes de beacon e rastreador; ligar "ler mensagens em voz alta" e receber uma mensagem; voltar com o botão Sair ou Voltar.
+
+**T65 — Rotas:** Tracker → Rotas (GPX) → Importar um GPX com rota ou trilha: aparece em roxo no mapa e o painel mostra a distância restante e o afastamento da rota. Ocultar e apagar. Seguindo uma estação, aparece a linha tracejada direta até ela.
+
+**T66 — Idiomas:** trocar o idioma do app entre português, inglês, espanhol, francês e italiano e percorrer as telas novas (Logs, Rádio áudio/USB, objetos, modo carro, backup): nenhum texto em outro idioma ou cortado.

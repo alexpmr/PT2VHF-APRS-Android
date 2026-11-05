@@ -7,6 +7,10 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.BroadcastReceiver
+import android.content.IntentFilter
+import android.os.BatteryManager
+import android.os.PowerManager
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.content.Intent
@@ -46,6 +50,9 @@ import com.pt2vhf.aprs.data.Medium
 import com.pt2vhf.aprs.data.OutboundSendResult
 import com.pt2vhf.aprs.data.OutboundBeaconResult
 import com.pt2vhf.aprs.data.Settings
+import com.pt2vhf.aprs.data.UpdateManager
+import com.pt2vhf.aprs.data.MyObject
+import com.pt2vhf.aprs.core.objectInfo
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.abs
@@ -55,16 +62,20 @@ class AprsService : Service(), LocationListener {
     private lateinit var settings: Settings
     private val handler = Handler(Looper.getMainLooper())
     private var smart = SmartBeaconing()
-    private fun configuredSmartBeaconing(s: Settings): SmartBeaconing = SmartBeaconing(
-        slowSpeed = s.smartSlowSpeedKmh.toDouble(),
-        slowRateSec = s.smartSlowIntervalSec,
-        fastSpeed = maxOf(s.smartFastSpeedKmh, s.smartSlowSpeedKmh + 1).toDouble(),
-        fastRateSec = s.smartFastIntervalSec,
-        minTurnAngle = s.smartMinTurnAngle.toDouble(),
-        turnSlope = s.smartTurnSlope.toDouble(),
-        minTurnTimeSec = s.smartMinTurnTimeSec,
-        stoppedRateSec = s.stoppedBeaconMinutes * 60,
-    )
+    private fun configuredSmartBeaconing(s: Settings): SmartBeaconing {
+        // #49: com a economia ativa, intervalos mínimos maiores (≥ 2 min rápido, ≥ 30 s entre curvas).
+        val saver = ::settings.isInitialized && batterySaverActive()
+        return SmartBeaconing(
+            slowSpeed = s.smartSlowSpeedKmh.toDouble(),
+            slowRateSec = s.smartSlowIntervalSec,
+            fastSpeed = maxOf(s.smartFastSpeedKmh, s.smartSlowSpeedKmh + 1).toDouble(),
+            fastRateSec = if (saver) maxOf(120, s.smartFastIntervalSec) else s.smartFastIntervalSec,
+            minTurnAngle = s.smartMinTurnAngle.toDouble(),
+            turnSlope = s.smartTurnSlope.toDouble(),
+            minTurnTimeSec = if (saver) maxOf(30, s.smartMinTurnTimeSec) else s.smartMinTurnTimeSec,
+            stoppedRateSec = s.stoppedBeaconMinutes * 60,
+        )
+    }
     @Volatile private var lastBeaconAt = 0L
     private val beaconPending = AtomicBoolean(false)
     // Android invokes onStartCommand and LocationListener on the main thread. Never write TCP there.
@@ -100,6 +111,7 @@ class AprsService : Service(), LocationListener {
             if (verified) {
                 alertsQuietUntil = System.currentTimeMillis() + 60_000L // no burst after (re)connecting
                 updateAprsFilterForKnownPosition()
+                handler.postDelayed({ announceVersionIfNeeded() }, 5_000L)
             }
             refreshNotification()
         },
@@ -118,9 +130,32 @@ class AprsService : Service(), LocationListener {
     }
     private val tnc = BluetoothTnc(onFrame = tncFrame, onState = tncState)
     private val tcpTnc = KissTcpTnc(onFrame = tncFrame, onState = tncState)
-    private fun tncConnected(): Boolean = tnc.connected || tcpTnc.connected
-    private fun tncSend(line: String): Boolean =
-        if (tcpTnc.connected) tcpTnc.send(line) else tnc.send(line)
+    // #44 modem AFSK pelo áudio e TNC KISS por USB-OTG (herdado da 0.1.0).
+    private val audioTnc by lazy {
+        AudioTnc(this, onFrame = tncFrame, onState = tncState, onLevel = { level, tx ->
+            AprsRepository.updateStatus { it.copy(audioLevel = level, audioTransmitting = tx) }
+        })
+    }
+    private val usbTnc by lazy { UsbSerialTnc(this, onFrame = tncFrame, onState = tncState) }
+    private var audioStarted = false
+    private var usbStarted = false
+    private fun tncConnected(): Boolean = tnc.connected || tcpTnc.connected ||
+        (audioStarted && audioTnc.connected) || (usbStarted && usbTnc.connected)
+    private fun tncSend(line: String): Boolean = when {
+        audioStarted && audioTnc.connected -> audioTnc.send(line)
+        usbStarted && usbTnc.connected -> usbTnc.send(line)
+        tcpTnc.connected -> tcpTnc.send(line)
+        else -> tnc.send(line)
+    }
+    private fun audioConfig(s: Settings) = AudioConfig(s.audioInput, s.audioOutput, s.audioVolume, s.audioTxDelayMs,
+        s.audioVoxLeadMs, s.audioHighQuality)
+    private fun disconnectAllTnc() {
+        tnc.disconnect()
+        tcpTnc.disconnect()
+        if (audioStarted) { audioTnc.stop(); audioStarted = false }
+        if (usbStarted) { usbTnc.disconnect(); usbStarted = false }
+        AprsRepository.updateStatus { it.copy(tncConnected = false, tncName = "", audioLevel = 0.0, audioTransmitting = false) }
+    }
     @Volatile private var alertsQuietUntil = System.currentTimeMillis() + 60_000L
     private val alertCooldown = HashMap<String, Long>()
 
@@ -144,9 +179,11 @@ class AprsService : Service(), LocationListener {
         createChannels()
         startForegroundCompat()
         running = true
+        applyManualPosition()
         connectAprsIs()
         startLocation()
         watchNetwork()
+        watchScreen()
         if (!Settings.flag(this, "tnc_manual_pause")) connectTnc()
         handler.post(ticker)
     }
@@ -154,10 +191,22 @@ class AprsService : Service(), LocationListener {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_RELOAD -> {
-                val previousTnc = Triple(settings.tncType, settings.tncHost, settings.tncPort)
+                val previousTnc = listOf(settings.tncType, settings.tncHost, settings.tncPort, audioConfig(settings), settings.usbBaud)
+                val previousLocation = listOf(settings.positionSource, settings.manualLat, settings.manualLon,
+                    settings.gpsPrecision, settings.useNetworkLocation, settings.batterySaver, settings.batteryAutoPercent)
                 settings = Settings.load(this)
-                if (previousTnc != Triple(settings.tncType, settings.tncHost, settings.tncPort) &&
+                AprsRepository.retentionPolicy = settings.retention
+                // Audio needs the microphone foreground-service type; refresh types while the UI is visible.
+                startForegroundCompat()
+                if (previousTnc != listOf(settings.tncType, settings.tncHost, settings.tncPort, audioConfig(settings), settings.usbBaud) &&
                     !Settings.flag(this, "tnc_manual_pause")) connectTnc()
+                else if (!tncConnected() && !Settings.flag(this, "tnc_manual_pause") &&
+                    (settings.tncType == "audio" || settings.tncType == "usb")) connectTnc()
+                if (previousLocation != listOf(settings.positionSource, settings.manualLat, settings.manualLon,
+                        settings.gpsPrecision, settings.useNetworkLocation, settings.batterySaver, settings.batteryAutoPercent)) {
+                    applyManualPosition()
+                    restartLocation()
+                }
                 smart = configuredSmartBeaconing(settings)
                 restoreTrackerPreference()
                 if (settings.connectAprsIs && !Settings.flag(this, "aprs_manual_pause")) connectAprsIs() else {
@@ -178,6 +227,41 @@ class AprsService : Service(), LocationListener {
                 }
             }
             ACTION_BEACON -> queueBeacon(intent.getStringExtra(EXTRA_REQUEST_ID))
+            ACTION_WIDGET_TRACKER -> {
+                val on = AprsRepository.status.value.trackerOn
+                if (on) {
+                    Settings.setFlag(this, "tracker_explicit_off", true)
+                    AprsRepository.updateStatus { it.copy(trackerOn = false, nextBeaconSec = null) }
+                } else if (settings.configured && !settings.rxOnly && (settings.txViaInternet || settings.txViaRf)) {
+                    Settings.setFlag(this, "tracker_explicit_off", false)
+                    AprsRepository.updateStatus { it.copy(trackerOn = true) }
+                    checkTracker()
+                }
+            }
+            ACTION_AUDIO_TEST -> if (audioStarted && !settings.rxOnly && settings.txViaRf)
+                txWorker.execute { runCatching { audioTnc.testTone() } }
+            ACTION_MSG_CANCEL -> intent.getStringExtra(EXTRA_MESSAGE_ID)?.toLongOrNull()?.let { id ->
+                AprsRepository.setRetry(id, 0, null)
+                AprsRepository.setStatus(id, "Cancelada")
+            }
+            ACTION_MSG_RESEND -> intent.getStringExtra(EXTRA_MESSAGE_ID)?.toLongOrNull()?.let { id ->
+                val local = AprsRepository.message(id)
+                if (local != null && local.outgoing && !settings.rxOnly) {
+                    AprsRepository.setStatus(id, "Enviando")
+                    txWorker.execute { runCatching { sendWithRetry(local, local.to, local.text, local.msgId, 0) } }
+                }
+            }
+            ACTION_OBJECT_SEND -> intent.getStringExtra(EXTRA_OBJECT_ID)?.toLongOrNull()?.let { id ->
+                AprsRepository.myObjects.value.firstOrNull { it.id == id }?.let { obj -> txWorker.execute { sendObject(obj, true) } }
+            }
+            ACTION_OBJECT_KILL -> intent.getStringExtra(EXTRA_OBJECT_ID)?.toLongOrNull()?.let { id ->
+                AprsRepository.myObjects.value.firstOrNull { it.id == id }?.let { obj ->
+                    txWorker.execute {
+                        sendObject(obj, false)
+                        AprsRepository.removeObject(obj.id)
+                    }
+                }
+            }
             ACTION_API_BEACON -> if (settings.apiEnabled && settings.apiAllowBeacon) queueBeacon()
             ACTION_API_STATUS -> if (settings.apiEnabled) broadcastStatus()
             ACTION_TCP_CONNECT -> {
@@ -213,9 +297,7 @@ class AprsService : Service(), LocationListener {
             }
             ACTION_BT_PAUSE -> {
                 Settings.setFlag(this, "tnc_manual_pause", true)
-                tnc.disconnect()
-                tcpTnc.disconnect()
-                AprsRepository.updateStatus { it.copy(tncConnected = false, tncName = "") }
+                disconnectAllTnc()
             }
             ACTION_BT_RESUME -> {
                 Settings.setFlag(this, "tnc_manual_pause", false)
@@ -223,9 +305,8 @@ class AprsService : Service(), LocationListener {
             }
             ACTION_BT_DISCONNECT -> {
                 if (settings.tncType == "bt") { settings = settings.copy(btAddress = ""); Settings.save(this, settings) }
-                tnc.disconnect()
-                tcpTnc.disconnect()
-                AprsRepository.updateStatus { it.copy(tncConnected = false, tncName = "") }
+                else Settings.setFlag(this, "tnc_manual_pause", true)
+                disconnectAllTnc()
             }
             ACTION_STOP -> {
                 Settings.setFlag(this, "tracker_explicit_off", true)
@@ -243,10 +324,14 @@ class AprsService : Service(), LocationListener {
         aprsIs.stop()
         tnc.disconnect()
         tcpTnc.disconnect()
+        if (audioStarted) audioTnc.stop()
+        if (usbStarted) usbTnc.release()
+        screenReceiver?.let { runCatching { unregisterReceiver(it) } }
         running = false
         runCatching { (getSystemService(LOCATION_SERVICE) as LocationManager).removeUpdates(this) }
         networkCallback?.let { runCatching { getSystemService(ConnectivityManager::class.java).unregisterNetworkCallback(it) } }
         AprsRepository.updateStatus { it.copy(aprsIsConnected = false, aprsIsVerified = false, tncConnected = false, trackerOn = false) }
+        runCatching { StatusWidget.refresh(this) }
         super.onDestroy()
     }
 
@@ -263,6 +348,34 @@ class AprsService : Service(), LocationListener {
         if (!txWorker.isShutdown) txWorker.execute { aprsIs.updateFilter(filter) }
     }
 
+    /**
+     * #43: um boletim por versão, só pelo APRS-IS verificado (nunca RF), no idioma atual, com até 67 caracteres.
+     * Só marca como anunciado depois da escrita bem-sucedida no socket.
+     */
+    private fun announceVersionIfNeeded() {
+        if (!::settings.isInitialized || !settings.announceVersion || !settings.configured || settings.rxOnly ||
+            !settings.txViaInternet) return
+        val version = com.pt2vhf.aprs.BuildConfig.VERSION_NAME
+        if (Settings.readOption(this, "announced_version", "") == version) return
+        if (txWorker.isShutdown) return
+        txWorker.execute {
+            if (!AprsRepository.status.value.aprsIsVerified) return@execute
+            if (Settings.readOption(this, "announced_version", "") == version) return@execute
+            val text = UiText.text(R.string.announce_bulletin, version).take(67)
+            val info = messageInfo(ANNOUNCE_DEST, text, null)
+            val line = "${settings.fullCall}>$TOCALL,TCPIP*:$info"
+            if (aprsIs.send(line)) {
+                Settings.saveOption(this, "announced_version", version)
+                AprsRepository.updateStatus { it.copy(aprsTx = it.aprsTx + 1) }
+                AprsRepository.logPacket("TX", Medium.INTERNET, line)
+                AprsRepository.monitorLine("TX APRS-IS $line")
+                AprsRepository.add(ChatMessage(AprsRepository.newId(), settings.fullCall, ANNOUNCE_DEST, text,
+                    System.currentTimeMillis(), true, Medium.INTERNET, "APRS-IS", null, "Enviada · APRS-IS",
+                    AprsMessage.Kind.BULLETIN))
+            }
+        }
+    }
+
     private fun connectAprsIs(force: Boolean = false) {
         if (!settings.configured || (!force && (!settings.connectAprsIs || Settings.flag(this, "aprs_manual_pause")))) return
         val s = AprsRepository.status.value
@@ -272,12 +385,12 @@ class AprsService : Service(), LocationListener {
 
     /** Connects the configured TNC (Bluetooth KISS or KISS TCP); does nothing if none is set. */
     private fun connectTnc() {
-        if (settings.tncType == "tcp") {
-            tnc.disconnect()
-            if (settings.tncHost.isNotBlank()) tcpTnc.connect(settings.tncHost.trim(), settings.tncPort)
-        } else {
-            tcpTnc.disconnect()
-            if (settings.btAddress.isNotEmpty()) connectBluetooth(settings.btAddress)
+        disconnectAllTnc()
+        when (settings.tncType) {
+            "tcp" -> if (settings.tncHost.isNotBlank()) tcpTnc.connect(settings.tncHost.trim(), settings.tncPort)
+            "audio" -> { audioStarted = true; audioTnc.start(audioConfig(settings)) }
+            "usb" -> { usbStarted = true; usbTnc.connect(settings.usbBaud) }
+            else -> if (settings.btAddress.isNotEmpty()) connectBluetooth(settings.btAddress)
         }
     }
 
@@ -309,15 +422,88 @@ class AprsService : Service(), LocationListener {
         networkCallback = cb
     }
 
+    /**
+     * #6 precisão do GPS e #49 economia de bateria. Posição fixa (manual) não liga o GPS.
+     * Alta: GPS a cada 2 s; equilibrada: GPS 10 s/20 m; baixa: só rede (ou GPS a cada 60 s sem rede).
+     * Com a economia ativa (tela desligada), o GPS passa a 30 s / 50 m.
+     */
     @SuppressLint("MissingPermission")
     private fun startLocation() {
-        if (!granted(Manifest.permission.ACCESS_FINE_LOCATION)) return
+        if (settings.manualPosition) return
+        if (!granted(Manifest.permission.ACCESS_FINE_LOCATION) && !granted(Manifest.permission.ACCESS_COARSE_LOCATION)) return
         val lm = getSystemService(LOCATION_SERVICE) as LocationManager
-        runCatching { lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2000L, 0f, this, Looper.getMainLooper()) }
-        runCatching { lm.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 10000L, 0f, this, Looper.getMainLooper()) }
+        val saver = batterySaverActive()
+        val (gpsMs, gpsMeters) = when {
+            saver -> 30_000L to 50f
+            settings.gpsPrecision == "balanced" -> 10_000L to 20f
+            settings.gpsPrecision == "low" -> 60_000L to 100f
+            else -> 2_000L to 0f
+        }
+        val useGps = granted(Manifest.permission.ACCESS_FINE_LOCATION) &&
+            (settings.gpsPrecision != "low" || !settings.useNetworkLocation)
+        if (useGps) runCatching { lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, gpsMs, gpsMeters, this, Looper.getMainLooper()) }
+        if (settings.useNetworkLocation)
+            runCatching { lm.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, maxOf(10_000L, gpsMs), 0f, this, Looper.getMainLooper()) }
+        AprsRepository.updateStatus { it.copy(batterySaverActive = saver) }
+    }
+
+    private fun restartLocation() {
+        runCatching { (getSystemService(LOCATION_SERVICE) as LocationManager).removeUpdates(this) }
+        lastLocation = null
+        startLocation()
+    }
+
+    /** #6: posição fixa digitada ou escolhida no mapa entra no lugar do GPS. */
+    private fun applyManualPosition() {
+        if (settings.manualPosition) {
+            AprsRepository.updateStatus {
+                it.copy(lat = settings.manualLat, lon = settings.manualLon, speedKmh = 0.0, course = null,
+                    gpsAccuracyM = null, manualPosition = true)
+            }
+        } else AprsRepository.updateStatus { it.copy(manualPosition = false) }
+    }
+
+    // ---------- #49 economia de bateria ----------
+
+    private var screenReceiver: BroadcastReceiver? = null
+    @Volatile private var screenOn = true
+    private var lastBatterySample = 0L
+
+    private fun batteryPercent(): Int? = runCatching {
+        getSystemService(BatteryManager::class.java)?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+    }.getOrNull()?.takeIf { it in 0..100 }
+
+    private fun batterySaverActive(): Boolean {
+        val wanted = when (settings.batterySaver) {
+            "on" -> true
+            "auto" -> (batteryPercent() ?: 100) <= settings.batteryAutoPercent
+            else -> false
+        }
+        return wanted && !screenOn
+    }
+
+    private fun watchScreen() {
+        screenOn = getSystemService(PowerManager::class.java)?.isInteractive != false
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                val now = intent.action == Intent.ACTION_SCREEN_ON
+                if (now == screenOn) return
+                screenOn = now
+                if (settings.batterySaver != "off") {
+                    restartLocation()
+                    smart = configuredSmartBeaconing(settings)
+                }
+            }
+        }
+        runCatching {
+            ContextCompat.registerReceiver(this, receiver,
+                IntentFilter(Intent.ACTION_SCREEN_ON).apply { addAction(Intent.ACTION_SCREEN_OFF) }, ContextCompat.RECEIVER_NOT_EXPORTED)
+            screenReceiver = receiver
+        }
     }
 
     override fun onLocationChanged(location: Location) {
+        if (settings.manualPosition) return
         val previous = lastLocation
         if (previous != null && previous.provider == LocationManager.GPS_PROVIDER &&
             location.provider != LocationManager.GPS_PROVIDER && location.time - previous.time < 30_000) return
@@ -351,21 +537,67 @@ class AprsService : Service(), LocationListener {
         val course = s.course
         val change = if (course != null && lastBeaconCourse != null)
             ((course - lastBeaconCourse!! + 540) % 360 - 180).toDouble() else 0.0
-        val interval = settings.periodicIntervalSec.toLong()
-        val due = if (settings.beaconMode == "periodic") since >= interval
+        val interval = (if (batterySaverActive()) maxOf(300, settings.periodicIntervalSec) else settings.periodicIntervalSec).toLong()
+        // A fixed position has no speed/course: SmartBeaconing falls back to the periodic interval.
+        val periodic = settings.beaconMode == "periodic" || settings.manualPosition
+        val due = if (periodic) since >= interval
             else smart.shouldBeacon(since, s.speedKmh, abs(change))
         if (due) queueBeacon()
         AprsRepository.updateStatus {
-            it.copy(nextBeaconSec = if (settings.beaconMode == "periodic")
+            it.copy(nextBeaconSec = if (periodic)
                 (interval - (System.currentTimeMillis() - lastBeaconAt) / 1000).coerceAtLeast(0)
                 else smart.nextBeaconSeconds((System.currentTimeMillis() - lastBeaconAt) / 1000, it.speedKmh))
         }
     }
 
+    private var lastHourly = System.currentTimeMillis()
+    private var lastWidgetMinute = 0L
+
+    /** Tarefas periódicas da 0.1.9: retenção de hora em hora, aviso de versão, bateria, objetos e widget. */
+    private fun periodicJobs() {
+        val now = System.currentTimeMillis()
+        if (now - lastHourly >= 3_600_000L) {
+            lastHourly = now
+            runCatching { AprsRepository.applyRetention(settings.retention) } // #42: "24 h" precisa rodar ao menos de hora em hora
+            runCatching { AprsRepository.applyLogRetention() }
+        }
+        runCatching { UpdateManager.maybeCheck(this, UpdateManager.PERIODIC_MS, fromBackground = true) } // #39
+        if (now - lastBatterySample >= 5 * 60_000L) {
+            lastBatterySample = now
+            batteryPercent()?.let { pct ->
+                AprsRepository.addBatterySample(pct, now)
+                val saver = batterySaverActive()
+                val before = AprsRepository.status.value.batterySaverActive
+                AprsRepository.updateStatus { it.copy(batteryPercent = pct, batterySaverActive = saver) }
+                if (saver != before && settings.batterySaver == "auto") { restartLocation(); smart = configuredSmartBeaconing(settings) }
+            }
+        }
+        // #48: repetição periódica dos meus objetos ativos.
+        if (!settings.rxOnly) for (obj in AprsRepository.myObjects.value) {
+            if (!obj.active) continue
+            val due = if (obj.intervalMin <= 0) obj.lastSent == 0L else now - obj.lastSent >= obj.intervalMin * 60_000L
+            if (due) {
+                AprsRepository.markObjectSent(obj.id, now) // avoid queueing twice before the TX finishes
+                txWorker.execute { sendObject(obj, true) }
+            }
+        }
+        if (now / 60_000L != lastWidgetMinute) { lastWidgetMinute = now / 60_000L; runCatching { StatusWidget.refresh(this) } }
+    }
+
+    /** #48: objeto/item pelo(s) meio(s) autorizado(s); [alive] false envia o encerramento ("killed"). */
+    private fun sendObject(obj: MyObject, alive: Boolean): Boolean {
+        if (!settings.configured || settings.rxOnly) return false
+        val info = objectInfo(obj.name, alive, obj.lat, obj.lon, obj.symbolTable, obj.symbol, obj.comment, obj.item)
+        val ok = transmit(info) != null
+        if (ok && alive) AprsRepository.markObjectSent(obj.id, System.currentTimeMillis())
+        return ok
+    }
+
     private val ticker = object : Runnable {
         override fun run() {
+            runCatching { periodicJobs() }
             AprsRepository.updateStatus { state ->
-                if (state.gpsAccuracyM != null && state.gpsFixTimeMs > 0 &&
+                if (!state.manualPosition && state.gpsAccuracyM != null && state.gpsFixTimeMs > 0 &&
                     System.currentTimeMillis() - state.gpsFixTimeMs > 120_000L) {
                     AprsRepository.logConnection("GPS", "fix lost (> 2 min without location)")
                     state.copy(gpsAccuracyM = null)
@@ -399,7 +631,7 @@ class AprsService : Service(), LocationListener {
         val s = AprsRepository.status.value
         val lat = s.lat ?: return false
         val lon = s.lon ?: return false
-        val moving = settings.sendCourseSpeed && s.speedKmh >= 5.0
+        val moving = settings.sendCourseSpeed && !s.manualPosition && s.speedKmh >= 5.0
         val comment = composeBeaconComment(settings.comment, formatVoiceFrequency(settings.voiceFrequency),
             if (settings.sendAltitude) formatAltitude(s.altitudeM) else null)
         val info = positionInfo(lat, lon, settings.symbolTable, settings.symbol, comment,
@@ -407,7 +639,8 @@ class AprsService : Service(), LocationListener {
         if (transmit(info) == null) return false
         lastBeaconAt = System.currentTimeMillis()
         lastBeaconCourse = s.course
-        AprsRepository.updateStatus { it.copy(beaconsSent = it.beaconsSent + 1) }
+        AprsRepository.updateStatus { it.copy(beaconsSent = it.beaconsSent + 1, lastBeaconAt = lastBeaconAt) }
+        runCatching { StatusWidget.refresh(this) }
         return true
     }
 
@@ -422,13 +655,19 @@ class AprsService : Service(), LocationListener {
         if (settings.txViaRf && tncConnected()) {
             val path = settings.rfPath.split(',').map { it.trim() }.filter { it.isNotEmpty() }
             val line = "$call>$TOCALL" + (if (path.isNotEmpty()) "," + path.joinToString(",") else "") + ":" + info
-            if (tncSend(line)) { used = Medium.RF; AprsRepository.updateStatus { it.copy(tncTx = it.tncTx + 1) } }
+            if (tncSend(line)) {
+                used = Medium.RF
+                AprsRepository.updateStatus { it.copy(tncTx = it.tncTx + 1) }
+                AprsRepository.logPacket("TX", Medium.RF, line)
+            }
         }
         val status = AprsRepository.status.value
         if (settings.txViaInternet && status.aprsIsVerified) {
-            if (aprsIs.send("$call>$TOCALL,TCPIP*:$info")) {
+            val line = "$call>$TOCALL,TCPIP*:$info"
+            if (aprsIs.send(line)) {
                 used = used ?: Medium.INTERNET
                 AprsRepository.updateStatus { it.copy(aprsTx = it.aprsTx + 1) }
+                AprsRepository.logPacket("TX", Medium.INTERNET, line)
             }
         }
         AprsRepository.monitorLine("TX ${used?.label ?: UiText.text(R.string.not_sent)} $call>$TOCALL:$info")
@@ -455,21 +694,37 @@ class AprsService : Service(), LocationListener {
     }
 
     /** true means written to at least one authorized transport, not remotely delivered. */
+    /** #47: tentativas e intervalo base configuráveis (padrão 5 / 30 s × n); cancelar interrompe os reenvios. */
     private fun sendWithRetry(local: ChatMessage, dest: String, text: String, msgId: String?, attempt: Int): Boolean {
-        if (!AprsRepository.containsMessage(local.id) || AprsRepository.isAcked(local.id)) return true
+        if (!AprsRepository.containsMessage(local.id) || AprsRepository.isAcked(local.id)) {
+            AprsRepository.setRetry(local.id, 0, null)
+            return true
+        }
+        val retries = settings.msgRetries.coerceIn(1, 10)
         val medium = transmit(messageInfo(dest, text, msgId))
         when {
-            medium == null -> AprsRepository.setStatus(local.id, "Sem conexão para enviar")
+            medium == null -> { AprsRepository.setRetry(local.id, 0, null); AprsRepository.setStatus(local.id, "Sem conexão para enviar") }
             msgId == null -> AprsRepository.setStatus(local.id, "Enviada · ${medium.label}")
-            attempt >= 4 -> AprsRepository.setStatus(local.id, "Sem ACK após 5 tentativas")
+            attempt >= retries - 1 -> {
+                AprsRepository.setRetry(local.id, 0, null)
+                // Wait one more interval for a late ACK before declaring failure.
+                val delay = settings.msgRetryBaseSec * 1000L * (attempt + 1)
+                AprsRepository.setStatus(local.id, "Aguardando ACK (${attempt + 1}ª tentativa)")
+                handler.postDelayed({
+                    if (AprsRepository.containsMessage(local.id) && !AprsRepository.isAcked(local.id))
+                        AprsRepository.setStatus(local.id, "Sem ACK após $retries tentativas")
+                }, delay)
+            }
             else -> {
                 AprsRepository.setStatus(local.id, if (attempt == 0) "Aguardando ACK · ${medium.label}"
                     else "Aguardando ACK (${attempt + 1}ª tentativa)")
+                val delay = settings.msgRetryBaseSec * 1000L * (attempt + 1)
+                AprsRepository.setRetry(local.id, attempt + 1, System.currentTimeMillis() + delay)
                 handler.postDelayed({
                     if (!txWorker.isShutdown) txWorker.execute {
                         sendWithRetry(local, dest, text, msgId, attempt + 1)
                     }
-                }, 30_000L * (attempt + 1))
+                }, delay)
             }
         }
         return medium != null
@@ -494,6 +749,7 @@ class AprsService : Service(), LocationListener {
     }
 
     private fun handleLine(line: String, medium: Medium) {
+        AprsRepository.logPacket("RX", medium, line)
         val packet = AprsPacket.parse(line) ?: return
         if (medium == Medium.INTERNET)
             AprsRepository.updateStatus { it.copy(aprsRx = it.aprsRx + 1) }
@@ -508,9 +764,11 @@ class AprsService : Service(), LocationListener {
         forUs.msgId?.takeIf { !settings.rxOnly }?.let { id ->
             val info = ackInfo(forUs.from, id)
             if (medium == Medium.RF && tncConnected()) {
-                tncSend("${settings.fullCall}>$TOCALL:${info}")
+                val ack = "${settings.fullCall}>$TOCALL:${info}"
+                if (tncSend(ack)) AprsRepository.logPacket("TX", Medium.RF, ack)
             } else if (AprsRepository.status.value.aprsIsVerified) {
-                aprsIs.send("${settings.fullCall}>$TOCALL,TCPIP*:$info")
+                val ack = "${settings.fullCall}>$TOCALL,TCPIP*:$info"
+                if (aprsIs.send(ack)) AprsRepository.logPacket("TX", Medium.INTERNET, ack)
             }
         }
         if (settings.notifyMessages) notifyMessage(forUs)
@@ -632,6 +890,7 @@ class AprsService : Service(), LocationListener {
     }
 
     private fun refreshNotification() {
+        runCatching { StatusWidget.refresh(this) }
         if (!canNotify()) return
         runCatching { getSystemService(NotificationManager::class.java).notify(NOTIF_SERVICE, buildNotification()) }
     }
@@ -657,8 +916,16 @@ class AprsService : Service(), LocationListener {
             if (Build.VERSION.SDK_INT >= 34) types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
             if (Build.VERSION.SDK_INT >= 31 && granted(Manifest.permission.BLUETOOTH_CONNECT))
                 types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
+            if (Build.VERSION.SDK_INT >= 30 && ::settings.isInitialized && settings.tncType == "audio" &&
+                granted(Manifest.permission.RECORD_AUDIO))
+                types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
         }
-        ServiceCompat.startForeground(this, NOTIF_SERVICE, buildNotification(), types)
+        // Android 14 only allows the microphone type while the app is visible; fall back without it.
+        val ok = runCatching { ServiceCompat.startForeground(this, NOTIF_SERVICE, buildNotification(), types) }.isSuccess
+        if (!ok) runCatching {
+            ServiceCompat.startForeground(this, NOTIF_SERVICE, buildNotification(),
+                types and ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE.inv())
+        }
     }
 
     private fun canNotify(): Boolean = Build.VERSION.SDK_INT < 33 || granted(Manifest.permission.POST_NOTIFICATIONS)
@@ -694,6 +961,16 @@ class AprsService : Service(), LocationListener {
         const val ACTION_TCP_CONNECT = "tcp_connect"
         const val ACTION_API_BEACON = "api_beacon"
         const val ACTION_API_STATUS = "api_status"
+        const val ACTION_WIDGET_TRACKER = "widget_tracker"
+        const val ACTION_AUDIO_TEST = "audio_test"
+        const val ACTION_MSG_RESEND = "msg_resend"
+        const val ACTION_MSG_CANCEL = "msg_cancel"
+        const val ACTION_OBJECT_SEND = "object_send"
+        const val ACTION_OBJECT_KILL = "object_kill"
+        const val EXTRA_MESSAGE_ID = "message_id"
+        const val EXTRA_OBJECT_ID = "object_id"
+        /** #43: destino do boletim de versão (boletim geral 0). */
+        const val ANNOUNCE_DEST = "BLN0"
         const val EXTRA_REPLY_TO = "reply_to"
         const val EXTRA_TO = "to"
         const val EXTRA_TEXT = "text"

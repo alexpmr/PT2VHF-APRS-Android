@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Widget (#46): tema claro; values-night/widget_colors.xml tem o escuro. -->
+    <color name="widget_bg">#F2F5F8</color>
+    <color name="widget_text">#14202C</color>
+    <color name="widget_muted">#4D6175</color>
+    <color name="widget_button">#DDE6EF</color>
+</resources>

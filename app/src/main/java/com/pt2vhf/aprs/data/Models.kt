@@ -95,6 +95,16 @@ data class LinkStatus(
     val aprsIsSince: Long = 0L,
     val aprsIsReconnects: Int = 0,
     val aprsIsEverConnected: Boolean = false,
+    /** #44: nível RMS da entrada de áudio (0..1) e transmissão AFSK em andamento. */
+    val audioLevel: Double = 0.0,
+    val audioTransmitting: Boolean = false,
+    /** Hora do último beacon próprio aceito por algum transporte (widget #46). */
+    val lastBeaconAt: Long = 0L,
+    /** #6: posição atual vem da posição fixa configurada, não do GPS. */
+    val manualPosition: Boolean = false,
+    /** #49: economia de bateria ativa neste momento (tela desligada + modo ligado/automático). */
+    val batterySaverActive: Boolean = false,
+    val batteryPercent: Int? = null,
 )
 
 /** Local RF evidence (#4, #14): only packets that arrived through this device's TNC. */
@@ -114,3 +124,34 @@ data class RfEvent(
 
 /** Connection/state transitions for the diagnostics centre (#13). */
 data class ConnectionEvent(val time: Long, val source: String, val text: String)
+
+/** Objeto/item APRS criado pelo usuário (#48). intervalMin 0 = transmitir uma vez. */
+data class MyObject(
+    val id: Long,
+    val name: String,
+    val item: Boolean,
+    val lat: Double,
+    val lon: Double,
+    val symbolTable: Char,
+    val symbol: Char,
+    val comment: String,
+    val intervalMin: Int,
+    val active: Boolean,
+    val lastSent: Long = 0L,
+)
+
+/** Rota importada de GPX (rotas). */
+data class SavedRoute(val id: Long, val name: String, val visible: Boolean, val points: List<com.pt2vhf.aprs.core.RoutePoint>)
+
+/** Uma linha da aba Logs (#51): pacote bruto TNC2 recebido ou enviado. */
+data class PacketLogEntry(
+    val id: Long,
+    val time: Long,
+    /** "RX" ou "TX". */
+    val direction: String,
+    val medium: Medium,
+    val raw: String,
+    val source: String,
+    val destination: String,
+    val type: String,
+)

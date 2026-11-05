@@ -13,6 +13,10 @@
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <!-- #44 TNC por áudio (AFSK): microfone, rota de áudio Bluetooth SCO e serviço do tipo microfone. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
 
     <!-- API para outros apps (#15): o usuário concede esta permissão ao app cliente. -->
     <permission
@@ -23,6 +27,8 @@
 
     <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
+    <uses-feature android:name="android.hardware.usb.host" android:required="false" />
 
     <application
         android:name=".Pt2vhfApplication"
@@ -47,7 +53,7 @@
         <service
             android:name=".service.AprsService"
             android:exported="false"
-            android:foregroundServiceType="location|connectedDevice|specialUse">
+            android:foregroundServiceType="location|connectedDevice|specialUse|microphone">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Cliente APRS para radioamadores: mantém a conexão APRS-IS e o recebimento de mensagens com a tela desligada." />
@@ -63,6 +69,18 @@
                 <action android:name="com.pt2vhf.aprs.command.TRACKER_STOP" />
                 <action android:name="com.pt2vhf.aprs.command.SEND_BEACON" />
             </intent-filter>
+        </receiver>
+        <!-- #46 widget da tela inicial -->
+        <receiver
+            android:name=".service.StatusWidget"
+            android:exported="false"
+            android:label="@string/widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_status_info" />
         </receiver>
     </application>
 </manifest>
