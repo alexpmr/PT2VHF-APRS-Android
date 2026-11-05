@@ -139,7 +139,7 @@ fun App(onExit: () -> Unit) {
         onPauseOrDispose { }
     }
     LaunchedEffect(showUpdateRequests) { if (showUpdateRequests > 0) forceUpdateDialog = true }
-    // #48: falha anterior registrada → oferecer o envio do log.
+    // #45: falha anterior registrada → oferecer o envio do log.
     LaunchedEffect(Unit) { crashText = withContext(Dispatchers.IO) { CrashLog.pending(context) } }
     // #6: manter a tela ligada (opcional), só enquanto o app está visível.
     val view = LocalView.current

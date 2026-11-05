@@ -128,7 +128,7 @@
     <string name="object_interval">Repetir</string>
     <string name="object_invalid_name">Nome: 1 a 9 caracteres (objeto) ou 3 a 9 (item)</string>
     <string name="object_kill">Remover (kill)</string>
-    <string name="object_kill_confirm">Enviar a remoção deste objeto via APRS-IS e apagá-lo da lista?</string>
+    <string name="object_kill_confirm">Enviar a remoção (killed) deste objeto e apagá-lo da lista?</string>
     <string name="object_minutes">%1$d min</string>
     <string name="object_name">Nome</string>
     <string name="object_new">Novo objeto</string>
@@ -139,7 +139,7 @@
     <string name="object_send_now">Enviar agora</string>
     <string name="object_status">%1$s · %2$s · enviado %3$s</string>
     <string name="object_symbol">Símbolo</string>
-    <string name="object_tx_note">Objetos são enviados só via APRS-IS, nunca por RF, com o seu indicativo como origem.</string>
+    <string name="object_tx_note">Objetos são enviados pelos meios autorizados (APRS-IS e/ou RF), com o seu indicativo como origem.</string>
     <string name="object_type_item">Item</string>
     <string name="object_type_object">Objeto</string>
     <string name="position_section">Posição</string>

@@ -264,7 +264,7 @@ fun MapScreen(settings: Settings, onStation: (String) -> Unit, onSettingsChanged
         update = { map ->
             map.overlayManager.tilesOverlay.setColorFilter(brightnessFilter(brightness))
             map.overlays.clear()
-            // Toque longo no mapa: definir posição fixa ou criar objeto neste ponto (#6, #43).
+            // Toque longo no mapa: definir posição fixa ou criar objeto neste ponto (#6, #48).
             map.overlays.add(org.osmdroid.views.overlay.MapEventsOverlay(object : org.osmdroid.events.MapEventsReceiver {
                 override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean = false
                 override fun longPressHelper(p: GeoPoint?): Boolean { longPress = p; return p != null }
@@ -364,7 +364,7 @@ fun MapScreen(settings: Settings, onStation: (String) -> Unit, onSettingsChanged
                     map.controller.setCenter(GeoPoint(myLat, myLon)); centered = true
                 }
             }
-            // Meus objetos/itens (#43).
+            // Meus objetos/itens (#48).
             myObjects.forEach { o ->
                 map.overlays.add(Marker(map).apply {
                     position = GeoPoint(o.lat, o.lon)

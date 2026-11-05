@@ -128,7 +128,7 @@
     <string name="object_interval">Repeat</string>
     <string name="object_invalid_name">Name: 1 to 9 characters (object) or 3 to 9 (item)</string>
     <string name="object_kill">Remove (kill)</string>
-    <string name="object_kill_confirm">Send the removal of this object via APRS-IS and delete it from the list?</string>
+    <string name="object_kill_confirm">Send the removal (killed) of this object and delete it from the list?</string>
     <string name="object_minutes">%1$d min</string>
     <string name="object_name">Name</string>
     <string name="object_new">New object</string>
@@ -139,7 +139,7 @@
     <string name="object_send_now">Send now</string>
     <string name="object_status">%1$s · %2$s · sent %3$s</string>
     <string name="object_symbol">Symbol</string>
-    <string name="object_tx_note">Objects are sent only via APRS-IS, never by RF, with your callsign as the source.</string>
+    <string name="object_tx_note">Objects are sent by the authorized transports (APRS-IS and/or RF), with your callsign as the source.</string>
     <string name="object_type_item">Item</string>
     <string name="object_type_object">Object</string>
     <string name="position_section">Position</string>
