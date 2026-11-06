@@ -1855,6 +1855,52 @@ app em segundo plano/tela apagada, notificação com som/vibração e Responder 
 não toca por padrão; reenvio do mesmo ID não toca de novo.
 - **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
 
+### 56. Mensagens: texto digitado não aparece no campo de escrever
+_Solicitado em 06/11/2026: "Backlog: Quando escrevo msg, não consigo ler o que estou escrevendo"_ — print:
+[item56-campo-mensagem-ilegivel.png](docs/inspiracao/item56-campo-mensagem-ilegivel.png)
+(conversa com PT2ATC-1, teclado aberto; o teclado sugere "Tes/Teste", mas no campo só aparece o cursor).
+
+**Análise rápida (v0.1.9):** o campo é um `OutlinedTextField` em `MessagesUi.kt` (~linha 413), sem
+cores próprias, ao lado do botão Enviar. No print ele está bem **mais baixo que a altura mínima
+do Material (56 dp)**, então o texto provavelmente está sendo **cortado na vertical** (só o
+cursor aparece), efeito colateral da compactação com teclado aberto (item 28) ou do layout que
+encolhe a barra quando o teclado sobe. Conferir também contraste (texto/cursor/placeholder no
+tema escuro `Pal.bar`) em aparelhos com fonte do sistema ampliada.
+
+**Correção esperada:** texto digitado sempre legível (cor `Pal.text` explícita, contraste AA),
+campo com altura mínima suficiente para 1 linha e crescendo até 4, sem cortar letras; contador
+de caracteres/aviso de divisão em 67 visível; mesmo comportamento na conversa, nas mensagens
+gerais (CQ) e nos boletins.
+**Critério de aceite:** em 320/360/412 dp, fonte 100% e 130%, teclado aberto, o texto digitado
+aparece inteiro e legível no campo.
+- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+
+### 57. Mensagens: balões no estilo WhatsApp com 1 ou 2 checks verdes
+_Solicitado em 06/11/2026: "Backlog: formato das mensagens estilo whatsapp, com 1 ou 2 checks verdes"_
+
+**Como está hoje (v0.1.9):** balões com uma linha de metadados com texto de status e um ícone
+(`MessagesUi.kt` ~linha 293): 🕓 aguardando, ✓ ACK recebido, ✗ sem ACK, ⛔ rejeitada, ⊘ cancelada.
+
+**Comportamento exigido:**
+- Balões estilo app de conversa: enviadas à direita (cor própria do tema PT2VHF), recebidas à
+  esquerda, com "rabinho", hora no canto inferior do balão e agrupamento por dia ("Hoje",
+  "Ontem", data). Visual próprio, sem copiar a identidade do WhatsApp.
+- Checks no canto do balão enviado:
+  - 🕓 relógio: na fila / enviando.
+  - **1 check (✓)**: enviada a um transporte (gravada no socket APRS-IS verificado ou aceita pelo TNC).
+  - **2 checks verdes (✓✓)**: **ACK recebido** do destinatário.
+  - Opcional: 1 check verde quando o próprio pacote for ouvido digipetado/gateado (eco no RF ou
+    no APRS-IS), indicando que saiu no ar.
+  - Vermelho/✗ para sem ACK, rejeitada ou sem conexão, mantendo Reenviar/Cancelar (item 47).
+- Toque no check mostra o detalhe (tentativas, meio, hora do ACK, path).
+- Mensagens sem ID (CQ/boletins) não têm ACK: mostrar só 1 check, sem prometer entrega.
+- **Não** afirmar entrega/leitura sem ACK; não existe "lido" no APRS.
+
+**Dependências:** item 54 (ACK e reply-ack `{MM}AA` corretos) e item 47.
+**Critério de aceite:** mensagem pessoal mostra 🕓 → ✓ ao sair → ✓✓ verde ao chegar o ACK
+(testado RF e APRS-IS); sem ACK após as tentativas mostra falha; CQ/boletim mostram só ✓.
+- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+
 ## Consolidação das sugestões aprovadas com itens já existentes
 
 A comparação com o APRSdroid também aprovou os recursos abaixo, que **já estavam
