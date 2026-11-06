@@ -1901,6 +1901,86 @@ _Solicitado em 06/11/2026: "Backlog: formato das mensagens estilo whatsapp, com 
 (testado RF e APRS-IS); sem ACK após as tentativas mostra falha; CQ/boletim mostram só ✓.
 - **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
 
+### 58. Estações, ficha da estação e comunidade inspiradas no app APRS World
+_Solicitado em 06/11/2026: "Backlog: Aproveite os recursos do aprs world para colocar neste aplicativo. Algumas telas de exemplo"_ —
+12 prints de referência em `docs/inspiracao/item58-*.png`:
+[mapa](docs/inspiracao/item58-mapa.png), [lista](docs/inspiracao/item58-lista-estacoes.png),
+[filtros](docs/inspiracao/item58-filtros.png), [visão geral](docs/inspiracao/item58-detalhe-visao-geral.png),
+[recepção](docs/inspiracao/item58-detalhe-recepcao.png), [SSIDs e caminho](docs/inspiracao/item58-detalhe-ssids-caminho.png),
+[trilha](docs/inspiracao/item58-detalhe-trilha.png), [telemetria](docs/inspiracao/item58-detalhe-telemetria.png),
+[mensagens](docs/inspiracao/item58-detalhe-mensagens.png), [bruto](docs/inspiracao/item58-detalhe-bruto.png),
+[comunidade](docs/inspiracao/item58-comunidade.png).
+
+**Regra:** só ideias de recursos e organização de tela. Nada de marca, nome, logotipo, arte, ícones,
+textos ou código do APRS World; visual e cores próprios do PT2VHF.
+
+**Como está hoje (v0.1.9):** a aba Estações tem lista com busca/filtro/ordenação (item 3) e, ao tocar,
+abre um **diálogo** (`StationDialog` em `Screens.kt`) com distância, rumo, posição, grid, velocidade,
+comentário, via, "ouvida por RF", favorito, seguir e navegar. Não há tela de detalhe com abas, histórico
+por período, telemetria, pacotes brutos por estação nem visão de comunidade.
+
+**58.1 Mapa**
+- Chips de tipo **com contagem** sobre o mapa (Todos N, Móvel N, Fixo N, Clima N, Digi, iGate…), rolagem
+  horizontal; tocar filtra o mapa e a lista juntos.
+- Busca única "indicativo ou lugar" (lugar via geocodificação de baixo custo/offline quando possível).
+- Selo de fonte e estado ao vivo ("APRS-IS · ao vivo", "RF · ao vivo") no topo do mapa.
+- Botões laterais: zoom, minha posição, camadas/estilo do mapa e um botão de **raio/alcance** com o
+  número de estações dentro do raio configurado.
+
+**58.2 Lista de estações**
+- Topo com contador "visíveis / total" e botão **pausar atualização** (congela a lista para ler sem os itens pularem).
+- Alternância Estações | Mensagens no topo da aba (atalho para o tráfego de mensagens das estações).
+- Busca por indicativo **ou comentário**, botão de filtro com **contador de filtros ativos**.
+- Chips de tipo com contagem e ordenação explícita em chips: **Recentes · Distância · Indicativo**.
+- Cada linha: ícone do símbolo APRS, indicativo, **etiqueta colorida do tipo** (DIGI, IGATE, FIXAS, MÓVEL,
+  CLIMA, OUTRAS), início do comentário, "há X min" e distância à direita, seta para a ficha.
+
+**58.3 Painel de filtros (folha inferior)**
+- Buscar (indicativo/comentário).
+- Localização: **região** (Tudo / BR / US / … conforme prefixo ou posição) e "apenas estações com posição conhecida".
+- Tipo: **SSID 0-15** em grade de seleção múltipla e **símbolo** (tabela/código, ex.: `/_`, `\&`).
+- Tempo: **visto por último** (último minuto, 15 min, 1 h, 6 h, 24 h, 7 d, 30 d, tudo).
+- Botões **Limpar tudo** e **Aplicar**; filtros persistidos. Complementa o item 3 (não duplicar).
+
+**58.4 Ficha da estação (tela cheia, substitui o diálogo)**
+- Cabeçalho: ícone do símbolo, indicativo base + **SSID em destaque**, bandeira/país pelo prefixo,
+  etiqueta do tipo, indicador **ao vivo/inativo** + "há X min", coordenadas.
+  Ações: **Seguir** (item 11/12), Rotas/Navegar, Enviar mensagem (item 19), Favorito.
+- Abas: **Visão geral · Trilha · Telemetria · Mensagens · Bruto**.
+- **Visão geral:** cartões Localização, Velocidade, Rumo (graus + nome: norte…), Altitude, Tipo,
+  Último pacote (há X + **total de pacotes recebidos**); comentário/status expansível; e:
+  - **Recepção (últimas 24 h):** distância máxima de recepção e iGate mais distante, distância do
+    último salto e iGate do último salto, "ouvida por N iGates" (calculado com o path/qAR dos pacotes
+    APRS-IS e com o que o próprio app ouviu por RF, separando as duas fontes — ver itens 4 e 14).
+  - **Outros SSIDs do mesmo operador:** chips com cada SSID visto e "há X", tocando abre a ficha.
+  - **Histórico de posição:** minimapa com os pontos das últimas 6 h e contagem de pontos.
+  - **Caminho:** linha do tempo do path do último pacote (origem, WIDEn-N, digis, qAR/qAC/qAO e
+    iGate), com o significado de cada salto e número de saltos.
+- **Trilha:** período **1 h · 6 h · 1 d · 3 d · 7 d**, mapa com a trilha e número de pontos, resumo
+  com nº de pontos e **distância total** percorrida (integra com item 5).
+- **Telemetria:** gráficos de telemetria (T#) e clima (temperatura, vento, chuva, pressão, umidade)
+  quando houver; senão, aviso "sem dados de telemetria ou clima".
+- **Mensagens:** mensagens de/para esta estação em balões (integra itens 54/57), campo para responder.
+- **Bruto:** lista dos pacotes brutos recebidos dessa estação com "há X", copiar e compartilhar
+  (reaproveita a aba Logs, item 51, filtrada pelo indicativo).
+- Dados vêm do histórico local (item 7) e, opcionalmente, de consulta online; sempre indicar a fonte.
+
+**58.5 Comunidade / rodadas APRS**
+- Nova área "Comunidade" com rodadas semanais (ex.: rodadas de check-in por mensagem APRS como a
+  "Thursday Net") e rodadas configuráveis pelo usuário (indicativo/palavra-chave de check-in, dia, horário).
+- Seletor de data da rodada, busca de indicativo, cartões **Participantes** e **Países**,
+  **classificação por país** (bandeira + quantidade) e lista de participantes por país.
+- Opção de fazer **check-in** na rodada pelo app (mensagem APRS pré-preenchida, com confirmação antes de transmitir).
+- Fonte dos dados: mensagens ouvidas pelo app/APRS-IS ou fonte pública da rodada, se existir e permitir;
+  avaliar antes de implementar.
+
+**Dependências/relacionados:** itens 3, 5, 7, 11, 12, 14, 19, 51, 54, 57.
+**Critério de aceite:** lista com chips + contadores, ordenação e painel de filtros completo funcionando
+em tempo real; toque abre a ficha em tela cheia com as 5 abas preenchidas a partir do histórico local;
+recepção/caminho coerentes com os pacotes brutos; trilha por período desenhada; comunidade mostrando
+participantes e países de uma rodada. Nenhum elemento visual copiado do app de referência.
+- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+
 ## Consolidação das sugestões aprovadas com itens já existentes
 
 A comparação com o APRSdroid também aprovou os recursos abaixo, que **já estavam
