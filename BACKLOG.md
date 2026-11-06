@@ -1758,6 +1758,60 @@ cores próprios (tema PT2VHF), sem reproduzir o visual daquele app.
   e o apontamento mostrados.
 - **Status:** **cancelado / fora de escopo** (vai para um app de satélite separado). Não implementar aqui.
 
+### 54. Mensagens: mensagem pessoal vinda de RF (via iGate) não aparece no APRS-IS + filtro pessoais/todas
+_Solicitado em 06/11/2026: "Backlog: eu conectado por aprs-is não recebo uma mensage de um amigo que está conectado por rf na rede que tem um igate. Ele recebe a minha mensagem mas só olhando o pacote. Não aparece como um pacote recebido. Eu também deixo ligado por horas e não recebo nada além dos boletins. No log, vejo tudo chegando de todos. Seria bom na parte mensagens, filtrar mensagem pessoal ou de todos, empilhada ou concatenada por emissor."_
+
+**Bug (P1).** Cenário: eu no app só por APRS-IS; amigo só por RF, numa rede com iGate.
+- A mensagem dele para mim **não aparece** como recebida em Mensagens (nem notificação/ACK).
+- A minha mensagem chega ao rádio/app dele, mas ele **só vê o pacote bruto**, não como mensagem recebida.
+- Em horas ligado, em Mensagens só aparecem **boletins**; na aba Logs chegam pacotes de todos.
+
+**Análise rápida do código (v0.1.9, sem teste em servidor real; confirmar antes de corrigir):**
+1. **Comparação exata do destinatário com indicativo + SSID** — `AprsRepository.ingest` (~linha 531):
+   `forUs = msg.addressee == ownCall`, com `ownCall = settings.fullCall` (`AprsService.handleLine`).
+   Mensagem para `PT2VHF` quando o app está como `PT2VHF-9` (ou outro SSID) é **descartada em
+   silêncio** (`if (!forUs && !general) return null`): não entra nem em Mensagens nem gera ACK.
+   Causa provável nº 1; conferir o SSID usado pelo amigo no pacote do Log.
+2. **Mensagens de terceiros (`}`) não são decodificadas** — `parseMessage` (`core/Aprs.kt` ~linha 166)
+   só aceita info começando com `:`. Quando o iGate passa IS→RF, a mensagem vai encapsulada como
+   terceiros (`}PT2VHF>APxxxx,TCPIP,IGATE*::AMIGO    :texto{1`); se o amigo usa este app no RF, ela
+   aparece só no Log/Monitor, exatamente o sintoma relatado do lado dele. O ACK dele também volta
+   assim se cruzar o iGate de novo.
+3. **Reply-ack (`{MM}AA`) mal interpretado** — o ID vira `MM}AA` (`take(5)` após o último `{`); o ACK
+   enviado de volta (`ackMM}AA`) não casa com o original, e o rádio do amigo continua reenviando.
+   Comum em rádios Kenwood/Yaesu e apps modernos.
+4. **Filtro APRS-IS:** padrão `r/4000` (expandido para `r/lat/lon/4000` só após o 1º fix de GPS).
+   O servidor costuma repassar mensagens para o indicativo do login, mas para garantir incluir no
+   filtro `g/<MEUCALL>*` (mensagens para qualquer SSID meu) e validar em servidor real (soam/rotate).
+5. Mensagens entre **outras** estações (nem para mim, nem CQ/BLN) são descartadas: por isso a aba
+   só mostra boletins/CQ, embora o Log mostre tudo.
+
+**Correção esperada:**
+- Reconhecer como pessoal a mensagem para o meu indicativo **com e sem SSID** (opção em Configurações:
+  "aceitar mensagens para o indicativo base/qualquer SSID", padrão ligado), mantendo o ACK com o
+  destinatário exato do pacote.
+- Desencapsular pacotes de terceiros `}` (origem/destino/path internos) para mensagens, ACK/REJ e
+  posições, marcando o meio de chegada como RF via iGate.
+- Tratar reply-ack (`{MM}AA`): ID = `MM`, e `AA` confirma a mensagem que eu enviei.
+- Acrescentar `g/<MEUCALL>*` ao filtro (sem duplicar se o usuário já tiver) e mostrar o filtro
+  efetivamente enviado ao servidor no diagnóstico.
+
+**Melhoria — tela Mensagens: pessoais × todas, empilhada × por emissor:**
+- Filtro/aba **"Pessoais"** (para mim + enviadas por mim) e **"Todas"** (inclui mensagens entre
+  terceiros ouvidas por RF/APRS-IS, CQ e boletins), padrão Pessoais. Mensagens de terceiros só
+  para leitura, sem ACK nem notificação.
+- Modo de exibição: **empilhada** (linha do tempo única, ordem de chegada, com "DE → PARA" no
+  balão) ou **agrupada por emissor** (uma conversa por indicativo, expansível). Persistir a escolha.
+- Combinar com os filtros já existentes (direção, meio, status, período, busca — itens 2/31) e
+  com a retenção (itens 26/42) e o apagar por tipo (item 41), incluindo o tipo "de terceiros".
+
+**Critério de aceite:** com amigo em RF + iGate e eu só no APRS-IS: a mensagem dele para
+`MEUCALL` (com e sem SSID) aparece em Pessoais, notifica e recebe ACK que o rádio dele aceita
+(para de reenviar); minha mensagem aparece como mensagem (não só pacote) no app dele em RF;
+reply-ack confirma o balão; em "Todas" aparecem mensagens de terceiros vistas no Log; testes de
+unidade para SSID, `}` e `{MM}AA`.
+- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+
 ## Consolidação das sugestões aprovadas com itens já existentes
 
 A comparação com o APRSdroid também aprovou os recursos abaixo, que **já estavam
