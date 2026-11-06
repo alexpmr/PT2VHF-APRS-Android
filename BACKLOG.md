@@ -1766,35 +1766,45 @@ _Solicitado em 06/11/2026: "Backlog: eu conectado por aprs-is não recebo uma me
 - A minha mensagem chega ao rádio/app dele, mas ele **só vê o pacote bruto**, não como mensagem recebida.
 - Em horas ligado, em Mensagens só aparecem **boletins**; na aba Logs chegam pacotes de todos.
 
-**Análise rápida do código (v0.1.9, sem teste em servidor real; confirmar antes de corrigir):**
-1. **Comparação exata do destinatário com indicativo + SSID** — `AprsRepository.ingest` (~linha 531):
-   `forUs = msg.addressee == ownCall`, com `ownCall = settings.fullCall` (`AprsService.handleLine`).
-   Mensagem para `PT2VHF` quando o app está como `PT2VHF-9` (ou outro SSID) é **descartada em
-   silêncio** (`if (!forUs && !general) return null`): não entra nem em Mensagens nem gera ACK.
-   Causa provável nº 1; conferir o SSID usado pelo amigo no pacote do Log.
-2. **Mensagens de terceiros (`}`) não são decodificadas** — `parseMessage` (`core/Aprs.kt` ~linha 166)
-   só aceita info começando com `:`. Quando o iGate passa IS→RF, a mensagem vai encapsulada como
-   terceiros (`}PT2VHF>APxxxx,TCPIP,IGATE*::AMIGO    :texto{1`); se o amigo usa este app no RF, ela
-   aparece só no Log/Monitor, exatamente o sintoma relatado do lado dele. O ACK dele também volta
-   assim se cruzar o iGate de novo.
-3. **Reply-ack (`{MM}AA`) mal interpretado** — o ID vira `MM}AA` (`take(5)` após o último `{`); o ACK
-   enviado de volta (`ackMM}AA`) não casa com o original, e o rádio do amigo continua reenviando.
-   Comum em rádios Kenwood/Yaesu e apps modernos.
-4. **Filtro APRS-IS:** padrão `r/4000` (expandido para `r/lat/lon/4000` só após o 1º fix de GPS).
-   O servidor costuma repassar mensagens para o indicativo do login, mas para garantir incluir no
-   filtro `g/<MEUCALL>*` (mensagens para qualquer SSID meu) e validar em servidor real (soam/rotate).
-5. Mensagens entre **outras** estações (nem para mim, nem CQ/BLN) são descartadas: por isso a aba
-   só mostra boletins/CQ, embora o Log mostre tudo.
+**Complemento em 06/11/2026:** "este meu amigo me mandou para o indicativo correto e não recebi. Ele recebeu o meu olhando os pacotes que passaram pelo igate da rede. Ambos com mesma versão do app android." → a hipótese de **SSID errado foi descartada**.
+
+**Análise do código (v0.1.9, sem teste em servidor real; confirmar antes de corrigir):**
+1. **Lado RF (amigo) — confirmado no código: pacote de terceiros `}` não é decodificado.**
+   Quando o iGate passa a minha mensagem IS→RF, ela vai encapsulada
+   (`IGATE>APxxxx,WIDE..:}PT2VHF>APxxxx,TCPIP,IGATE*::AMIGO    :texto{1`).
+   `AprsPacket.parse` usa o cabeçalho externo (origem = iGate) e `parseMessage`
+   (`core/Aprs.kt` ~linha 166) só aceita info começando com `:`; o `}` cai fora e o pacote
+   fica só no Log/Monitor. É exatamente o sintoma dele. Também não sai ACK, então o meu app
+   reenvia até "Sem ACK".
+2. **Lado APRS-IS (eu) — filtro não pede mensagens para mim.** Padrão `r/4000`, expandido para
+   `r/lat/lon/4000` só após o 1º fix de GPS (antes disso vai o `r/4000` literal, que não é
+   filtro válido). O filtro de alcance casa pacotes **com posição**; mensagem não tem posição,
+   então só chega se o servidor repassar por conta própria a mensagem para o indicativo logado,
+   o que depende do servidor (aprsc/javAPRSSrvr) e de a estação ter sido "ouvida" naquela
+   conexão. Causa provável nº 1 do meu lado. Correção: incluir sempre `g/<MEUCALL>*`
+   (mensagens para mim, qualquer SSID) e, opcionalmente, `b/<contatos recentes>` no filtro de
+   login **e** no `#filter` após o GPS (`AprsService` ~linhas 343 e 525, `Connections.kt` ~45).
+3. **Diagnóstico pendente com o usuário:** na aba Logs, procurar o pacote do amigo
+   (`AMIGO>...::PT2VHF-x:...`). Se **não aparece**, a mensagem não chegou ao app (filtro/servidor,
+   item 2). Se **aparece** e não virou mensagem, é parse/ingestão e precisa do pacote cru para
+   reproduzir em teste de unidade.
+4. **Comparação exata do destinatário** (`AprsRepository.ingest` ~linha 531: `addressee == fullCall`):
+   não é a causa deste caso, mas continua descartando em silêncio mensagens para o indicativo
+   base/outro SSID meu. Manter na correção.
+5. **Reply-ack (`{MM}AA`) mal interpretado:** o ID vira `MM}AA` (`take(5)` após o último `{`) e o
+   ACK devolvido (`ackMM}AA`) não confirma a mensagem original. Comum em Kenwood/Yaesu.
+6. Mensagens entre **outras** estações (nem para mim, nem CQ/BLN) são descartadas: por isso a
+   tela só mostra boletins/CQ, embora o Log mostre tudo.
 
 **Correção esperada:**
+- Filtro APRS-IS com `g/<MEUCALL>*` sempre (sem duplicar se o usuário já tiver), no login e
+  no `#filter`, e mostrar o filtro efetivamente enviado no diagnóstico (Sobre → Enviar log).
 - Reconhecer como pessoal a mensagem para o meu indicativo **com e sem SSID** (opção em Configurações:
   "aceitar mensagens para o indicativo base/qualquer SSID", padrão ligado), mantendo o ACK com o
   destinatário exato do pacote.
 - Desencapsular pacotes de terceiros `}` (origem/destino/path internos) para mensagens, ACK/REJ e
   posições, marcando o meio de chegada como RF via iGate.
 - Tratar reply-ack (`{MM}AA`): ID = `MM`, e `AA` confirma a mensagem que eu enviei.
-- Acrescentar `g/<MEUCALL>*` ao filtro (sem duplicar se o usuário já tiver) e mostrar o filtro
-  efetivamente enviado ao servidor no diagnóstico.
 
 **Melhoria — tela Mensagens: pessoais × todas, empilhada × por emissor:**
 - Filtro/aba **"Pessoais"** (para mim + enviadas por mim) e **"Todas"** (inclui mensagens entre
@@ -1810,6 +1820,39 @@ _Solicitado em 06/11/2026: "Backlog: eu conectado por aprs-is não recebo uma me
 (para de reenviar); minha mensagem aparece como mensagem (não só pacote) no app dele em RF;
 reply-ack confirma o balão; em "Todas" aparecem mensagens de terceiros vistas no Log; testes de
 unidade para SSID, `}` e `{MM}AA`.
+- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+
+### 55. Mensagens: aviso visual e sonoro ao chegar mensagem
+_Solicitado em 06/11/2026: "Backlog: notificação visual e sonora quando chegar msg."_
+
+**Como está hoje (v0.1.9):** já existe notificação do Android para mensagem pessoal
+(`AprsService.notifyMessage`, canal "Mensagens" com importância alta, som padrão do sistema),
+ligada por Configurações → "Notificar mensagens" (padrão ligado). Limitações:
+- Só dispara para mensagem **endereçada a mim** que passou pela ingestão; com o bug do item 54
+  ela nunca dispara (por isso o usuário não percebe nada).
+- Sem aviso **dentro do app** com ele aberto: nenhum contador de não lidas na aba Mensagens,
+  nenhum banner/snackbar, nenhum destaque na conversa.
+- Sem escolha de som/vibração no app (só pelas configurações do canal no Android) e sem
+  opção para CQ/boletins.
+- Exige permissão POST_NOTIFICATIONS (Android 13+); se negada, nada aparece e o app não avisa.
+
+**Comportamento exigido:**
+- **Visual no app:** contador de não lidas na aba Mensagens e em cada conversa; banner/snackbar
+  "Mensagem de X" com toque para abrir a conversa; marcar como lida ao abrir.
+- **Sonoro:** som próprio curto (padrão) ou som do sistema/silencioso, vibração liga/desliga,
+  tocando também com o app aberto. Respeitar o modo silencioso/Não perturbe do Android e o
+  horário de silêncio já existente (item 12).
+- **Por tipo:** pessoais (padrão ligado), CQ/gerais e boletins (padrão desligado), mensagens de
+  terceiros do item 54 nunca notificam.
+- Notificação do sistema com ações **Responder** (resposta direta) e **Marcar como lida**;
+  agrupar várias mensagens do mesmo emissor.
+- Se a permissão de notificação estiver negada, mostrar aviso em Mensagens com atalho para
+  concedê-la. Sem duplicar aviso de mensagem repetida (reenvio com o mesmo ID).
+
+**Dependência:** item 54 (sem ele, a mensagem nem chega a ser reconhecida).
+**Critério de aceite:** mensagem recebida com app aberto mostra banner + contador + som; com
+app em segundo plano/tela apagada, notificação com som/vibração e Responder funcionando; boletim
+não toca por padrão; reenvio do mesmo ID não toca de novo.
 - **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
 
 ## Consolidação das sugestões aprovadas com itens já existentes
