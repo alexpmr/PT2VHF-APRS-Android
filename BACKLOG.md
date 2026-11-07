@@ -1981,6 +1981,38 @@ recepção/caminho coerentes com os pacotes brutos; trilha por período desenhad
 participantes e países de uma rodada. Nenhum elemento visual copiado do app de referência.
 - **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
 
+### 59. Indicativo: aceitar só indicativos de radioamador válidos no mundo
+_Solicitado em 07/11/2026: "Backlog: Permitir apenas indicativos válidos no mundo, para evitar de qualquer pessoa escrever uma palavra e o app aceitar."_
+
+**Como está hoje (v0.1.9):** Configurações valida o indicativo só com `CALLSIGN_RE`
+(`core/Aprs.kt`: `^[A-Z0-9]{1,6}(-([0-9]|1[0-5]))?$`), ou seja, aceita qualquer palavra de 1 a 6
+letras/números (ex.: `CASA`, `TESTE`, `ABC`), desde que o SSID fique entre 0 e 15.
+
+**O que fazer**
+- Validar o **formato** do indicativo base conforme a estrutura internacional de radioamador:
+  prefixo (1 a 3 caracteres) + **um algarismo** + sufixo de 1 a 4 letras (ex.: `PT2VHF`, `PY2ABC`,
+  `K1ABC`, `W1AW`, `DL1ABC`, `2E0ABC`, `VK2ABC`), com SSID opcional `-0` a `-15`.
+- Validar o **prefixo** contra a tabela de blocos de prefixos da ITU (alocações por país, incluindo
+  prefixos especiais/eventuais usados por radioamadores). Tabela embarcada no app (sem internet),
+  em arquivo de dados próprio, fácil de atualizar; a mesma tabela serve para bandeira/país do item 58.
+- Rejeitar palavras arbitrárias e formatos sem algarismo ou sem sufixo, com mensagem clara
+  ("Indicativo inválido: use o seu indicativo de radioamador, ex.: PT2VHF-9") nos 5 idiomas.
+- Aplicar no indicativo do usuário (Configurações, perfis do item 10, importação de backup do item 50
+  e assistente de primeiro uso). Indicativo inválido não conecta ao APRS-IS nem transmite por RF.
+- Configurações antigas com indicativo inválido: avisar e pedir correção, sem apagar o valor salvo.
+- Campos de destino de mensagem (Nova mensagem, item 21) e busca: **avisar** quando o formato não
+  parecer indicativo, mas sem bloquear, porque o APRS também usa destinos táticos/objetos (ex.: `CQ`,
+  `BLN1`, `EMAIL`, `WLNK-1`, nomes de serviço). Pacotes recebidos de outras estações não são filtrados.
+- Casos especiais a avaliar: indicativos com barra (`PT2VHF/P`, `CT/PY2ABC`) não cabem no campo de
+  origem AX.25 (6 caracteres); orientar o uso do SSID. Indicativos de escuta/SWL e de clubes seguem
+  a mesma regra de formato.
+
+**Testes:** unidade no core JVM com lista de válidos (vários países, prefixos com algarismo inicial,
+SSID 0-15) e inválidos (`CASA`, `TESTE`, `ABC123`, `12345`, `PT2VHF-16`, prefixo inexistente).
+**Critério de aceite:** palavras comuns são recusadas com mensagem clara; indicativos reais de vários
+países são aceitos com e sem SSID; mensagens para destinos táticos continuam possíveis.
+- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+
 ## Consolidação das sugestões aprovadas com itens já existentes
 
 A comparação com o APRSdroid também aprovou os recursos abaixo, que **já estavam
