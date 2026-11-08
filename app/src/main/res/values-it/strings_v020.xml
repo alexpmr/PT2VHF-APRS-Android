@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="wx_section">Osservazioni meteo</string>
+    <string name="wx_temperature">Temperatura</string>
+    <string name="wx_humidity">Umidità</string>
+    <string name="wx_pressure">Pressione</string>
+    <string name="wx_wind">Vento</string>
+    <string name="wx_gust">Raffiche</string>
+    <string name="wx_rain_hour">Pioggia (1 h)</string>
+    <string name="wx_rain_day">Pioggia (24 h)</string>
+    <string name="wx_rain_midnight">Pioggia da mezzanotte</string>
+    <string name="wx_history_insufficient">Dati insufficienti per mostrare il grafico.</string>
+</resources>
