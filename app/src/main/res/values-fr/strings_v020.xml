@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="wx_section">Observations météo</string>
+    <string name="wx_temperature">Température</string>
+    <string name="wx_humidity">Humidité</string>
+    <string name="wx_pressure">Pression</string>
+    <string name="wx_wind">Vent</string>
+    <string name="wx_gust">Rafales</string>
+    <string name="wx_rain_hour">Pluie (1 h)</string>
+    <string name="wx_rain_day">Pluie (24 h)</string>
+    <string name="wx_rain_midnight">Pluie depuis minuit</string>
+    <string name="wx_history_insufficient">Pas assez de mesures pour afficher une courbe.</string>
+</resources>
