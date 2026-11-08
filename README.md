@@ -18,6 +18,13 @@ ou pelo próprio áudio do celular (modem AFSK 1200).
 - TNC KISS por Bluetooth (Mobilinkd, BTECH UV-Pro, Radtel RT-950 Pro e similares) com monitor ao vivo.
 - Aviso de nova versão pelo site www.pt2vhf.com (o aviso de "Downloads no site oficial" na abertura saiu na 0.1.8).
 
+## Candidata 0.1.10 (QA — ainda não publicada)
+
+Aprimora tratamento de mensagens RF/APRS-IS, pacotes de terceiros e reply-ack, corrige bloqueio visual
+do compositor, oferece lixeira de Estações, introduz visualização WX da sessão e validação básica de
+formato do indicativo do operador. Requer testes de campo e a publicação coordenada do site.
+A versão pública continua 0.1.9 até homologação e liberação explícita.
+
 ## Novidades da 0.1.9
 
 - **Modem AFSK 1200 pelo áudio** do celular (o celular vira o TNC; PTT por VOX ou interface) e **TNC KISS por USB-OTG**
