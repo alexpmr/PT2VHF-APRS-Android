@@ -21,6 +21,41 @@ class AprsTest {
         assertEquals("m/200 b/PT2*", expandFilter("m/200 b/PT2*", -15.0, -47.0))
     }
 
+    @Test fun directMessageFilterCoversBareCallAndSsids() {
+        assertEquals("g/PT2VHF/PT2VHF-*",
+            effectiveAprsFilter("r/4000", null, null, "PT2VHF-9"))
+        assertEquals("r/-15.780/-47.930/4000 g/PT2VHF/PT2VHF-*",
+            effectiveAprsFilter("r/4000", -15.78, -47.93, "PT2VHF-9"))
+        assertEquals("m/200 g/PT2VHF/PT2VHF-*",
+            effectiveAprsFilter("m/200", null, null, "PT2VHF-9"))
+    }
+
+    @Test fun thirdPartyIgatePacketUsesOriginalSender() {
+        val frame = "IGATE>APRS,WIDE2-1:}PT2ABC-7>APRS,TCPIP,IGATE*::PT2VHF-9 :Teste{42"
+        val decoded = AprsPacket.parse(frame)!!
+        assertEquals("PT2ABC-7", decoded.source)
+        assertEquals("IGATE", decoded.thirdPartyGateway)
+        assertEquals("Teste", parseMessage(decoded.info)!!.text)
+        assertTrue(localRfEvidenceLinks(decoded, true).isEmpty())
+        assertNull(AprsPacket.parse("GATE>APRS:}BAD>APRS:}LOOP>APRS::CQ       :x"))
+    }
+
+    @Test fun parsesReplyAckWithoutMixingMessageIds() {
+        val m = parseMessage(":PT2VHF-9 :Oi{42}31")!!
+        assertEquals("42", m.id)
+        assertEquals("31", m.replyAckId)
+        assertEquals("Oi", m.text)
+        assertEquals("42", parseMessage(":PT2VHF-9 :ack42}31")!!.id)
+        assertEquals("31", parseMessage(":PT2VHF-9 :ack42}31")!!.replyAckId)
+    }
+
+    @Test fun rejectsArbitraryOperatorNames() {
+        for (call in listOf("PT2VHF", "PT2VHF-9", "N0CALL", "K1ABC", "2E0ABC", "DL1ABC"))
+            assertTrue("Expected international callsign: $call", plausibleAmateurCallsign(call))
+        for (call in listOf("CASA", "TESTE", "ABC", "ABC123", "12345", "PT2VHF-16"))
+            assertFalse("Expected invalid callsign: $call", plausibleAmateurCallsign(call))
+    }
+
     @Test fun serverValidation() {
         assertTrue(validHostPort("soam.aprs2.net", 14580))
         assertFalse(validHostPort("soam aprs", 14580))
