@@ -1966,6 +1966,55 @@ por período, telemetria, pacotes brutos por estação nem visão de comunidade.
   (reaproveita a aba Logs, item 51, filtrada pelo indicativo).
 - Dados vêm do histórico local (item 7) e, opcionalmente, de consulta online; sempre indicar a fonte.
 
+**58.4.1 Telemetria e metadados detalhados (ampliação solicitada em 08/11/2026)**
+_Solicitado: "Backlog: implementar gráficos de telemetria das estações, quando selecionadas, ex: se for uma wx, mostrar as informações do clima de forma amigável com gráficos, etc.. Mostrar todos os metadados da estação, quando houver."_
+
+- **Acesso contextual:** ao selecionar qualquer estação no mapa ou na lista, abrir sua ficha completa
+  com indicadores e gráficos adequados **aos dados efetivamente recebidos**, sem mostrar campos
+  fictícios. Para estação WX, destacar no topo as condições meteorológicas; para outras,
+  destacar telemetria técnica ou de movimento conforme disponibilidade.
+- **Estações WX:** cartões com última temperatura, umidade relativa, pressão barométrica,
+  vento (velocidade, direção e rajadas), precipitação (acumulados informados em 1 h/24 h/
+  desde meia-noite quando transmitidos), luminosidade e demais grandezas que o protocolo
+  ou o pacote efetivamente fornecer. Exibir unidades, horário da observação, idade do dado
+  e indicação de sensor ausente. Não confundir medida instantânea com acumulado.
+- **Gráficos históricos:** curvas de temperatura, umidade, pressão, vento/rajadas e chuva,
+  com séries temporais independentes, zoom e escolha de período (1 h, 6 h, 24 h, 7 d,
+  30 d, respeitando a retenção disponível); legenda, eixos com unidades, mínimos/máximos
+  reais, valor ao tocar no ponto e lacunas explícitas quando não houver amostras. Para
+  chuva acumulada, usar visualização coerente com o tipo de medição; **não inventar
+  pontos intermediários**.
+- **Telemetria APRS:** decodificar quadros T# e, quando recebidos, definições PARM.,
+  UNIT., EQNS. e BITS. Exibir até 5 canais analógicos com nome, unidade, valor
+  bruto e valor escalonado pela equação aplicável; bits/estados digitais com rótulos
+  e histórico de mudança. Mostrar dados adicionais de bateria, voltagem, sensores
+  e outros campos disponíveis, inclusive valores não reconhecidos em seção técnica.
+- **Metadados completos:** exibir identificador/indicativo/SSID, símbolo APRS,
+  tipo, descrição/status, posição, precisão/ambiguidade, grid, altitude, velocidade,
+  rumo, primeira e última recepção, origem RF versus APRS-IS, path, digipeaters,
+  iGate identificado, saltos, RSSI/SNR **somente se medidos pelo transporte**,
+  frequência/PHG quando presentes, informações de equipamento/software **apenas se
+  efetivamente identificadas**, último pacote bruto e histórico local com timestamps.
+  Campos desconhecidos devem aparecer como "não informado", sem suposição.
+- **Proveniência e persistência:** enriquecer parsing/armazenamento histórico local
+  de observações meteorológicas e telemetria por indicativo/SSID, com instante do
+  pacote e instante de recepção separados; deduplicar repetições, tolerar pacotes
+  incompletos, preservar dados crus e aplicar retenção configurável sem afetar
+  mensagens e tracklog. Não misturar valores de estações/SSIDs diferentes.
+- **UX:** ficha responsiva em telas pequenas, abas Visão geral / Clima ou Telemetria /
+  Trilha / Mensagens / Bruto, atualização automática com pacotes novos e estado
+  "sem dados suficientes para gráfico" quando só existir uma amostra. Exportar as
+  séries e metadados para CSV ou JSON se viável, com timestamps e unidades.
+- **Testes de aceite:** injetar pacotes APRS WX completos/incompletos, T#,
+  PARM./UNIT./EQNS./BITS. e estações sem telemetria; conferir interpretação de
+  unidades e escalonamento, gráficos em diferentes períodos, persistência após
+  reiniciar, dados ausentes, comparação com os pacotes brutos e distinção RF/IS.
+  Testar em Android físico com tráfego de estação WX real.
+- **Situação:** detalhamento incorporado ao **item #58**; ainda não implementado
+  nem homologado. Não criar item paralelo, pois complementa a ficha de estação
+  e a aba Telemetria já previstas no #58.
+
+
 **58.5 Comunidade / rodadas APRS**
 - Nova área "Comunidade" com rodadas semanais (ex.: rodadas de check-in por mensagem APRS como a
   "Thursday Net") e rodadas configuráveis pelo usuário (indicativo/palavra-chave de check-in, dia, horário).
