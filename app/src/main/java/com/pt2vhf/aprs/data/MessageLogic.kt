@@ -59,7 +59,8 @@ fun conversations(
 ): List<Pair<String, List<ChatMessage>>> {
     val direct = messages.filter {
         it.kind == AprsMessage.Kind.MESSAGE && it.to != "CQ" && !it.to.startsWith("CQ") &&
-            (it.to == ownCall || it.outgoing) && matchesMessage(it, criteria, now)
+            (it.to == ownCall || it.to == ownCall.substringBefore('-') || it.outgoing) &&
+            matchesMessage(it, criteria, now)
     }
     val grouped = direct.groupBy { if (it.outgoing) it.to else it.from }.toList()
     val order = compareBy<Pair<String, List<ChatMessage>>> { (_, list) -> list.maxOf { it.time } }
