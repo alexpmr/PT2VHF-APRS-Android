@@ -29,6 +29,21 @@ fun fullCallsign(callsign: String, ssid: Int): String {
 
 val CALLSIGN_RE = Regex("^[A-Z0-9]{1,6}(-([0-9]|1[0-5]))?$")
 
+/**
+ * Plausible worldwide amateur callsign syntax, deliberately separate from AX.25 tactical
+ * addressees. Syntax validation is NOT proof of an issued license. Prefix allocation and
+ * country-specific exceptional calls are tracked in backlog #59.
+ */
+fun plausibleAmateurCallsign(value: String): Boolean {
+    val call = value.trim().uppercase(Locale.ROOT)
+    val base = call.substringBefore('-')
+    if (!CALLSIGN_RE.matches(call) || base.length !in 3..6) return false
+    // Most international amateur calls use a prefix with a numeral and a letter suffix.
+    // Do not reject numbers at the beginning (e.g., 2E0ABC, 3D2ABC).
+    return Regex("^[A-Z0-9]{1,3}[0-9][A-Z]{1,4}$").matches(base) &&
+        base.any { it.isLetter() }
+}
+
 /** Servidores oferecidos na lista; "Outro…" permite digitar. Padrão igual ao desktop. */
 data class AprsServer(val host: String, val label: String)
 
@@ -55,6 +70,24 @@ fun expandFilter(filter: String, lat: Double?, lon: Double?): String {
     }
 }
 
+/**
+ * APRS-IS group-message filter accepts wildcards. Subscribe to both bare callsign and
+ * all SSIDs of this operator; a geographical filter alone misses message-only packets.
+ * Remove the r/4000 shortcut until a GPS fix makes it a valid range filter.
+ */
+fun effectiveAprsFilter(filter: String, lat: Double?, lon: Double?, ownCall: String): String {
+    val expanded = expandFilter(filter, lat, lon)
+    val parts = expanded.split(Regex("\\s+")).filter {
+        it.isNotBlank() && !Regex("^r/\\d+(?:\\.\\d+)?$").matches(it)
+    }.toMutableList()
+    val base = ownCall.trim().uppercase(Locale.ROOT).substringBefore('-')
+    if (base.isNotBlank()) {
+        val group = "g/$base/$base-*"
+        if (group !in parts) parts += group
+    }
+    return parts.joinToString(" ")
+}
+
 fun validHostPort(host: String, port: Int): Boolean =
     port in 1..65535 && Regex("^[A-Za-z0-9.-]{1,253}$").matches(host.trim()) && !host.startsWith(".")
 
@@ -65,6 +98,8 @@ data class AprsPacket(
     val path: List<String>,
     val info: String,
     val raw: String,
+    /** Source gateway for a third-party RF packet; null for direct TNC2 packets. */
+    val thirdPartyGateway: String? = null,
 ) {
     /** Elementos do path que foram repetidos por RF (marcados com '*'), sem pseudo-saltos de internet/rede digital. */
     val rfDigipeaters: List<String>
@@ -77,7 +112,9 @@ data class AprsPacket(
         get() = path.any { it.startsWith("TCPIP") || it == "qAC" || it == "qAS" || it == "qAI" }
 
     companion object {
-        fun parse(line: String): AprsPacket? {
+        fun parse(line: String): AprsPacket? = parseDepth(line, 0)
+
+        private fun parseDepth(line: String, depth: Int): AprsPacket? {
             val clean = line.trimEnd('\r', '\n')
             if (clean.isEmpty() || clean.startsWith("#")) return null
             val colon = clean.indexOf(':')
@@ -87,7 +124,14 @@ data class AprsPacket(
             val source = header.substring(0, gt).uppercase(Locale.ROOT)
             val rest = header.substring(gt + 1).split(',')
             if (rest.isEmpty() || rest[0].isEmpty()) return null
-            return AprsPacket(source, rest[0], rest.drop(1), clean.substring(colon + 1), clean)
+            val info = clean.substring(colon + 1)
+            if (info.startsWith("}")) {
+                // Third-party frame from an iGate: the original sender is in the inner header.
+                // Permit only one encapsulation layer to prevent recursive malformed packets.
+                if (depth != 0) return null
+                return parseDepth(info.substring(1), 1)?.copy(raw = clean, thirdPartyGateway = source)
+            }
+            return AprsPacket(source, rest[0], rest.drop(1), info, clean)
         }
     }
 }
@@ -96,7 +140,7 @@ data class AprsPacket(
  * Um caminho APRS-IS pode relatar digipeaters, mas não confirma recepção no rádio deste aparelho.
  */
 fun localRfEvidenceLinks(packet: AprsPacket, receivedViaTnc: Boolean): List<Pair<String, String>> {
-    if (!receivedViaTnc) return emptyList()
+    if (!receivedViaTnc || packet.thirdPartyGateway != null) return emptyList()
     val chain = listOf(packet.source) + packet.rfDigipeaters
     return chain.zipWithNext()
 }
@@ -115,7 +159,9 @@ fun isNonRfHop(hop: String): Boolean {
 data class Position(val lat: Double, val lon: Double, val symbolTable: Char, val symbol: Char,
                     val comment: String, val course: Int? = null, val speedKmh: Double? = null)
 
-data class AprsMessage(val addressee: String, val text: String, val id: String?, val kind: Kind) {
+data class AprsMessage(val addressee: String, val text: String, val id: String?, val kind: Kind,
+                       /** Piggybacked ACK in {MM}AA; distinct from the new message's MM. */
+                       val replyAckId: String? = null) {
     enum class Kind { MESSAGE, ACK, REJ, BULLETIN }
 }
 
@@ -167,16 +213,20 @@ fun parseMessage(info: String): AprsMessage? {
     if (!info.startsWith(":") || info.length < 11 || info[10] != ':') return null
     val addressee = info.substring(1, 10).trim().uppercase(Locale.ROOT)
     val body = info.substring(11)
-    val ackMatch = Regex("^(ack|rej)([A-Za-z0-9]{1,5})$").find(body)
+    val ackMatch = Regex("^(ack|rej)([A-Za-z0-9]{1,5})(?:}([A-Za-z0-9]{1,5}))?$").matchEntire(body)
     if (ackMatch != null) {
         val kind = if (ackMatch.groupValues[1] == "ack") AprsMessage.Kind.ACK else AprsMessage.Kind.REJ
-        return AprsMessage(addressee, "", ackMatch.groupValues[2], kind)
+        return AprsMessage(addressee, "", ackMatch.groupValues[2], kind,
+            ackMatch.groupValues[3].ifEmpty { null })
     }
     val brace = body.lastIndexOf('{')
-    val text = if (brace >= 0) body.substring(0, brace) else body
-    val id = if (brace >= 0) body.substring(brace + 1).trimEnd('}').take(5).ifEmpty { null } else null
+    val suffix = if (brace >= 0) body.substring(brace + 1) else ""
+    val idMatch = Regex("^([A-Za-z0-9]{1,5})(?:}([A-Za-z0-9]{1,5}))?$").matchEntire(suffix)
+    val text = if (idMatch != null) body.substring(0, brace) else body
+    val id = idMatch?.groupValues?.get(1)
+    val replyAck = idMatch?.groupValues?.get(2)?.ifEmpty { null }
     val kind = if (addressee.startsWith("BLN")) AprsMessage.Kind.BULLETIN else AprsMessage.Kind.MESSAGE
-    return AprsMessage(addressee, text, id, kind)
+    return AprsMessage(addressee, text, id, kind, replyAck)
 }
 
 fun formatLatitude(lat: Double): String {
