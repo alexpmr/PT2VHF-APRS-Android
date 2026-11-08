@@ -759,13 +759,15 @@ fun StationDialog(call: String, onDismiss: () -> Unit, onMessage: () -> Unit) {
     val followed by AprsRepository.followCall.collectAsState()
     val stations by AprsRepository.stations.collectAsState()
     val status by AprsRepository.status.collectAsState()
+    val weather by AprsRepository.weatherHistory.collectAsState()
     val s: Station? = stations[call]
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = Pal.bar,
         title = { Text(call, fontWeight = FontWeight.Bold) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(Modifier.heightIn(max = 470.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 if (s == null) Text(UiText.text(R.string.no_position), color = Pal.muted)
                 else {
                     Text("${UiText.role(s.role)} · ${s.medium.label} · ${ago(s.lastHeard)}", color = Pal.muted, fontSize = 13.sp)
@@ -781,6 +783,14 @@ fun StationDialog(call: String, onDismiss: () -> Unit, onMessage: () -> Unit) {
                     if (s.comment.isNotBlank()) Text(s.comment, fontSize = 14.sp)
                     Text(UiText.text(R.string.via, s.via.ifBlank { UiText.text(R.string.direct) }), color = Pal.muted, fontSize = 12.sp)
                     if (s.heardBy.isNotEmpty()) Text(UiText.text(R.string.heard_by_rf, s.heardBy.joinToString(", ")), color = Pal.green, fontSize = 12.sp)
+                    KeyValue("Símbolo APRS", "${s.symbolTable}${s.symbol}")
+                    KeyValue("Primeira recepção", ago(s.firstSeen))
+                    KeyValue("Última recepção", ago(s.lastHeard))
+                    KeyValue("Transporte", s.medium.label)
+                    KeyValue("Path", s.via.ifBlank { "—" })
+                    if (weather[call].orEmpty().isNotEmpty()) {
+                        StationWeatherPanel(weather[call].orEmpty())
+                    }
                 }
                 TextButton(onClick = { AprsRepository.toggleFavorite(call) }, modifier = Modifier.fillMaxWidth()) {
                     Text(UiText.text(if (call in favorites) R.string.favorite_remove else R.string.favorite_add))
