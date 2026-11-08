@@ -475,7 +475,7 @@ object AprsRepository {
             }
         }
         val position = parsePosition(packet.info)
-        if (medium == Medium.RF) {
+        if (medium == Medium.RF && packet.thirdPartyGateway == null) {
             val own = _status.value
             val known = _stations.value
             rfEventFor(packet, ownCall, position?.lat ?: known[packet.source]?.lat,
@@ -522,17 +522,22 @@ object AprsRepository {
             }
         }
         val msg = parseMessage(packet.info) ?: return null
+        // Receive traffic for the configured full callsign and for the bare callsign.
+        val ownBase = ownCall.substringBefore('-')
+        val forUs = msg.addressee == ownCall || msg.addressee == ownBase
+        // Reply-ack {MM}AA confirms our previously transmitted AA, independently of MM.
+        if (forUs && msg.replyAckId != null) markAck(packet.source, msg.replyAckId, true)
         return when (msg.kind) {
             AprsMessage.Kind.ACK, AprsMessage.Kind.REJ -> {
-                if (msg.addressee == ownCall) markAck(packet.source, msg.id, msg.kind == AprsMessage.Kind.ACK)
+                if (forUs) markAck(packet.source, msg.id, msg.kind == AprsMessage.Kind.ACK)
                 null
             }
             else -> {
-                val forUs = msg.addressee == ownCall
                 val general = msg.kind == AprsMessage.Kind.BULLETIN || msg.addressee == "CQ" ||
                     msg.addressee.startsWith("CQ")
                 if (!forUs && !general) return null
                 val via = if (medium == Medium.RF)
+                    packet.thirdPartyGateway?.let { "RF via iGate $it" } ?:
                     packet.rfDigipeaters.firstOrNull()?.let { "RF via $it" } ?: "RF direto"
                 else "APRS-IS"
                 // Display text only (#27): IDs/ACK and the raw packet keep the original bytes.
