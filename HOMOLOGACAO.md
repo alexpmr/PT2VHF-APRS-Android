@@ -1,5 +1,28 @@
 # Homologação do PT2VHF APRS Client for Android
 
+## Plano de QA — candidata 0.1.10 (não publicada)
+
+1. **TX real:** cliente Android em APRS-IS verificado envia mensagem a dois destinatários
+   ativos (um IS, um RF por iGate); inspecionar Logs, confirmar transmissão de bytes,
+   ACK do destinatário e ausência de tentativas infinitas.
+2. **Terceiros via iGate:** injetar pacote `IGATE>APRS:}CALL>APRS::DEST    :texto{42`
+   via TNC e confirmar origem interna, texto, envio de ACK autorizado e nenhuma
+   alegação falsa de RF direto.
+3. **Rede e desconexão:** trocar Wi-Fi/LTE, desligar dados, forçar parada do serviço,
+   verificar que o campo retorna com texto preservado após timeout.
+4. **UI:** digitar em 320/360/412 dp, fontes 100%/130%, receber ACK e observar checks.
+5. **Estações:** usar lixeira com filtro aplicado, cancelar e confirmar; testar banco
+   após reinício e reaparecimento em RX.
+6. **WX:** injetar estação com pacotes `_ddd/sss...` e conferir unidades,
+   gráficos/ausências e retenção da sessão. Histórico após reinício ainda não
+   suportado nesta candidata.
+7. **Indicativos:** rejeitar CASA, TESTE, ABC123; aceitar PT2VHF, N0CALL, K1ABC,
+   DL1ABC e 2E0ABC. Verificar outros países e chamadas especiais antes da
+   validação mundial definitiva.
+
+**Não interpretar testes de unidade ou build aprovado como homologação de rádio/OTA/site.**
+
+
 Atualizado em 04/11/2026. **Esta matriz não é um release.**
 
 > **0.1.8 QA:** o status vigente de cada item está em `BACKLOG.md` → "Status para teste — 0.1.8 QA".
