@@ -17,6 +17,24 @@ Itens registrados para as próximas versões. Não implementar até o pedido de 
   do osmdroid já guarda as áreas visitadas).
 - Numeração: o item "31" duplicado (remover aviso de abertura, 04/11) passou a ser o **#38**. Não há #32.
 
+## Em desenvolvimento — candidata 0.1.10 (08/11/2026)
+
+**Branch:** feature/android-020-messaging-stability. Não há nova publicação pública.
+Implementação **parcial / precisa de CI e teste em aparelhos**:
+- #54 e #60: filtro de mensagens para o próprio indicativo, parser de pacotes terceiros
+  de iGate, reply-ack, liberação da composição por timeout e ACK no worker de I/O.
+  Pendente validação real das rotas TX/ACK por RF e APRS-IS.
+- #56 e #57: contraste/altura do campo e checks simples/duplos nos balões;
+  pendem testes de usabilidade, telas pequenas e entrega real de ACK.
+- #61: lixeira na aba Estações reaproveitando limpeza existente; testar em aparelho.
+- #58: parser WX convencional, gráficos de medições **somente da sessão atual**.
+  Ainda faltam persistência, telemetria T#/PARM/UNIT/EQNS/BITS, outras variantes WX,
+  ficha completa e comunidade.
+- #59: somente validação de formato plausível do indicativo do operador;
+  ainda faltam tabela global de prefixos e exceções internacionais.
+- #52 (digi/iGate), #55 (notificações completas) e demais homologações anteriores:
+  **não finalizados**. Nenhuma baixa por código não testado.
+
 ## Status para teste — 0.1.9 (05/11/2026)
 
 Mesma legenda da tabela 0.1.8. Roteiros T50-T66 em [HOMOLOGACAO.md](HOMOLOGACAO.md).
