@@ -2026,6 +2026,13 @@ do serviço, fila travada, retransmissão sem limite ou mensagem transmitida mas
 **Relacionados:** #25 (APRS-IS conectado mas sem TX), #37 (queda de APRS-IS durante envio),
 #47 (tentativas/ACK no balão), #54 (mensagens RF↔iGate↔APRS-IS, reply-ack) e #56 (campo de composição).
 
+**Atualização do teste em 08/11/2026:** o mantenedor tentou enviar mensagem para uma estação
+sabidamente online e acessível tanto por RF quanto por APRS-IS. O aplicativo permaneceu tentando,
+sem concluir o envio. O relato **não identifica qual transporte foi efetivamente utilizado** nem se
+houve escrita no socket/TNC, recepção no destino ou ACK. Registrar esses eventos separadamente para
+isolar falha de TX, roteamento, confirmação ou interface. É evidência adicional de falha funcional,
+mas não prova ainda a causa raiz.
+
 **Diagnóstico e correção exigidos:**
 - Reproduzir com **APRS-IS verificado e TX via Internet ativada**, depois repetir por TNC KISS/AFSK
   em ambiente controlado; separar falha de APRS-IS, RF e falha de interface.
@@ -2054,6 +2061,39 @@ envio após troca Wi-Fi/dados móveis, queda/reconexão e app em primeiro/segund
 Registrar pacotes brutos e carimbos de tempo do emissor e receptor para distinguir
 falha de TX, roteamento e ACK. Cobrir com testes de unidade/instrumentação.
 - **Status:** relatado e registrado; **não corrigido, não homologado e nenhum APK novo gerado**.
+
+### 61. Estações: ícone de lixeira para apagar estações armazenadas
+_Solicitado em 08/11/2026: "Backlog: implementar apagar estações com ícone de lixeira na aba de estações"._
+
+**Como está na v0.1.9:** já há exclusão de todas as estações em
+Configurações → Dados locais → Apagar todas as estações, usando
+AprsRepository.clearStations() e StationStore.clearStationsAndLinks().
+A aba Estações (StationsScreen em ui/Screens.kt) ainda não dispõe de acesso direto
+à operação por ícone de lixeira.
+
+**Comportamento solicitado:**
+- Incluir **ícone de lixeira** na barra de ações da aba **Estações**, ao lado
+  dos filtros/busca, com rótulo acessível "Apagar estações".
+- Ao tocar, abrir confirmação clara: **"Apagar todas as estações armazenadas?"**,
+  com quantidade total e botões **Cancelar** / **Apagar**. A exclusão é apenas
+  local, não afeta estações na rede APRS.
+- Com filtros aplicados, explicitar que a operação apaga **todas as estações
+  armazenadas**, não apenas as visíveis no filtro; não executar silenciosamente
+  exclusão parcial ou por critério de filtro.
+- Reutilizar a função transacional de Configurações; eliminar também enlaces RF
+  derivados do cache, sem apagar mensagens, preferências, favoritos, rastreamento
+  GPS, histórico próprio ou configurações de conexão.
+- Atualizar a lista e o contador imediatamente após sucesso; mostrar mensagem
+  de resultado ou erro. Se APRS-IS/TNC continuarem ativos, novas estações
+  recebidas podem reaparecer; explicar isso na confirmação.
+- Evitar cliques duplicados, permitir cancelar e traduzir os textos em
+  português, inglês, espanhol, francês e italiano.
+
+**Critérios de aceite:** apagar com e sem filtros ativos, confirmar/cancelar,
+verificar lista vazia e banco após reiniciar, preservação dos outros dados;
+com conexão ativa, verificar reaparecimento apenas por novos pacotes.
+- **Status:** registrado no backlog; **interface ainda não implementada**,
+  nenhum APK novo gerado.
 
 ## Consolidação das sugestões aprovadas com itens já existentes
 
