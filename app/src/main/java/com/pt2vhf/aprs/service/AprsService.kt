@@ -771,7 +771,9 @@ class AprsService : Service(), LocationListener {
             val info = ackInfo(forUs.from, id)
             if (!txWorker.isShutdown) txWorker.execute {
                 if (medium == Medium.RF && settings.txViaRf && tncConnected()) {
-                    val ack = "${settings.fullCall}>$TOCALL:$info"
+                    val path = settings.rfPath.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+                    val ack = "${settings.fullCall}>$TOCALL" +
+                        (if (path.isEmpty()) "" else "," + path.joinToString(",")) + ":$info"
                     if (tncSend(ack)) AprsRepository.logPacket("TX", Medium.RF, ack)
                 } else if (settings.txViaInternet && AprsRepository.status.value.aprsIsVerified) {
                     val ack = "${settings.fullCall}>$TOCALL,TCPIP*:$info"
