@@ -12,6 +12,7 @@ Itens registrados para as próximas versões. Não implementar até o pedido de 
   adaptadores USB-OTG, widget (#46) e consumo de bateria (#49). O modem AFSK passa nos testes com ruído,
   de-ênfase e 44,1 kHz, mas nível de áudio, VOX e rádios reais precisam do teste T52.
 - O P0 **#37** (queda do APRS-IS ao transmitir) ainda precisa de confirmação em servidor real.
+- **Nova falha P0 (#60, 08/11): envio de mensagens fica tentando sem concluir.** Investigar junto com #25, #37 e #54 antes de publicar nova versão; falha relatada, ainda não reproduzida em teste.
 - Fora do escopo: download em massa de mapas offline (a política de tiles do OpenStreetMap proíbe; o cache
   do osmdroid já guarda as áreas visitadas).
 - Numeração: o item "31" duplicado (remover aviso de abertura, 04/11) passou a ser o **#38**. Não há #32.
@@ -2012,6 +2013,47 @@ SSID 0-15) e inválidos (`CASA`, `TESTE`, `ABC123`, `12345`, `PT2VHF-16`, prefix
 **Critério de aceite:** palavras comuns são recusadas com mensagem clara; indicativos reais de vários
 países são aceitos com e sem SSID; mensagens para destinos táticos continuam possíveis.
 - **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+
+### 60. Mensagens: envio não conclui, permanece tentando indefinidamente (P0)
+_Solicitado em 08/11/2026: "Backlog: O app não consegue enviar msg...fica tentando.."_
+
+**Falha relatada (v0.1.9; reprodução ainda não coletada):** ao enviar mensagem, a interface permanece
+no estado de tentativa/envio e o usuário não consegue confirmar que a mensagem saiu. **Não assumir**
+que seja apenas ausência de ACK: pode ser falha antes da escrita no transporte, ausência de resultado
+do serviço, fila travada, retransmissão sem limite ou mensagem transmitida mas sem ACK remoto.
+
+**Prioridade:** **P0 — bloqueador do uso básico do APRS Client Android.**
+**Relacionados:** #25 (APRS-IS conectado mas sem TX), #37 (queda de APRS-IS durante envio),
+#47 (tentativas/ACK no balão), #54 (mensagens RF↔iGate↔APRS-IS, reply-ack) e #56 (campo de composição).
+
+**Diagnóstico e correção exigidos:**
+- Reproduzir com **APRS-IS verificado e TX via Internet ativada**, depois repetir por TNC KISS/AFSK
+  em ambiente controlado; separar falha de APRS-IS, RF e falha de interface.
+- Rastrear ponta a ponta: clique Enviar → requestId → despacho da Intent → serviço →
+  fila serial TX → socket APRS-IS/TNC → resultado entregue à UI → ID da mensagem →
+  recepção de ACK/REJ (quando aplicável). Cada etapa deve ter estado e erro observáveis.
+- Checar pendingId/OutboundSendResult em ui/MessagesUi.kt, ACTION_MESSAGE,
+  txWorker e tratamento de exceções em AprsService.kt, AprsIsClient.send,
+  estados de conexão/autenticação, persistência de retries e processamento do ACK.
+- **Timeout explícito** para submissão ao serviço/transporte; se falhar, exibir motivo concreto,
+  desbloquear a composição e preservar texto/destino. Não deixar o botão nem o balão
+  eternamente em "Enviando..." após falha ou interrupção do serviço.
+- Distinguir claramente **Na fila**, **Enviando**, **Enviado ao transporte (sem ACK)**,
+  **Confirmado por ACK**, **Rejeitado (REJ)** e **Falha / sem ACK**. Escrita no socket
+  **não** equivale a confirmação de recepção; mensagens sem ID não têm ACK.
+- Limitar tentativas ao número e intervalo configurados (#47), cancelar ao obter ACK/REJ,
+  impedir reenvio paralelo/duplicado após reconexão e permitir **Reenviar** manual.
+- Registrar no Logs/diagnóstico meio, requestId, ID APRS, tentativas, último erro,
+  autenticação verificada, status de socket e mudanças de estado, **sem expor credenciais**.
+
+**Critérios de aceite:** em dois clientes reais (um APRS-IS e outro RF via iGate),
+uma mensagem passa de Enviando → Enviado → ACK confirmado, quando o destinatário
+responde com ACK; se a conexão falhar, retornar erro e liberar a composição;
+sem ACK, esgotar o limite e mostrar "Sem ACK", sem loop infinito. Verificar
+envio após troca Wi-Fi/dados móveis, queda/reconexão e app em primeiro/segundo plano.
+Registrar pacotes brutos e carimbos de tempo do emissor e receptor para distinguir
+falha de TX, roteamento e ACK. Cobrir com testes de unidade/instrumentação.
+- **Status:** relatado e registrado; **não corrigido, não homologado e nenhum APK novo gerado**.
 
 ## Consolidação das sugestões aprovadas com itens já existentes
 
