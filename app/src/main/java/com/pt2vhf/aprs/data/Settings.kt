@@ -6,6 +6,7 @@ import com.pt2vhf.aprs.core.DEFAULT_PORT
 import com.pt2vhf.aprs.core.DEFAULT_SERVER
 import com.pt2vhf.aprs.core.aprsPasscode
 import com.pt2vhf.aprs.core.fullCallsign
+import com.pt2vhf.aprs.core.plausibleAmateurCallsign
 import org.json.JSONObject
 
 /** Preferências do app (SharedPreferences). O passcode nunca é pedido: vem do indicativo. */
@@ -98,7 +99,7 @@ data class Settings(
 ) {
     val fullCall: String get() = fullCallsign(callsign, ssid)
     val passcode: Int get() = aprsPasscode(callsign)
-    val configured: Boolean get() = callsign.isNotBlank()
+    val configured: Boolean get() = plausibleAmateurCallsign(fullCall)
     /** Perfil Somente recepção: nenhum beacon, mensagem ou ACK sai por nenhum meio. */
     val rxOnly: Boolean get() = profile == PROFILE_RX
     /** #6: posição fixa digitada ou escolhida no mapa, usada no lugar do GPS. */
