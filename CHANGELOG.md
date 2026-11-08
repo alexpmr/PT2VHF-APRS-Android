@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.10 — candidata QA (08/11/2026; NÃO publicada)
+
+- **#54/#60:** acrescentado filtro de mensagens dirigidas ao próprio indicativo (`g/BASE/BASE-*`), removendo o atalho regional inválido até haver fix GPS; recepção de mensagens APRS encapsuladas em pacotes de terceiros de iGate e interpretação separada de ID de mensagem/ACK piggyback.
+- **Envio e ACK:** ACKs processados na fila de I/O respeitando as autorizações de transmissão; a composição deixa de ficar bloqueada indefinidamente quando não há retorno do serviço. Timeout de interface não garante que o pacote não tenha sido transmitido.
+- **#56:** campo de texto com altura mínima e contraste explícito, mesmo com teclado aberto.
+- **#57:** um check quando o transporte aceita o pacote; dois checks verdes apenas depois do ACK. Nunca representam leitura.
+- **#61:** lixeira na aba Estações, com confirmação de exclusão de todas as estações locais; mensagens, favoritos e configurações preservados.
+- **#58:** primeiro parser de relatórios meteorológicos APRS WX convencionais (temperatura, umidade, vento, pressão e chuva), séries temporais da sessão e gráficos na ficha de estação; sem persistência histórica ainda.
+- **#59:** regra inicial de sintaxe para indicativo próprio (contra palavras arbitrárias); tabela global oficial de prefixos, exceções nacionais e verificação de atribuição **ainda pendentes**.
+- Testes de unidade adicionados para parser WX, filtros, encapsulamento iGate, reply-ack e sintaxe de indicativos.
+
+**PENDÊNCIAS / BLOQUEIOS:** todos os itens dependentes de rádio/TNC e servidor real precisam de homologação; o #52 (digipeater/iGate ativo), o #55 (notificações enriquecidas), a ficha completa #58 (telemetria T#/PARM/UNIT/EQNS/BITS e persistência), e o #59 completo não estão concluídos. Não liberar como estável sem CI verde, APK assinado, provas de TX/ACK e atualização validada do site/OTA.
+
+
 ## 0.1.9 — Publicada (05/11/2026, beta; testes item a item pendentes)
 
 Implementa todos os itens pendentes do backlog. Itens que dependem de hardware (AFSK no ar, adaptadores USB, widget, consumo de bateria) foram testados só em código e precisam de teste físico.
