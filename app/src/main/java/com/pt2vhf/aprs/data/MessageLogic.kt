@@ -20,7 +20,7 @@ data class MessageCriteria(
 fun isPendingStatus(status: String): Boolean = status == "Enviando" || status.startsWith("Aguardando ACK")
 
 fun isFailedStatus(status: String): Boolean =
-    status == "Sem conexão para enviar" || status == "Sem ACK após 5 tentativas" || status == "Rejeitada"
+    status == "Sem conexão para enviar" || status.startsWith("Sem ACK após ") || status == "Rejeitada"
 
 fun matchesMessage(m: ChatMessage, c: MessageCriteria, now: Long = System.currentTimeMillis()): Boolean {
     val text = c.text.trim()
