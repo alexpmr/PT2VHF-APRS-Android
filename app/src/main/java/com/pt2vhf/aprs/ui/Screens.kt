@@ -535,6 +535,10 @@ fun StationsScreen(maxAgeHours: Int, onStation: (String) -> Unit) {
         }
     }
     var filterOpen by remember { mutableStateOf(false) }
+    var clearStationsOpen by remember { mutableStateOf(false) }
+    var clearingStations by remember { mutableStateOf(false) }
+    var clearStationsResult by remember { mutableStateOf<String?>(null) }
+    val stationClearScope = rememberCoroutineScope()
     var query by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_search", "")) }
     var sort by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_sort_v2", "distance")) }
     var descending by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_desc_v2", "false") == "true") }
@@ -585,7 +589,15 @@ fun StationsScreen(maxAgeHours: Int, onStation: (String) -> Unit) {
             TextButton(onClick = { filterOpen = true }) {
                 Text("☷" + if (activeFilters) " ●" else "", fontSize = 20.sp)
             }
+            TextButton(onClick = { clearStationsOpen = true }, enabled = !clearingStations && allStations.isNotEmpty(),
+                modifier = Modifier.semantics {
+                    contentDescription = UiText.text(R.string.clear_all_stations)
+                }) {
+                Text("🗑", fontSize = 20.sp)
+            }
         }
+        clearStationsResult?.let { Text(it, color = Pal.muted, fontSize = 12.sp,
+            modifier = Modifier.padding(horizontal = 16.dp)) }
         Text(UiText.text(R.string.station_showing, list.size, stations.size),
             modifier = Modifier.padding(horizontal = 16.dp), color = Pal.muted, fontSize = 12.sp)
         if (list.isEmpty()) Empty(UiText.text(R.string.no_stations))
@@ -628,6 +640,34 @@ fun StationsScreen(maxAgeHours: Int, onStation: (String) -> Unit) {
                 }
             }
         }
+    }
+    if (clearStationsOpen) {
+        AlertDialog(
+            onDismissRequest = { if (!clearingStations) clearStationsOpen = false },
+            containerColor = Pal.bar,
+            title = { Text(UiText.text(R.string.clear_all_stations)) },
+            text = { Text(UiText.text(R.string.clear_stations_confirmation) +
+                "\n" + UiText.text(R.string.station_showing, allStations.size, allStations.size)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (!clearingStations) {
+                        clearingStations = true
+                        stationClearScope.launch {
+                            val ok = runCatching { AprsRepository.clearStations() }.getOrDefault(false)
+                            clearStationsResult = UiText.text(if (ok) R.string.clear_local_data_success
+                                else R.string.clear_local_data_error)
+                            clearingStations = false
+                            clearStationsOpen = false
+                        }
+                    }
+                }, enabled = !clearingStations) { Text(UiText.text(R.string.clear_all_stations)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { clearStationsOpen = false }, enabled = !clearingStations) {
+                    Text(UiText.text(R.string.cancel))
+                }
+            },
+        )
     }
     if (filterOpen) {
         val choices = listOf(
