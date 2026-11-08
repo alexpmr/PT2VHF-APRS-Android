@@ -35,7 +35,7 @@ import com.pt2vhf.aprs.core.AprsMessage
 import com.pt2vhf.aprs.core.AprsPacket
 import com.pt2vhf.aprs.core.SmartBeaconing
 import com.pt2vhf.aprs.core.ackInfo
-import com.pt2vhf.aprs.core.expandFilter
+import com.pt2vhf.aprs.core.effectiveAprsFilter
 import com.pt2vhf.aprs.core.messageInfo
 import com.pt2vhf.aprs.core.composeBeaconComment
 import com.pt2vhf.aprs.core.decodeAprsText
@@ -283,12 +283,18 @@ class AprsService : Service(), LocationListener {
                 val message = intent.getStringExtra(EXTRA_TEXT).orEmpty()
                 val requestId = intent.getStringExtra(EXTRA_REQUEST_ID)
                 val replyTo = intent.getStringExtra(EXTRA_REPLY_TO)?.toLongOrNull()
-                txWorker.execute {
-                    val submitted = runCatching { sendMessage(to, message, replyTo) }.getOrDefault(false)
-                    if (!requestId.isNullOrBlank()) {
-                        AprsRepository.reportSendResult(OutboundSendResult(requestId, submitted,
-                            if (submitted) "" else sendFailureReason()))
+                // A stopped worker must not leave the composer waiting without a result.
+                runCatching {
+                    txWorker.execute {
+                        val submitted = runCatching { sendMessage(to, message, replyTo) }.getOrDefault(false)
+                        if (!requestId.isNullOrBlank()) {
+                            AprsRepository.reportSendResult(OutboundSendResult(requestId, submitted,
+                                if (submitted) "" else sendFailureReason()))
+                        }
                     }
+                }.onFailure {
+                    if (!requestId.isNullOrBlank())
+                        AprsRepository.reportSendResult(OutboundSendResult(requestId, false, sendFailureReason()))
                 }
             }
             ACTION_BT_CONNECT -> intent.getStringExtra(EXTRA_ADDRESS)?.let {
@@ -344,7 +350,7 @@ class AprsService : Service(), LocationListener {
         val gps = AprsRepository.status.value
         val lat = gps.lat ?: return
         val lon = gps.lon ?: return
-        val filter = expandFilter(settings.filter, lat, lon)
+        val filter = effectiveAprsFilter(settings.filter, lat, lon, settings.fullCall)
         if (!txWorker.isShutdown) txWorker.execute { aprsIs.updateFilter(filter) }
     }
 
@@ -380,7 +386,7 @@ class AprsService : Service(), LocationListener {
         if (!settings.configured || (!force && (!settings.connectAprsIs || Settings.flag(this, "aprs_manual_pause")))) return
         val s = AprsRepository.status.value
         aprsIs.start(settings.server, settings.port, settings.fullCall, settings.passcode,
-            expandFilter(settings.filter, s.lat, s.lon))
+            effectiveAprsFilter(settings.filter, s.lat, s.lon, settings.fullCall))
     }
 
     /** Connects the configured TNC (Bluetooth KISS or KISS TCP); does nothing if none is set. */
@@ -523,7 +529,7 @@ class AprsService : Service(), LocationListener {
             AprsRepository.recordTrack(location.latitude, location.longitude)
         }
         if (firstFix && settings.filter.contains("r/")) {
-            val expanded = expandFilter(settings.filter, location.latitude, location.longitude)
+            val expanded = effectiveAprsFilter(settings.filter, location.latitude, location.longitude, settings.fullCall)
             // Reconfigure the filter within the authenticated session, without closing the socket.
             txWorker.execute { aprsIs.updateFilter(expanded) }
         }
@@ -760,15 +766,17 @@ class AprsService : Service(), LocationListener {
         runCatching { checkAlerts(packet, medium, previous, eventsBefore) }
         if (settings.apiEnabled) runCatching { broadcastPacket(packet, medium) }
         if (forUs == null) return
-        // ACK pelo mesmo meio por onde a mensagem chegou. Somente recepção não transmite nem ACK.
+        // Send ACK through an authorized transport on the IO worker, not the APRS-IS reader.
         forUs.msgId?.takeIf { !settings.rxOnly }?.let { id ->
             val info = ackInfo(forUs.from, id)
-            if (medium == Medium.RF && tncConnected()) {
-                val ack = "${settings.fullCall}>$TOCALL:${info}"
-                if (tncSend(ack)) AprsRepository.logPacket("TX", Medium.RF, ack)
-            } else if (AprsRepository.status.value.aprsIsVerified) {
-                val ack = "${settings.fullCall}>$TOCALL,TCPIP*:$info"
-                if (aprsIs.send(ack)) AprsRepository.logPacket("TX", Medium.INTERNET, ack)
+            if (!txWorker.isShutdown) txWorker.execute {
+                if (medium == Medium.RF && settings.txViaRf && tncConnected()) {
+                    val ack = "${settings.fullCall}>$TOCALL:$info"
+                    if (tncSend(ack)) AprsRepository.logPacket("TX", Medium.RF, ack)
+                } else if (settings.txViaInternet && AprsRepository.status.value.aprsIsVerified) {
+                    val ack = "${settings.fullCall}>$TOCALL,TCPIP*:$info"
+                    if (aprsIs.send(ack)) AprsRepository.logPacket("TX", Medium.INTERNET, ack)
+                }
             }
         }
         if (settings.notifyMessages) notifyMessage(forUs)
