@@ -55,7 +55,7 @@ import com.pt2vhf.aprs.BuildConfig
 import com.pt2vhf.aprs.R
 import com.pt2vhf.aprs.UiText
 import com.pt2vhf.aprs.core.APRS_SERVERS
-import com.pt2vhf.aprs.core.CALLSIGN_RE
+import com.pt2vhf.aprs.core.plausibleAmateurCallsign
 import com.pt2vhf.aprs.core.DEFAULT_FILTER
 import com.pt2vhf.aprs.core.formatVoiceFrequency
 import com.pt2vhf.aprs.core.validHostPort
@@ -256,7 +256,7 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
         val portN = port.toIntOrNull() ?: -1
         val full = if (ssidN in 1..15) "$base-$ssidN" else base
         if (!force) when {
-            !CALLSIGN_RE.matches(full) || ssidN !in 0..15 -> { error = UiText.text(R.string.invalid_call); return null }
+            !plausibleAmateurCallsign(full) || ssidN !in 0..15 -> { error = UiText.text(R.string.invalid_call); return null }
             !validHostPort(server, portN) -> { error = UiText.text(R.string.invalid_server); return null }
             symbol.length != 2 -> { error = UiText.text(R.string.invalid_symbol); return null }
             voiceFreq.isNotBlank() && formatVoiceFrequency(voiceFreq) == null -> {
