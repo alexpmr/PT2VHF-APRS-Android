@@ -503,7 +503,8 @@ object AprsRepository {
             _stations.update { map ->
                 val existing = map[packet.source]
                 val heardBy = (existing?.heardBy ?: emptySet()) +
-                    (if (medium == Medium.RF) digis.take(1) else emptyList())
+                    (if (medium == Medium.RF && packet.thirdPartyGateway == null)
+                        digis.take(1) else emptyList())
                 val station = Station(
                     packet.source, pos.lat, pos.lon, pos.symbolTable, pos.symbol, decodeAprsText(pos.comment), now, medium,
                     packet.path.joinToString(","), pos.speedKmh, pos.course, heardBy,
