@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="wx_section">Weather observations</string>
+    <string name="wx_temperature">Temperature</string>
+    <string name="wx_humidity">Humidity</string>
+    <string name="wx_pressure">Pressure</string>
+    <string name="wx_wind">Wind</string>
+    <string name="wx_gust">Gust</string>
+    <string name="wx_rain_hour">Rain (1 h)</string>
+    <string name="wx_rain_day">Rain (24 h)</string>
+    <string name="wx_rain_midnight">Rain since midnight</string>
+    <string name="wx_history_insufficient">Not enough observations to draw a trend.</string>
+</resources>
