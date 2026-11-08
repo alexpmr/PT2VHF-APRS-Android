@@ -290,11 +290,12 @@ private enum class BubbleAction { REPLY, REPLY_PUBLIC, REPLY_PRIVATE, DIRECT, CO
 /** #47: ícone, cor e texto do estado de entrega; null para mensagens recebidas ou sem confirmação. */
 private fun deliveryIcon(m: ChatMessage): Pair<String, androidx.compose.ui.graphics.Color>? = when {
     !m.outgoing -> null
-    m.status == "ACK recebido" -> "✓" to Pal.green
+    m.status == "ACK recebido" -> "✓✓" to Pal.green
     m.status == "Rejeitada" -> "⛔" to androidx.compose.ui.graphics.Color(0xFFF26F70)
     m.status.startsWith("Sem ACK") || m.status == "Sem conexão para enviar" -> "✗" to Pal.orange
     m.status == "Cancelada" -> "⊘" to Pal.muted
-    m.status.startsWith("Aguardando") || m.status == "Enviando" -> "🕓" to Pal.yellow
+    m.status.startsWith("Aguardando ACK") || m.status.startsWith("Enviada") -> "✓" to Pal.green
+    m.status == "Enviando" -> "🕓" to Pal.yellow
     else -> null
 }
 
@@ -398,6 +399,18 @@ private fun Composer(
             pendingId = null
         }
     }
+    // Do not strand the composer forever if Android kills/restarts the service or its
+    // serial TX worker blocks. The draft stays intact; an absent result is NOT proof of TX failure.
+    LaunchedEffect(pendingId) {
+        val request = pendingId
+        if (request != null) {
+            kotlinx.coroutines.delay(15_000L)
+            if (pendingId == request && AprsRepository.sendResults.value[request] == null) {
+                error = "Sem resposta do serviço de envio. Confira a aba Logs antes de tentar novamente."
+                pendingId = null
+            }
+        }
+    }
     Column(Modifier.fillMaxWidth().background(Pal.bar)) {
         if (replyContext != null) Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically) {
@@ -411,7 +424,9 @@ private fun Composer(
         error?.let { Text(it, color = Pal.orange, modifier = Modifier.padding(horizontal = 12.dp)) }
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(text, { text = it; error = null }, placeholder = { Text(placeholder) },
-                modifier = Modifier.weight(1f), minLines = 1, maxLines = 4,
+                modifier = Modifier.weight(1f).heightIn(min = 56.dp),
+                textStyle = androidx.compose.ui.text.TextStyle(color = Pal.text, fontSize = 16.sp),
+                minLines = 1, maxLines = 4,
                 supportingText = if (text.length > 67) {
                     { Text(UiText.text(R.string.message_split_notice, (text.length + 66) / 67), fontSize = 11.sp) }
                 } else null)
@@ -452,7 +467,9 @@ private fun Conversation(
     val messages by AprsRepository.messages.collectAsState()
     val stations by AprsRepository.stations.collectAsState()
     val list = messages.filter { it.kind == AprsMessage.Kind.MESSAGE &&
-        ((it.outgoing && it.to == contact) || (!it.outgoing && it.from == contact && it.to == settings.fullCall)) }
+        ((it.outgoing && it.to == contact) ||
+            (!it.outgoing && it.from == contact &&
+                (it.to == settings.fullCall || it.to == settings.callsign.uppercase()))) }
         .sortedWith(compareBy<ChatMessage> { it.time }.thenBy { it.id })
     val replyContext = messages.firstOrNull { it.id == replyToId }
     val retries by AprsRepository.retryAt.collectAsState()
