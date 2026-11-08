@@ -2061,7 +2061,36 @@ letras/números (ex.: `CASA`, `TESTE`, `ABC`), desde que o SSID fique entre 0 e 
 SSID 0-15) e inválidos (`CASA`, `TESTE`, `ABC123`, `12345`, `PT2VHF-16`, prefixo inexistente).
 **Critério de aceite:** palavras comuns são recusadas com mensagem clara; indicativos reais de vários
 países são aceitos com e sem SSID; mensagens para destinos táticos continuam possíveis.
-- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+**Complemento de 08/11/2026 — requisito reforçado pelo mantenedor:**
+"Permitir apenas indicativos válidos do mundo todo, para evitar que coloquem qualquer palavra e aceite."
+
+- **Não usar uma expressão regular genérica como único critério.** Validar sintaxe e comprimento
+  compatíveis com APRS/AX.25, SSID de 0 a 15, alocações internacionais de prefixos
+  (ITU) e regras nacionais quando disponíveis; manter lista de exceções para
+  prefixos especiais, clubes, indicativos temporários e formatos legítimos
+  de países diferentes. Não aplicar a regra brasileira a todos os países.
+- **Distinguir três estados:** (a) formato inválido/rejeitado,
+  (b) formato e prefixo plausíveis mas titularidade não verificada,
+  (c) indicativo efetivamente confirmado por cadastro oficial disponível.
+  Prefixo ITU válido **não comprova** que o indicativo tenha sido atribuído.
+  Não prometer uma base mundial completa de licenças, pois nem todos os
+  reguladores oferecem cadastros públicos ou APIs.
+- **Operação sem rede:** base local versionada, atualizável junto com o aplicativo;
+  se houver fonte oficial confiável para determinada jurisdição, admitir consulta
+  opcional, com cache, proteção de privacidade e tratamento de indisponibilidade.
+  Ausência de cadastro online não deve rejeitar automaticamente um indicativo
+  internacional legítimo que passou nas regras documentadas.
+- **Separar identidade TX de destinos:** bloquear configuração do próprio indicativo
+  sintaticamente inválido e uso indevido no transmissor; manter suporte a destinos
+  de mensagens APRS e identificadores táticos válidos que não são licenças
+  de radioamador (CQ, boletins, serviços, objetos etc.), sem impedir RX de terceiros.
+- **Critério mínimo de aceitação:** `CASA`, `TESTE`, palavras arbitrárias e prefixos
+  inexistentes são recusados; exemplos legítimos de diferentes países (inclusive
+  indicativos especiais e com dígito inicial) não sofrem falsos bloqueios.
+  Retornar motivo claro, país/prefixo identificado quando possível, e testes
+  automatizados com casos positivos, negativos e limítrofes.
+
+- **Status:** requisito reforçado e registrado; **não implementado**. Nenhum APK novo gerado.
 
 ### 60. Mensagens: envio não conclui, permanece tentando indefinidamente (P0)
 _Solicitado em 08/11/2026: "Backlog: O app não consegue enviar msg...fica tentando.."_
