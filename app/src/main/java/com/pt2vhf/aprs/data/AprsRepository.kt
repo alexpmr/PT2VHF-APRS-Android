@@ -9,6 +9,8 @@ import com.pt2vhf.aprs.core.localRfEvidenceLinks
 import com.pt2vhf.aprs.core.parseMessage
 import com.pt2vhf.aprs.core.parseObject
 import com.pt2vhf.aprs.core.parsePosition
+import com.pt2vhf.aprs.core.parseAprsWeather
+import com.pt2vhf.aprs.core.AprsWeather
 import com.pt2vhf.aprs.core.packetType
 import com.pt2vhf.aprs.core.RoutePoint
 import org.json.JSONArray
@@ -61,6 +63,10 @@ object AprsRepository {
     val connectionLog: StateFlow<List<ConnectionEvent>> = _connectionLog.asStateFlow()
 
     // Keep results per request so rapid navigation or two compositors cannot lose an acknowledgement.
+    /** WX observations received during this process; persisted history is a later #58 milestone. */
+    private val _weatherHistory = MutableStateFlow<Map<String, List<AprsWeather>>>(emptyMap())
+    val weatherHistory: StateFlow<Map<String, List<AprsWeather>>> = _weatherHistory.asStateFlow()
+
     private val _sendResults = MutableStateFlow<Map<String, OutboundSendResult>>(emptyMap())
     val sendResults: StateFlow<Map<String, OutboundSendResult>> = _sendResults.asStateFlow()
 
@@ -351,6 +357,7 @@ object AprsRepository {
         val store = stationStore ?: return false
         stationCacheEpoch.incrementAndGet()
         _stations.value = emptyMap()
+        _weatherHistory.value = emptyMap()
         _links.value = emptyList()
         _trails.value = emptyMap()
         _followCall.value = null
@@ -472,6 +479,12 @@ object AprsRepository {
                     map + (obj.name to station)
                 }
                 persisted?.let { st -> diskWorker.execute { runCatching { stationStore?.saveStation(st) } } }
+            }
+        }
+        parseAprsWeather(packet.info, now)?.let { observation ->
+            _weatherHistory.update { history ->
+                val previous = history[packet.source].orEmpty().filter { it.timestamp >= now - 7 * 86_400_000L }
+                history + (packet.source to (previous + observation).takeLast(1000))
             }
         }
         val position = parsePosition(packet.info)
