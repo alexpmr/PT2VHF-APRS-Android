@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="wx_section">Observações meteorológicas</string>
+    <string name="wx_temperature">Temperatura</string>
+    <string name="wx_humidity">Umidade</string>
+    <string name="wx_pressure">Pressão</string>
+    <string name="wx_wind">Vento</string>
+    <string name="wx_gust">Rajadas</string>
+    <string name="wx_rain_hour">Chuva (1 h)</string>
+    <string name="wx_rain_day">Chuva (24 h)</string>
+    <string name="wx_rain_midnight">Chuva desde meia-noite</string>
+    <string name="wx_history_insufficient">Ainda não há observações suficientes para o gráfico.</string>
+</resources>
