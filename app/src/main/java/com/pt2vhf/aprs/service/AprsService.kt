@@ -680,6 +680,46 @@ class AprsService : Service(), LocationListener {
         return used
     }
 
+    /**
+     * Prefer the verified APRS-IS route for private messages to avoid a stalled TNC write
+     * preventing the Internet transmission. RF is used as a fallback, not simultaneously:
+     * repeated identical IDs over both media would otherwise create avoidable duplicates.
+     *
+     * Returning INTERNET means the socket accepted bytes, never that the recipient saw
+     * the packet. ACK confirmation remains a distinct state in the message history.
+     */
+    private fun transmitPrivateMessage(info: String): Medium? {
+        if (settings.rxOnly) return null
+        val call = settings.fullCall
+        val state = AprsRepository.status.value
+        if (settings.txViaInternet && state.aprsIsVerified) {
+            val frame = "$call>$TOCALL,TCPIP*:$info"
+            if (aprsIs.send(frame)) {
+                AprsRepository.updateStatus { it.copy(aprsTx = it.aprsTx + 1) }
+                AprsRepository.logPacket("TX", Medium.INTERNET, frame)
+                AprsRepository.logConnection("TX-MSG", "APRS-IS socket write accepted; ACK pending")
+                return Medium.INTERNET
+            }
+            AprsRepository.logConnection("TX-MSG", "APRS-IS write failed; trying RF if available")
+        }
+        if (settings.txViaRf && tncConnected()) {
+            val path = settings.rfPath.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+            val frame = "$call>$TOCALL" +
+                (if (path.isEmpty()) "" else "," + path.joinToString(",")) + ":$info"
+            if (tncSend(frame)) {
+                AprsRepository.updateStatus { it.copy(tncTx = it.tncTx + 1) }
+                AprsRepository.logPacket("TX", Medium.RF, frame)
+                AprsRepository.logConnection("TX-MSG", "TNC accepted RF frame; ACK pending")
+                return Medium.RF
+            }
+        }
+        AprsRepository.logConnection("TX-MSG",
+            "No transport accepted message: isEnabled=${settings.txViaInternet}, " +
+            "isVerified=${AprsRepository.status.value.aprsIsVerified}, " +
+            "rfEnabled=${settings.txViaRf}, tncConnected=${tncConnected()}")
+        return null
+    }
+
     private fun sendMessage(to: String, text: String, replyTo: Long? = null): Boolean {
         val dest = to.trim().uppercase()
         if (dest.isEmpty() || text.isBlank() || !settings.configured || settings.rxOnly) return false
@@ -707,7 +747,8 @@ class AprsService : Service(), LocationListener {
             return true
         }
         val retries = settings.msgRetries.coerceIn(1, 10)
-        val medium = transmit(messageInfo(dest, text, msgId))
+        val frameInfo = messageInfo(dest, text, msgId)
+        val medium = if (msgId != null) transmitPrivateMessage(frameInfo) else transmit(frameInfo)
         when {
             medium == null -> { AprsRepository.setRetry(local.id, 0, null); AprsRepository.setStatus(local.id, "Sem conexão para enviar") }
             msgId == null -> AprsRepository.setStatus(local.id, "Enviada · ${medium.label}")
