@@ -41,6 +41,24 @@ class MessageLogicTest {
         assertEquals(listOf("A", "B"), convs.map { it.first })
     }
 
+    @Test fun deletionsUseStableIdsAndPreserveMessagesArrivingDuringDelete() {
+        val existing = listOf(
+            msg(101, "PT2ABC", "PT2VHF", false, 0),
+            msg(102, "PT2ABC", "CQ", false, 0),
+            msg(103, "PT2ABC", "BLN1", false, 0, kind = AprsMessage.Kind.BULLETIN),
+            msg(104, "PT2VHF", "PT2ABC", true, 0),
+        )
+        assertEquals(setOf(101L, 102L, 103L, 104L), deletionVictimIds(existing, null))
+        assertEquals(setOf(101L, 104L), deletionVictimIds(existing, MessageCategory.PRIVATE))
+        assertEquals(setOf(102L, 103L), deletionVictimIds(existing, MessageCategory.BULLETIN))
+        val victims = deletionVictimIds(existing, null)
+        val incomingAfterConfirmation = msg(105, "PT2XYZ", "PT2VHF", false, 0)
+        val afterCommit = (existing + incomingAfterConfirmation).filterNot { it.id in victims }
+        assertEquals(listOf(105L), afterCommit.map { it.id })
+        assertTrue(deletionVictimIds(emptyList(), null).isEmpty())
+        assertEquals(4, existing.size) // failed I/O leaves the original state intact
+    }
+
     @Test fun retentionRespectsAgeCountAndPending() {
         val list = listOf(
             msg(1, "A", "ME", false, 40),
