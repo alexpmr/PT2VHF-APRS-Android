@@ -2191,6 +2191,31 @@ com conexão ativa, verificar reaparecimento apenas por novos pacotes.
 - **Status:** registrado no backlog; **interface ainda não implementada**,
   nenhum APK novo gerado.
 
+### 62. P0 — Falha crítica: fechar ao apagar mensagens ou estações (v0.1.10 QA)
+_Relatado em 08/11/2026 após uso real da beta. Ao apagar mensagem ou estação, o aplicativo encerra._
+
+**Impacto:** crash no aparelho e risco operacional na exclusão. A causa exata depende
+da pilha de exceção ainda não coletada. Registrado separadamente do #60 (envio não concluído).
+
+**Contenção:** retirar temporariamente a v0.1.10 QA do manifesto oficial; manter o
+download de v0.1.9, sem orientar desinstalação com perda de dados.
+
+**Candidata de correção v0.1.11 (branch hotfix/android-0111-deletion-crash):**
+- Persistir no SQLite antes de alterar os dados em memória; se houver erro, preservar a lista.
+- Exclusão de mensagens por IDs do momento da confirmação, preservando novas recepções.
+- Não apagar favoritos, configurações ou tracklog próprio ao limpar estações.
+- Erros recuperáveis passam a ser incluídos no relatório **Sobre → Enviar log**.
+- Confirmar sucesso com testes de unidade e de integração em aparelho físico.
+
+**Critérios de aceite (ainda pendentes):**
+- Excluir todas as estações com filtros ativos/inativos e conexão RF/APRS-IS ativa/inativa.
+- Excluir mensagens individuais/conversas, todas, privadas e boletins, com atualização
+  simultânea por recepção e reenvio; reiniciar e verificar banco de dados.
+- Nenhum crash, nenhum dado perdido após erro SQLite, nenhuma exclusão de dado recém-chegado.
+- Coletar CrashLog e/ou `adb logcat` com stack trace para confirmar a causa raiz.
+
+**Situação:** correção preventiva em branch; não homologada.
+
 ## Consolidação das sugestões aprovadas com itens já existentes
 
 A comparação com o APRSdroid também aprovou os recursos abaixo, que **já estavam
