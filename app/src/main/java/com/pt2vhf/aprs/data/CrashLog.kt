@@ -33,6 +33,23 @@ object CrashLog {
         }
     }
 
+    /** Most recent caught storage failure, to distinguish a database error from a UI crash. */
+    fun recordRecoverable(context: Context, operation: String, error: Throwable) {
+        runCatching {
+            val writer = StringWriter()
+            error.printStackTrace(PrintWriter(writer))
+            val time = SimpleDateFormat("yyyy-MM-dd HH:mm:ss Z", Locale.ROOT).format(Date())
+            File(context.applicationContext.filesDir, "last_operation_error.txt").writeText(
+                "PT2VHF APRS ${BuildConfig.VERSION_NAME} / ${operation}\n${time}\n" +
+                    writer.toString().take(20_000)
+            )
+        }
+    }
+
+    fun lastRecoverable(context: Context): String? =
+        File(context.applicationContext.filesDir, "last_operation_error.txt")
+            .takeIf { it.exists() }?.let { runCatching { it.readText() }.getOrNull() }
+
     /** Travamento ainda não apresentado ao usuário. */
     fun pending(context: Context): String? = File(context.filesDir, FILE).takeIf { it.exists() }?.readText()
 
