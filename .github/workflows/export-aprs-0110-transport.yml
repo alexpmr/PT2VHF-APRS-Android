@@ -49,7 +49,7 @@ jobs:
           git switch -c transport/aprs-android-0110-qa-v2
           mkdir -p transport/aprs-android-0110-v2
           cp /tmp/aprs-android-0110/chunk-* transport/aprs-android-0110-v2/
-          git add transport/aprs-android-0110
+          git add transport/aprs-android-0110-v2
           git commit -m 'transport: signed APRS Android 0.1.10 QA split payload'
           git push origin HEAD:transport/aprs-android-0110-qa-v2
           echo 'SIGNED_QA_TRANSFER_BRANCH_READY=1'
