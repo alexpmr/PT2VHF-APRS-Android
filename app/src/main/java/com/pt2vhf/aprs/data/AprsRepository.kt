@@ -353,43 +353,66 @@ object AprsRepository {
         diskWorker.execute { runCatching { stationStore?.clearRfEvents() } }
     }
 
+    /**
+     * Remove station cache only after SQLite commits. On failure the UI keeps the old data,
+     * and any station received during deletion is preserved. Shared by Settings and Stations.
+     */
     suspend fun clearStations(): Boolean {
         val store = stationStore ?: return false
+        val startedAt = System.currentTimeMillis()
         stationCacheEpoch.incrementAndGet()
-        _stations.value = emptyMap()
-        _weatherHistory.value = emptyMap()
-        _links.value = emptyList()
-        _trails.value = emptyMap()
-        _followCall.value = null
-        return withContext(Dispatchers.IO) {
-            runCatching { diskWorker.submit<Boolean> { store.clearStationsAndLinks(); true }.get() }
-                .getOrDefault(false)
+        val success = withContext(Dispatchers.IO) {
+            try {
+                diskWorker.submit<Boolean> { store.clearStationsAndLinks(); true }.get()
+            } catch (error: Exception) {
+                appContext?.let { CrashLog.recordRecoverable(it, "clearStations", error) }
+                false
+            }
         }
+        if (!success) return false
+        _stations.update { map -> map.filterValues { it.lastHeard > startedAt } }
+        _weatherHistory.update { history ->
+            history.mapValues { (_, samples) -> samples.filter { it.timestamp > startedAt } }
+                .filterValues { it.isNotEmpty() }
+        }
+        _links.update { it.filter { link -> link.lastSeen > startedAt } }
+        _trails.update { history ->
+            history.mapValues { (_, points) -> points.filter { it.recordedAt > startedAt } }
+                .filterValues { it.isNotEmpty() }
+        }
+        _followCall.value = null
+        return true
     }
 
     /**
-     * #41: [category] null apaga todas; BULLETIN apaga boletins e mensagens gerais (CQ);
-     * PRIVATE apaga conversas privadas, inclusive enviadas e pendentes (os reenvios param sozinhos).
+     * #41: Delete only the IDs present at confirmation time, on the serialized database
+     * worker, before removing them from the displayed list. Messages received during
+     * deletion remain untouched, and failure must not pretend the deletion succeeded.
      */
     suspend fun clearMessages(category: MessageCategory? = null): Boolean {
         val store = messageStore ?: return false
-        if (category == null) {
-            _messages.value = emptyList()
-            _retryAt.value = emptyMap()
-            return withContext(Dispatchers.IO) {
-                runCatching { diskWorker.submit<Boolean> { store.clear(); true }.get() }.getOrDefault(false)
+        val victims = _messages.value.filter { m ->
+            when (category) {
+                null -> true
+                MessageCategory.PRIVATE -> messageCategory(m) == MessageCategory.PRIVATE
+                else -> messageCategory(m) != MessageCategory.PRIVATE
+            }
+        }.map { it.id }.toSet()
+        if (victims.isEmpty()) return true
+        val success = withContext(Dispatchers.IO) {
+            try {
+                diskWorker.submit<Boolean> { store.delete(victims); true }.get()
+            } catch (error: Exception) {
+                appContext?.let { CrashLog.recordRecoverable(it, "clearMessages", error) }
+                false
             }
         }
-        val victims = _messages.value.filter { m ->
-            val c = messageCategory(m)
-            if (category == MessageCategory.PRIVATE) c == MessageCategory.PRIVATE else c != MessageCategory.PRIVATE
-        }.map { it.id }.toSet()
-        _messages.update { list -> list.filter { it.id !in victims } }
+        if (!success) return false
+        _messages.update { list -> list.filterNot { it.id in victims } }
         _retryAt.update { map -> map.filterKeys { it !in victims } }
-        return withContext(Dispatchers.IO) {
-            runCatching { diskWorker.submit<Boolean> { store.delete(victims); true }.get() }.getOrDefault(false)
-        }
+        return true
     }
+
 
     fun countMessages(category: MessageCategory?): Int = _messages.value.count { m ->
         val c = messageCategory(m)
