@@ -391,13 +391,7 @@ object AprsRepository {
      */
     suspend fun clearMessages(category: MessageCategory? = null): Boolean {
         val store = messageStore ?: return false
-        val victims = _messages.value.filter { m ->
-            when (category) {
-                null -> true
-                MessageCategory.PRIVATE -> messageCategory(m) == MessageCategory.PRIVATE
-                else -> messageCategory(m) != MessageCategory.PRIVATE
-            }
-        }.map { it.id }.toSet()
+        val victims = deletionVictimIds(_messages.value, category)
         if (victims.isEmpty()) return true
         val success = withContext(Dispatchers.IO) {
             try {
