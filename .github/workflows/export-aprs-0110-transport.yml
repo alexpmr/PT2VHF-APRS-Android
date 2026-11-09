@@ -1,0 +1,55 @@
+name: Export signed Android 0.1.10 QA to private Git transport
+
+on:
+  push:
+    branches: ['feature/android-020-messaging-stability']
+    paths:
+      - '.github/workflows/export-aprs-0110-transport.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  transport:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Download signed QA from successful app run
+        uses: actions/download-artifact@v4
+        with:
+          name: android-signed-qa
+          repository: alexpmr/PT2VHF-APRS-Android
+          run-id: 42536315416
+          github-token: ${{ github.token }}
+          path: dist
+
+      - name: Validate and encode APK into bounded text chunks
+        run: |
+          set -euo pipefail
+          apk=dist/PT2VHF_APRS_Client_Android_v0.1.10_QA.apk
+          test -s "$apk"
+          test "$(stat -c '%s' "$apk")" = 7992699
+          echo '0a656898f98b354ff460c962089ccabb46ab63e76d15c78adaa9f6f905b8ac07  dist/PT2VHF_APRS_Client_Android_v0.1.10_QA.apk' | sha256sum -c -
+          mkdir -p /tmp/aprs-android-0110
+          base64 -w0 "$apk" | split -b 400000 -d -a 3 - /tmp/aprs-android-0110/chunk-
+          test "$(find /tmp/aprs-android-0110 -name 'chunk-*' -type f | wc -l)" -gt 20
+          echo 'SIGNED_QA_PAYLOAD_SPLIT_AND_VERIFIED=1'
+
+      - name: Push private transfer chunks for authenticated site import
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git switch -c transport/aprs-android-0110-qa
+          mkdir -p transport/aprs-android-0110
+          cp /tmp/aprs-android-0110/chunk-* transport/aprs-android-0110/
+          git add transport/aprs-android-0110
+          git commit -m 'transport: signed APRS Android 0.1.10 QA split payload'
+          git push origin HEAD:transport/aprs-android-0110-qa
+          echo 'SIGNED_QA_TRANSFER_BRANCH_READY=1'
