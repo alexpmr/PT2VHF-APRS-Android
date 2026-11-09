@@ -126,6 +126,9 @@ internal fun buildReport(context: Context, settings: Settings, anonymize: Boolea
     sb.appendLine()
     sb.appendLine("== Last crash ==")
     sb.appendLine(CrashLog.last(context) ?: "none")
+    sb.appendLine()
+    sb.appendLine("== Last recoverable operation error ==")
+    sb.appendLine(CrashLog.lastRecoverable(context) ?: "none")
     return sb.toString()
 }
 
