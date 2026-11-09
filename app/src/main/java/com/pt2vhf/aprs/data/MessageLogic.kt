@@ -122,6 +122,19 @@ fun messageCategory(m: ChatMessage): MessageCategory = when {
     else -> MessageCategory.PRIVATE
 }
 
+/**
+ * Stable deletion snapshot. It is applied to SQLite before the in-memory list changes:
+ * packets arriving after confirmation must not be removed from the database or the UI.
+ */
+fun deletionVictimIds(messages: List<ChatMessage>, category: MessageCategory?): Set<Long> =
+    messages.asSequence().filter { message ->
+        when (category) {
+            null -> true
+            MessageCategory.PRIVATE -> messageCategory(message) == MessageCategory.PRIVATE
+            else -> messageCategory(message) != MessageCategory.PRIVATE
+        }
+    }.map { it.id }.toSet()
+
 /** days = 0: sem prazo; max = 0: sem limite de quantidade. */
 data class RetentionRule(val days: Int = 0, val max: Int = 5000)
 
