@@ -209,11 +209,15 @@ fun parsePosition(info: String): Position? {
     return Position(lat, lon, g[4][0], g[8][0], comment.trim(), course, speed)
 }
 
+/** Precompiled: literal closing brace is part of APRS reply-ack syntax. */
+private val ACK_BODY_PATTERN = Regex("^(ack|rej)([A-Za-z0-9]{1,5})(?:[}]([A-Za-z0-9]{1,5}))?$")
+private val MESSAGE_ID_SUFFIX_PATTERN = Regex("^([A-Za-z0-9]{1,5})(?:[}]([A-Za-z0-9]{1,5}))?$")
+
 fun parseMessage(info: String): AprsMessage? {
     if (!info.startsWith(":") || info.length < 11 || info[10] != ':') return null
     val addressee = info.substring(1, 10).trim().uppercase(Locale.ROOT)
     val body = info.substring(11)
-    val ackMatch = Regex("^(ack|rej)([A-Za-z0-9]{1,5})(?:}([A-Za-z0-9]{1,5}))?$").matchEntire(body)
+    val ackMatch = ACK_BODY_PATTERN.matchEntire(body)
     if (ackMatch != null) {
         val kind = if (ackMatch.groupValues[1] == "ack") AprsMessage.Kind.ACK else AprsMessage.Kind.REJ
         return AprsMessage(addressee, "", ackMatch.groupValues[2], kind,
@@ -221,7 +225,7 @@ fun parseMessage(info: String): AprsMessage? {
     }
     val brace = body.lastIndexOf('{')
     val suffix = if (brace >= 0) body.substring(brace + 1) else ""
-    val idMatch = Regex("^([A-Za-z0-9]{1,5})(?:}([A-Za-z0-9]{1,5}))?$").matchEntire(suffix)
+    val idMatch = MESSAGE_ID_SUFFIX_PATTERN.matchEntire(suffix)
     val text = if (idMatch != null) body.substring(0, brace) else body
     val id = idMatch?.groupValues?.get(1)
     val replyAck = idMatch?.groupValues?.get(2)?.ifEmpty { null }

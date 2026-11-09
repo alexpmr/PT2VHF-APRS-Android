@@ -49,6 +49,29 @@ class AprsTest {
         assertEquals("31", parseMessage(":PT2VHF-9 :ack42}31")!!.replyAckId)
     }
 
+    /** Regression: bad Java regex used to tear down the APRS-IS reader on inbound chat/ACK. */
+    @Test fun incomingPacketsWithAckAndReplyAckDoNotCrashReader() {
+        val frames = listOf(
+            "PU2DIY>APRS,TCPIP*,qAC,T2LAUSITZ::PT2VHF-9 :Oi{42}31",
+            "PU2DIY>APRS,TCPIP*,qAC,T2LAUSITZ::PT2VHF-9 :ack42}31",
+            "PU2DIY>APRS,TCPIP*,qAC,T2LAUSITZ::PT2VHF-9 :rej42",
+            "PU2DIY>APRS,TCPIP*,qAC,T2LAUSITZ::PT2VHF-9 :ack42",
+            "PU2DIY>APRS,TCPIP*,qAC,T2LAUSITZ::PT2VHF-9 :Mensagem normal",
+        )
+        val parsed = frames.map { frame ->
+            val packet = AprsPacket.parse(frame)!!
+            parseMessage(packet.info)!!
+        }
+        assertEquals("42", parsed[0].id)
+        assertEquals("31", parsed[0].replyAckId)
+        assertEquals(AprsMessage.Kind.ACK, parsed[1].kind)
+        assertEquals("42", parsed[1].id)
+        assertEquals("31", parsed[1].replyAckId)
+        assertEquals(AprsMessage.Kind.REJ, parsed[2].kind)
+        assertEquals(AprsMessage.Kind.ACK, parsed[3].kind)
+        assertEquals("Mensagem normal", parsed[4].text)
+    }
+
     @Test fun rejectsArbitraryOperatorNames() {
         for (call in listOf("PT2VHF", "PT2VHF-9", "N0CALL", "K1ABC", "2E0ABC", "DL1ABC"))
             assertTrue("Expected international callsign: $call", plausibleAmateurCallsign(call))

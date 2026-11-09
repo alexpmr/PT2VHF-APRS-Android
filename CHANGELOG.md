@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.11 — candidata de correção QA (08/11/2026; não publicada)
+
+- **#62 P0:** relato de fechamento do aplicativo após apagar mensagens ou estações na 0.1.10 QA.
+- Executar a exclusão no SQLite **antes** de atualizar as listas da interface; em caso de falha, preservar os dados exibidos.
+- Apagar mensagens usando um snapshot de IDs, preservando mensagens que cheguem durante a operação; testes de unidade adicionais.
+- Registrar erros de exclusão no relatório diagnóstico compartilhável por Sobre → Enviar log.
+- **#60 P0:** priorizar APRS-IS verificado para mensagens privadas, com fallback para TNC/RF, evitando TX duplicado por ambos os meios e o bloqueio do envio pela tentativa RF. Diferenciar escrita no transporte de confirmação ACK e registrar tentativas no log de conexão.
+- A beta 0.1.10 foi retirada dos downloads oficiais após relato de instabilidade. A 0.1.9 permanece no manifesto como alternativa anterior, mas não é automaticamente instalável sobre 0.1.10.
+- **Status:** candidata QA, CI e homologação física de RF/APRS-IS pendentes; não afirmar que as causas raiz foram comprovadas sem stack trace ou teste no dispositivo.
+
+
 ## 0.1.10 — candidata QA (08/11/2026; NÃO publicada)
 
 - **#54/#60:** acrescentado filtro de mensagens dirigidas ao próprio indicativo (`g/BASE/BASE-*`), removendo o atalho regional inválido até haver fix GPS; recepção de mensagens APRS encapsuladas em pacotes de terceiros de iGate e interpretação separada de ID de mensagem/ACK piggyback.
