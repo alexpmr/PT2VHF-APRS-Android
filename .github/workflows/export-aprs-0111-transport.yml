@@ -1,0 +1,54 @@
+name: Transfer signed APRS Android 0.1.11 QA for official site
+
+on:
+  push:
+    branches: ['hotfix/android-0111-deletion-crash']
+    paths:
+      - '.github/workflows/export-aprs-0111-transport.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  transport:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Download exact signed QA artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: android-signed-qa
+          repository: alexpmr/PT2VHF-APRS-Android
+          run-id: 42546252049
+          github-token: ${{ github.token }}
+          path: dist
+
+      - name: Verify APK and split binary payload into GitHub-friendly parts
+        run: |
+          set -euo pipefail
+          apk=dist/PT2VHF_APRS_Client_Android_v0.1.11_QA.apk
+          test "$(stat -c '%s' "$apk")" = 7992699
+          echo '00e9fff75e348e7cc91e9a73314a2d0eeb07d9e73a9d5c23894fffddf1f656bf  dist/PT2VHF_APRS_Client_Android_v0.1.11_QA.apk' | sha256sum -c -
+          mkdir -p /tmp/android-0111
+          base64 -w0 "$apk" | split -b 900000 -d -a 3 - /tmp/android-0111/chunk-
+          test "$(find /tmp/android-0111 -name 'chunk-*' -type f | wc -l)" = 12
+          echo VERIFIED_SIGNED_ANDROID_0111_QA=1
+
+      - name: Push transfer branch for official site import
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git switch -c transport/aprs-android-0111-qa
+          mkdir -p transport/aprs-android-0111
+          cp /tmp/android-0111/chunk-* transport/aprs-android-0111/
+          git add transport/aprs-android-0111
+          git commit -m 'transport: verified signed Android 0.1.11 QA'
+          git push origin HEAD:transport/aprs-android-0111-qa
+          echo ANDROID_0111_TRANSFER_READY=1
