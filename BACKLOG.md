@@ -2478,7 +2478,7 @@ _Registrado em 10/11/2026 (ideia do APRS World aprovada)._
   indicativo pela regra do #59. Chaves desconhecidas são ignoradas, sem apagar as configurações atuais.
 - **Teste:** unidade da conversão com arquivo XML de preferências e com JSON de perfil.
 
-### 71. Ícones com fundo transparente
+### 71. ~~Ícones com fundo transparente~~ (CANCELADO — não há fundo branco; engano confirmado pelo mantenedor em 10/11/2026)
 _Relatado em 10/11/2026 (após a v0.1.14): "ícones com fundo transparente. Atualmente estão com fundo branco."_
 
 **Problema:** o mantenedor vê os ícones com fundo branco; devem aparecer com fundo transparente, deixando ver
@@ -2509,7 +2509,7 @@ o mapa ou o fundo da tela por trás.
 seletor de símbolo; símbolos das duas tabelas e com overlay; tema claro/escuro; sem regressão de nitidez (#63).
 
 **Dependências/relacionados:** itens 1, 58, 63.
-- **Status:** registrado em 10/11/2026; não implementado.
+- **Status:** **cancelado em 10/11/2026** pelo mantenedor: "Esquece o background branco. Falha minha. Está tudo certo." Nada a implementar.
 
 ## Consolidação das sugestões aprovadas com itens já existentes
 
