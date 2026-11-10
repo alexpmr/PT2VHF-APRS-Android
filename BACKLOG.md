@@ -2564,6 +2564,45 @@ funciona nos dois modos; testes de unidade para o filtro (próprias, gerais, bol
 
 **Dependências/relacionados:** itens 54, 56, 64 e 65.
 
+### 74. Configurações: reorganizar por assunto, em abas
+_Pedido do mantenedor em 10/11/2026 (após a v0.1.14): "refaça a parte de configuração. Está tudo junto em uma coisa
+comprida. Organize por assuntos e use abas."_
+
+**Situação atual (verificado no código em 10/11/2026, v0.1.14):** a tela é um único `AlertDialog`
+(`ui/SettingsUi.kt`, `SettingsDialog`, ~linha 154) com uma coluna rolável de ~17 seções em sequência: Perfil,
+Estação, APRS-IS, Beacon/SmartBeaconing, Posição, Bateria, Privacidade, Exibição, Notificações/alertas de
+favoritos, Retenção/mensagens, API local, Diagnóstico, Dados locais, Backup, Sobre. Um botão "Salvar" no rodapé
+valida e grava tudo de uma vez.
+
+**Proposta de abas** (rótulos curtos, `ScrollableTabRow`; cada aba com rolagem própria):
+1. **Estação** — perfil de uso (#10); indicativo, SSID, passcode; símbolo; comentário do beacon; frequência de voz.
+2. **APRS-IS** — servidor (lista/outro), porta, conectar automaticamente, filtro.
+3. **Beacon** — caminho RF; transmitir por RF / APRS-IS; iniciar rastreador ao abrir; modo (smart/periódico/manual),
+   intervalo e parâmetros do SmartBeaconing.
+4. **Posição** — fonte (GPS/manual) e coordenadas manuais; precisão do GPS e localização pela rede; privacidade
+   (ambiguidade, enviar rumo/velocidade, altitude); economia de bateria.
+5. **Mapa** — manter tela ligada, idade máxima das estações, tamanho dos ícones.
+6. **Mensagens** — notificar mensagens; alertas de favoritos e horário silencioso; tentativas/intervalo de reenvio;
+   anunciar versão; retenção (por tipo) e apagar todas as mensagens.
+7. **Sistema** — aviso de atualização; API local; diagnóstico (monitor); apagar estações; backup
+   exportar/importar (inclui APRSdroid, #70); sobre, versão e enviar log.
+
+**Comportamento exigido:**
+1. Nenhuma opção some nem muda de efeito: só muda o lugar. Mesmas chaves salvas; backup/importação seguem iguais.
+2. Trocar de aba **não perde** o que foi digitado; o "Salvar" continua único e grava todas as abas.
+3. Se a validação falhar (indicativo, servidor, símbolo, frequência, coordenadas, filtro vazio, confirmação de
+   retenção), abrir automaticamente a aba do campo com erro e mostrar a mensagem junto ao campo.
+4. Primeira configuração (app ainda não configurado): abrir na aba Estação e indicar o que é obrigatório.
+5. Preferir tela cheia (ou diálogo em tela cheia) com barra de título, abas e botões Salvar/Cancelar fixos,
+   em vez do `AlertDialog` atual, para caber as abas no celular em pé.
+6. Lembrar a última aba aberta durante a sessão; textos das abas nos idiomas do app.
+
+**Critérios de aceite:** todas as opções da v0.1.14 encontradas na aba proposta; editar campos em várias abas e
+salvar grava tudo; erro de validação leva à aba certa; sem rolagem horizontal da página; testes de unidade
+existentes de configurações continuam passando.
+
+**Dependências/relacionados:** itens 10, 38, 58, 70.
+
 ## Consolidação das sugestões aprovadas com itens já existentes
 
 A comparação com o APRSdroid também aprovou os recursos abaixo, que **já estavam
