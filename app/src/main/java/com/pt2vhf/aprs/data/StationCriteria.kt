@@ -10,7 +10,7 @@ import java.time.ZoneId
  */
 data class StationCriteria(
     val callsign: String = "",
-    val sort: String = "distance", // distance, heard, first, callsign
+    val sort: String = "distance", // distance, heard, first, callsign, type
     val descending: Boolean = false,
     val roleNames: Set<String> = emptySet(), // vazio = todas
     val source: String = "all", // all, rf, internet
@@ -60,13 +60,40 @@ fun selectStations(
         (criteria.minDistanceKm == null || (distance != null && distance >= criteria.minDistanceKm)) &&
         (criteria.maxDistanceKm == null || (distance != null && distance <= criteria.maxDistanceKm))
     }
+    val byCall = compareBy<Station, String>(String.CASE_INSENSITIVE_ORDER) { it.call }
+    // #58.6: estações sem distância conhecida ficam no fim nos dois sentidos, com desempate estável por indicativo.
+    if (criteria.sort == "distance") {
+        val (known, unknown) = selected.partition { km(it) != null }
+        val byKm = compareBy<Station> { km(it)!! }.let { if (criteria.descending) it.reversed() else it }
+        return known.sortedWith(byKm.then(byCall)) + unknown.sortedWith(byCall)
+    }
+    // Por tipo: o sentido inverte a ordem dos grupos; dentro do grupo, sempre A-Z.
+    if (criteria.sort == "type") {
+        val byType = compareBy<Station> { stationTypeRank(it.role) }
+        return selected.sortedWith((if (criteria.descending) byType.reversed() else byType).then(byCall))
+    }
     val compare: Comparator<Station> = when(criteria.sort) {
-        "callsign" -> compareBy(String.CASE_INSENSITIVE_ORDER) { it.call }
+        "callsign" -> byCall
         "first" -> compareBy { it.firstSeen }
-        "heard" -> compareBy { it.lastHeard }
-        else -> if (ownLat == null || ownLon == null) compareBy { it.lastHeard }
-            else compareBy { km(it) ?: Double.POSITIVE_INFINITY }
+        else -> compareBy { it.lastHeard }
     }
     val order = if (criteria.descending) compare.reversed() else compare
-    return selected.sortedWith(order.thenBy { it.call })
+    return selected.sortedWith(order.then(byCall))
 }
+
+/**
+ * Ordem estável dos tipos para "ordenar por tipo" (#58.6): móveis primeiro, depois fixas,
+ * clima, infraestrutura (digi, iGate) e por fim as demais. Documentada no CHANGELOG.
+ */
+val STATION_TYPE_ORDER = listOf("Móvel", "Pessoa", "Aeronave", "Embarcação", "Estação",
+    "Estação meteorológica", "Digipeater", "iGate")
+
+fun stationTypeRank(role: String): Int = STATION_TYPE_ORDER.indexOf(role).let { if (it < 0) STATION_TYPE_ORDER.size else it }
+
+/**
+ * Atalho de ordenação em um toque (#58.6): tocar em outro critério ordena por ele em sentido
+ * natural; tocar de novo no critério ativo inverte o sentido.
+ */
+fun toggleStationSort(currentSort: String, currentDescending: Boolean, tapped: String): Pair<String, Boolean> =
+    if (tapped == currentSort) tapped to !currentDescending
+    else tapped to (tapped == "heard") // "Recentes" começa pela mais recente.

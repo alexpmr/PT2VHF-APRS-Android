@@ -25,6 +25,13 @@ do compositor, oferece lixeira de Estações, introduz visualização WX da sess
 formato do indicativo do operador. Requer testes de campo e a publicação coordenada do site.
 A versão pública continua 0.1.9 até homologação e liberação explícita.
 
+## Em desenvolvimento (sem versão, não publicado)
+
+- **Ficha da estação em tela cheia** com Visão geral (recepção nas últimas 24 h, iGates, último salto, outros SSIDs),
+  **Caminho** do pacote salto a salto, **Telemetria e clima** com gráficos (T# com PARM/UNIT/EQNS/BITS) e pacotes brutos.
+- **Ordenação em um toque** da lista de estações por Tipo, Nome, Distância ou Recentes; tocar de novo inverte.
+- **Ícones do mapa maiores e nítidos**, com tamanho Pequeno/Médio/Grande em Configurações.
+
 ## Novidades da 0.1.9
 
 - **Modem AFSK 1200 pelo áudio** do celular (o celular vira o TNC; PTT por VOX ou interface) e **TNC KISS por USB-OTG**

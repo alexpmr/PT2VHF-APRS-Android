@@ -98,6 +98,7 @@ import com.pt2vhf.aprs.data.Station
 import com.pt2vhf.aprs.data.StationCriteria
 import com.pt2vhf.aprs.data.stationSpeedLabel
 import com.pt2vhf.aprs.data.selectStations
+import com.pt2vhf.aprs.data.toggleStationSort
 import com.pt2vhf.aprs.service.AprsService
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -193,6 +194,14 @@ fun MapScreen(settings: Settings, onStation: (String) -> Unit, onSettingsChanged
     val rfEvents by AprsRepository.rfEvents.collectAsState()
     val context = LocalContext.current
     val density = LocalDensity.current.density
+    val scaledDensity = density * LocalDensity.current.fontScale
+    val favorites by AprsRepository.favorites.collectAsState()
+    val changedIconSize by MapIconPrefs.changed.collectAsState()
+    val savedIconSize = remember { com.pt2vhf.aprs.data.MapIconSize.fromKey(
+        Settings.readOption(context, com.pt2vhf.aprs.data.MapIconSize.OPTION_KEY, "medium")) }
+    val iconSize = changedIconSize ?: savedIconSize
+    val iconPx = com.pt2vhf.aprs.data.mapIconPx(iconSize, density)
+    val touchPx = (com.pt2vhf.aprs.data.MapIconSize.TOUCH_DP * density).toInt()
     val status by AprsRepository.status.collectAsState()
     val followedCall by AprsRepository.followCall.collectAsState()
     val activeFollow by androidx.compose.runtime.rememberUpdatedState(followedCall)
@@ -339,26 +348,26 @@ fun MapScreen(settings: Settings, onStation: (String) -> Unit, onSettingsChanged
                     })
                 }
             }
-            for (s in stations.values) {
-                map.overlays.add(Marker(map).apply {
+            // #63: ícones no tamanho escolhido, na densidade real; seguida/favoritas por cima das demais.
+            fun stationMarker(label: String, table: Char, symbol: Char) = StationMarker(map,
+                if (showLabels) label else "", iconPx, touchPx, iconSize.labelSp * scaledDensity, density).apply {
+                icon = AprsSymbolIcons.mapIcon(context, table, symbol, iconPx)
+            }
+            val drawOrder = stations.values.sortedBy { s ->
+                when (s.call) { followedCall -> 2; in favorites -> 1; else -> 0 }
+            }
+            for (s in drawOrder) {
+                map.overlays.add(stationMarker(s.call, s.symbolTable, s.symbol).apply {
                     position = GeoPoint(s.lat, s.lon)
                     title = s.call
-                    val (drawable, anchorU) = AprsSymbolIcons.labeled(context, s.symbolTable, s.symbol,
-                        if (showLabels) s.call else "", density)
-                    icon = drawable
                     snippet = "${UiText.role(s.role)} · ${ago(s.lastHeard)}"
-                    setAnchor(anchorU, Marker.ANCHOR_CENTER)
                     setOnMarkerClickListener { _, _ -> onStation(s.call); true }
                 })
             }
             if (myLat != null && myLon != null) {
-                map.overlays.add(Marker(map).apply {
+                map.overlays.add(stationMarker(settings.fullCall, settings.symbolTable, settings.symbol).apply {
                     position = GeoPoint(myLat, myLon)
                     title = UiText.text(R.string.me)
-                    val (drawable, anchorU) = AprsSymbolIcons.labeled(context, settings.symbolTable, settings.symbol,
-                        if (showLabels) settings.fullCall else "", density)
-                    icon = drawable
-                    setAnchor(anchorU, Marker.ANCHOR_CENTER)
                 })
                 if (!centered && followedCall == null) {
                     map.controller.setCenter(GeoPoint(myLat, myLon)); centered = true
@@ -366,14 +375,10 @@ fun MapScreen(settings: Settings, onStation: (String) -> Unit, onSettingsChanged
             }
             // Meus objetos/itens (#48).
             myObjects.forEach { o ->
-                map.overlays.add(Marker(map).apply {
+                map.overlays.add(stationMarker(o.name + if (o.active) "" else " ✕", o.symbolTable, o.symbol).apply {
                     position = GeoPoint(o.lat, o.lon)
                     title = o.name
-                    val (drawable, anchorU) = AprsSymbolIcons.labeled(context, o.symbolTable, o.symbol,
-                        if (showLabels) o.name + if (o.active) "" else " ✕" else "", density)
-                    icon = drawable
                     alpha = if (o.active) 1f else 0.5f
-                    setAnchor(anchorU, Marker.ANCHOR_CENTER)
                     setOnMarkerClickListener { _, _ -> editObject = o; true }
                 })
             }
@@ -596,6 +601,13 @@ fun StationsScreen(maxAgeHours: Int, onStation: (String) -> Unit) {
                 Text("🗑", fontSize = 20.sp)
             }
         }
+        // #58.6: ordenação em um toque; tocar de novo no critério ativo inverte o sentido.
+        StationSortChips(sort, descending) { tapped ->
+            val (newSort, newDescending) = toggleStationSort(sort, descending, tapped)
+            sort = newSort; descending = newDescending
+            Settings.saveOption(context, "station_sort_v2", newSort)
+            Settings.saveOption(context, "station_desc_v2", newDescending.toString())
+        }
         clearStationsResult?.let { Text(it, color = Pal.muted, fontSize = 12.sp,
             modifier = Modifier.padding(horizontal = 16.dp)) }
         Text(UiText.text(R.string.station_showing, list.size, stations.size),
@@ -675,6 +687,7 @@ fun StationsScreen(maxAgeHours: Int, onStation: (String) -> Unit) {
             "heard" to R.string.station_sort_last,
             "first" to R.string.station_sort_first,
             "callsign" to R.string.station_sort_name,
+            "type" to R.string.station_sort_type,
         )
         val roleChoices = listOf("Estação", "Móvel", "Pessoa", "Digipeater", "iGate", "Estação meteorológica",
             "Aeronave", "Embarcação")
@@ -750,72 +763,6 @@ fun StationsScreen(maxAgeHours: Int, onStation: (String) -> Unit) {
             },
         )
     }
-}
-
-@Composable
-fun StationDialog(call: String, onDismiss: () -> Unit, onMessage: () -> Unit) {
-    val context = LocalContext.current
-    val favorites by AprsRepository.favorites.collectAsState()
-    val followed by AprsRepository.followCall.collectAsState()
-    val stations by AprsRepository.stations.collectAsState()
-    val status by AprsRepository.status.collectAsState()
-    val weather by AprsRepository.weatherHistory.collectAsState()
-    val s: Station? = stations[call]
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = Pal.bar,
-        title = { Text(call, fontWeight = FontWeight.Bold) },
-        text = {
-            Column(Modifier.heightIn(max = 470.dp).verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                if (s == null) Text(UiText.text(R.string.no_position), color = Pal.muted)
-                else {
-                    Text("${UiText.role(s.role)} · ${s.medium.label} · ${ago(s.lastHeard)}", color = Pal.muted, fontSize = 13.sp)
-                    val lat = status.lat; val lon = status.lon
-                    if (lat != null && lon != null) {
-                        val d = bearingDeg(lat, lon, s.lat, s.lon)
-                        KeyValue(UiText.text(R.string.distance), "%.1f km".format(haversineKm(lat, lon, s.lat, s.lon)))
-                        KeyValue(UiText.text(R.string.direction), "${compassName(d)} $d°")
-                    }
-                    KeyValue(UiText.text(R.string.position), "%.4f, %.4f".format(s.lat, s.lon))
-                    KeyValue("Grid", maidenhead(s.lat, s.lon))
-                    s.speedKmh?.let { KeyValue(UiText.text(R.string.speed), "%.0f km/h".format(it)) }
-                    if (s.comment.isNotBlank()) Text(s.comment, fontSize = 14.sp)
-                    Text(UiText.text(R.string.via, s.via.ifBlank { UiText.text(R.string.direct) }), color = Pal.muted, fontSize = 12.sp)
-                    if (s.heardBy.isNotEmpty()) Text(UiText.text(R.string.heard_by_rf, s.heardBy.joinToString(", ")), color = Pal.green, fontSize = 12.sp)
-                    KeyValue("Símbolo APRS", "${s.symbolTable}${s.symbol}")
-                    KeyValue("Primeira recepção", ago(s.firstSeen))
-                    KeyValue("Última recepção", ago(s.lastHeard))
-                    KeyValue("Transporte", s.medium.label)
-                    KeyValue("Path", s.via.ifBlank { "—" })
-                    if (weather[call].orEmpty().isNotEmpty()) {
-                        StationWeatherPanel(weather[call].orEmpty())
-                    }
-                }
-                TextButton(onClick = { AprsRepository.toggleFavorite(call) }, modifier = Modifier.fillMaxWidth()) {
-                    Text(UiText.text(if (call in favorites) R.string.favorite_remove else R.string.favorite_add))
-                }
-                TextButton(onClick = {
-                    AprsRepository.followStation(if (followed == call) null else call)
-                    onDismiss()
-                }, modifier = Modifier.fillMaxWidth()) {
-                    Text(UiText.text(if (followed == call) R.string.stop_following else R.string.follow_station))
-                }
-                if (s != null) TextButton(onClick = {
-                    context.startActivity(Intent(Intent.ACTION_VIEW,
-                        Uri.parse("geo:${s.lat},${s.lon}?q=${s.lat},${s.lon}($call)")))
-                }, modifier = Modifier.fillMaxWidth()) { Text(UiText.text(R.string.navigate)) }
-            }
-        },
-        confirmButton = {
-            Button(onClick = onMessage, modifier = Modifier.fillMaxWidth()) {
-                Text(UiText.text(R.string.message))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(UiText.text(R.string.close)) }
-        },
-    )
 }
 
 // ---------- Tracker ----------

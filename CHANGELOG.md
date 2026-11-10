@@ -5,6 +5,31 @@
 - **#60 P0:** mensagem que estava "Enviando"/"Aguardando ACK" quando o serviço parou ou o app foi encerrado passa a
   "Interrompida" (✗, com Reenviar), em vez de ficar tentando para sempre; antes, nenhuma retentativa sobrevivia ao
   reinício e o balão permanecia pendente (e imune à retenção). ACK que chegar depois ainda confirma a mensagem.
+- **#58.6 Ficha da estação em tela cheia** (substitui o diálogo): cabeçalho com símbolo, indicativo com o SSID
+  em destaque, tipo, "ao vivo/inativa" e coordenadas; ações Mensagem, Seguir, Navegar e Favorito; abas
+  **Visão geral · Caminho · Telemetria e clima · Bruto**. Tudo calculado a partir dos pacotes guardados na aba Logs
+  (sobrevive a reiniciar o app, limitado pela retenção de logs); campo sem dado aparece como "não informado".
+  - Visão geral: cartões de posição, grid, distância/rumo a partir de você, velocidade, rumo, altitude (`/A=`), tipo,
+    último pacote e total, primeira recepção, transporte, símbolo e PHG; condições WX no topo para estações de clima.
+  - **Recepção (24 h):** pacotes, iGates RF que a ouviram (qAR/qAr/qAo/qAO), iGate mais distante e distância,
+    último salto (digi ou iGate) e distância, pacotes ouvidos pelo TNC deste aparelho (diretos) separados dos do APRS-IS.
+  - **Outros SSIDs** do mesmo operador com "há X"; tocar abre a ficha daquele SSID.
+  - **Caminho** do último pacote em linha do tempo: origem, digipeaters que repetiram, alias usados/não usados,
+    construção q explicada, iGate e gateway de terceiros, com o número de saltos RF.
+  - **Telemetria e clima:** gráficos com mínimo/máximo reais, unidade, horário, lacunas visíveis e valor ao tocar;
+    períodos 1 h/6 h/24 h/7 d/30 d; chuva em barras (acumulado, sem interpolar). Telemetria APRS `T#` decodificada com
+    PARM./UNIT./EQNS./BITS. (nome, unidade, valor escalonado e bruto, bits com rótulo e última mudança).
+  - **Bruto:** pacotes da estação com data, "há X" e meio; tocar copia, botão compartilha todos.
+- **#58.6 Ordenação em um toque** na aba Estações: **Tipo · Nome · Distância · Recentes**; tocar de novo no critério
+  ativo inverte o sentido, com seta ↑/↓ e nome acessível; escolha salva. Ordem dos tipos: Móvel, Pessoa, Aeronave,
+  Embarcação, Estação fixa, Clima, Digipeater, iGate, demais (dentro do grupo, A-Z). Ao ordenar por distância,
+  estações sem distância conhecida ficam sempre no fim.
+- **#63 Ícones do mapa maiores e nítidos:** símbolos do atlas de alta resolução (células de 128 px) reduzidos com
+  filtragem para o tamanho real da tela, com sombra leve; **Configurações → Tela e mapa → Tamanho dos ícones**
+  Pequeno (26 dp) / Médio (34 dp, padrão) / Grande (44 dp), aplicado na hora. Rótulo proporcional, área de toque de
+  48 dp, estação seguida e favoritas desenhadas por cima. Antes os ícones saíam com 48 px físicos (≈16 dp em telas xxxhdpi).
+- Testes de unidade: caminho/q-constructs, telemetria T#/PARM/EQNS/BITS, ficha (recepção, duplicatas, SSIDs), ordenação
+  e tamanhos de ícone.
 
 ## 0.1.11 — candidata de correção QA (08/11/2026; não publicada)
 
