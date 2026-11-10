@@ -2,10 +2,11 @@
 
 Itens registrados para as próximas versões. Não implementar até o pedido de versão nova.
 
-## Onde estamos (05/11/2026)
+## Onde estamos (10/11/2026)
 
-- Última versão **publicada**: **v0.1.9** (05/11/2026, beta), com **todos os itens pendentes** implementados (#6 restante,
-  #39 a #51, USB-OTG, modo carro e rotas). Última publicada antes dela: v0.1.8 (04/11/2026).
+- Última versão **publicada**: **v0.1.13** (10/11/2026, beta, autorizada pelo mantenedor como "versão completa para
+  todos"): reúne as QA 0.1.10 a 0.1.12 (#54/#56/#57/#59 parcial/#60/#61/#62, WX) e #58.6 + #63 (PRs #15, #16, #17, #19).
+  #60 e #62 ainda dependem de teste em aparelho. Anterior: v0.1.9 (05/11/2026).
 - **Nenhum item tem baixa definitiva**: cada um aguarda teste físico e OK do mantenedor, item a item, pelas tabelas
   "Status para teste — 0.1.9" (novos) e "Status para teste — 0.1.8 QA" (anteriores, ainda valem).
 - Dependem de hardware e **não puderam ser validados aqui** (só testes de unidade do código): AFSK no ar (#44),

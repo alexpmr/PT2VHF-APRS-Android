@@ -18,15 +18,14 @@ ou pelo próprio áudio do celular (modem AFSK 1200).
 - TNC KISS por Bluetooth (Mobilinkd, BTECH UV-Pro, Radtel RT-950 Pro e similares) com monitor ao vivo.
 - Aviso de nova versão pelo site www.pt2vhf.com (o aviso de "Downloads no site oficial" na abertura saiu na 0.1.8).
 
-## Candidata 0.1.10 (QA — ainda não publicada)
+## Novidades da 0.1.13
 
-Aprimora tratamento de mensagens RF/APRS-IS, pacotes de terceiros e reply-ack, corrige bloqueio visual
-do compositor, oferece lixeira de Estações, introduz visualização WX da sessão e validação básica de
-formato do indicativo do operador. Requer testes de campo e a publicação coordenada do site.
-A versão pública continua 0.1.9 até homologação e liberação explícita.
+Primeira versão pública depois da 0.1.9 (reúne as candidatas QA 0.1.10 a 0.1.12):
 
-## Em desenvolvimento (sem versão, não publicado)
-
+- Mensagens: APRS-IS verificado tem prioridade para mensagens privadas com fallback RF, sem TX duplicado; envio
+  interrompido vira "Interrompida" com Reenviar, em vez de ficar pendente para sempre; ACK/REJ e reply-ack corrigidos.
+- Exclusão segura de mensagens e estações (lixeira em Estações), com o banco gravado antes da tela.
+- Observações meteorológicas (WX) e validação básica do indicativo do operador.
 - **Ficha da estação em tela cheia** com Visão geral (recepção nas últimas 24 h, iGates, último salto, outros SSIDs),
   **Caminho** do pacote salto a salto, **Telemetria e clima** com gráficos (T# com PARM/UNIT/EQNS/BITS) e pacotes brutos.
 - **Ordenação em um toque** da lista de estações por Tipo, Nome, Distância ou Recentes; tocar de novo inverte.

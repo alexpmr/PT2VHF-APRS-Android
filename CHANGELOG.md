@@ -1,6 +1,12 @@
 # Changelog
 
-## Em desenvolvimento (10/11/2026; sem versão, não publicada)
+## 0.1.13 — Publicada (10/11/2026, beta; testes item a item pendentes)
+
+Primeira versão pública depois da 0.1.9: inclui tudo das candidatas QA 0.1.10, 0.1.11 e 0.1.12 (abaixo) e as
+novidades a seguir.
+
+- **0.1.12 (QA):** expressão regular de ACK/REJ com reply-ack corrigida, evitando que um pacote malformado derrubasse
+  a recepção APRS-IS; testes de mensagens, ACK, REJ e reply-ack recebidos.
 
 - **#60 P0:** mensagem que estava "Enviando"/"Aguardando ACK" quando o serviço parou ou o app foi encerrado passa a
   "Interrompida" (✗, com Reenviar), em vez de ficar tentando para sempre; antes, nenhuma retentativa sobrevivia ao
