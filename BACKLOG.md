@@ -2478,6 +2478,39 @@ _Registrado em 10/11/2026 (ideia do APRS World aprovada)._
   indicativo pela regra do #59. Chaves desconhecidas são ignoradas, sem apagar as configurações atuais.
 - **Teste:** unidade da conversão com arquivo XML de preferências e com JSON de perfil.
 
+### 71. Ícones com fundo transparente
+_Relatado em 10/11/2026 (após a v0.1.14): "ícones com fundo transparente. Atualmente estão com fundo branco."_
+
+**Problema:** o mantenedor vê os ícones com fundo branco; devem aparecer com fundo transparente, deixando ver
+o mapa ou o fundo da tela por trás.
+
+**O que o código mostra hoje (verificado em 10/11/2026, v0.1.14):**
+- Os atlas de símbolos (`aprs-symbols-128-0/1.png`, hessu/aprs-symbols) são RGBA com transparência fora do
+  desenho, e `AprsSymbolIcons` recorta com `ARGB_8888`, sem pintar fundo. No mapa, `mapIcon` só acrescenta a
+  sombra (#63); nas listas, ficha, objeto e seletor o `Image` não tem fundo próprio (o seletor usa o fundo do
+  tema, `Pal.ground`/`Pal.mine`, que é escuro).
+- Alguns símbolos têm uma **área branca que faz parte do próprio desenho** (cerca de 25-30 % do ícone):
+  tabela primária `/0`, `/2`, `/3`, `/5`, `/6`, `/8`, `/9`, `/c` e alternativa `\+`, `\A`, `\Q`, `\R`
+  (círculos/quadrados numerados, caixa, etc.). Provável origem do "fundo branco" percebido.
+- O ícone do app (launcher) usa fundo `ground` (#0B131C, escuro) e o widget tem fundo próprio (`widget_bg`).
+
+**Comportamento exigido:**
+1. Confirmar com o mantenedor **quais ícones e em qual tela** aparecem com fundo branco (captura de tela), e
+   em qual aparelho/tema.
+2. Nenhum ícone de estação, objeto, seletor de símbolo ou ficha pode ter quadrado/círculo branco que não seja
+   parte do desenho: o que estiver fora do símbolo fica transparente, no mapa e nas listas, em tema claro e
+   escuro.
+3. Se o branco for do próprio desenho dos símbolos, decidir com o mantenedor entre manter a arte original
+   APRS, substituir o branco interno por transparente/cor do tema ou usar outra fonte de símbolos.
+4. Se a queixa for do ícone do app ou do widget, usar ícone adaptativo/monocromático com fundo adequado ao
+   lançador.
+
+**Critérios de aceite:** capturas antes/depois no mapa (tiles claros e escuros), lista de estações, ficha e
+seletor de símbolo; símbolos das duas tabelas e com overlay; tema claro/escuro; sem regressão de nitidez (#63).
+
+**Dependências/relacionados:** itens 1, 58, 63.
+- **Status:** registrado em 10/11/2026; não implementado.
+
 ## Consolidação das sugestões aprovadas com itens já existentes
 
 A comparação com o APRSdroid também aprovou os recursos abaixo, que **já estavam
