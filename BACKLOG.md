@@ -2024,6 +2024,29 @@ _Solicitado: "Backlog: implementar gráficos de telemetria das estações, quand
 - Fonte dos dados: mensagens ouvidas pelo app/APRS-IS ou fonte pública da rodada, se existir e permitir;
   avaliar antes de implementar.
 
+**58.6 Reforço solicitado em 10/11/2026**
+_Solicitado: "Backlog: Alguns itens que gostei são as informações sobre as estações, caminhos, gráficos de
+telemetria, etc.. Ordenação das estações, por tipo, nome, distância e clicando de novo em cima da ordem, a
+ordem é invertida. Ícones das estações no mapa são maiores e mais nítidas."_ Referência: as mesmas 11 telas de
+`docs/inspiracao/item58-*.png` (reenviadas, idênticas).
+
+- **Prioridade dentro do #58:** a ficha da estação com informações completas (58.4), o **caminho** do
+  pacote (saltos, digis, iGate) e os **gráficos de telemetria/clima** (58.4.1) são as partes preferidas pelo
+  mantenedor e devem vir primeiro quando o #58 for implementado.
+- **Ordenação da lista de estações em um toque:** opções visíveis (chips ou cabeçalho) **Tipo · Nome
+  (indicativo) · Distância**, além de Recentes já prevista em 58.2. Tocar em outra opção ordena por ela;
+  **tocar de novo na opção ativa inverte a ordem** (A-Z ↔ Z-A, mais perto ↔ mais longe, tipo crescente ↔
+  decrescente), com seta ↑/↓ indicando o sentido e nome acessível ("Distância, crescente").
+  - **Tipo:** agrupar pelo tipo da estação (Móvel, Fixa, Clima, Digi, iGate, Objeto/Item, Outras) e, dentro
+    do grupo, por indicativo; ordem dos tipos estável e documentada.
+  - Desempate estável por indicativo; estações sem posição ficam no fim ao ordenar por distância, nos dois
+    sentidos, com "—".
+  - Critério e sentido persistidos entre sessões e reaplicados em tempo real quando chegam pacotes
+    (mesmas regras do item 3; **não duplicar** o painel do item 3, só oferecer o atalho de um toque).
+- **Ícones no mapa:** ver item **#63** (ícones maiores e mais nítidos).
+- **Testes de aceite:** alternar cada critério e inverter com segundo toque; conferir seta, persistência após
+  reiniciar e reordenação com pacotes novos; distância sem GPS; telas 320/360/412 dp e fonte ampliada.
+
 **Dependências/relacionados:** itens 3, 5, 7, 11, 12, 14, 19, 51, 54, 57.
 **Critério de aceite:** lista com chips + contadores, ordenação e painel de filtros completo funcionando
 em tempo real; toque abre a ficha em tela cheia com as 5 abas preenchidas a partir do histórico local;
@@ -2195,6 +2218,36 @@ verificar lista vazia e banco após reiniciar, preservação dos outros dados;
 com conexão ativa, verificar reaparecimento apenas por novos pacotes.
 - **Status:** registrado no backlog; **interface ainda não implementada**,
   nenhum APK novo gerado.
+
+### 63. Mapa: ícones das estações maiores e mais nítidos
+_Solicitado em 10/11/2026 (junto com o reforço do #58): "Ícones das estações no mapa são maiores e mais
+nítidas."_ Referência funcional: [mapa](docs/inspiracao/item58-mapa.png). Só a ideia; arte e símbolos
+continuam os do próprio app (item 1).
+
+**Problema:** os símbolos APRS no mapa aparecem pequenos e pouco nítidos (serrilhados/borrados), difíceis de
+reconhecer, principalmente em telas de alta densidade e com o mapa em movimento.
+
+**Comportamento exigido:**
+- **Tamanho maior por padrão** (alvo ~32-36 dp por símbolo, contra o tamanho atual) e opção em Configurações
+  → Mapa: **Tamanho dos ícones** Pequeno / Médio / Grande (padrão Médio), aplicada na hora e persistida.
+- **Nitidez:** desenhar os símbolos na resolução real da tela (densidade do aparelho), a partir de fonte de
+  alta resolução (sprites em resolução maior ou vetor), sem ampliar bitmap pequeno; filtragem adequada ao
+  redimensionar; mesma nitidez em overlays (letra/número sobre o símbolo) e no "?" de símbolo desconhecido.
+- **Legibilidade:** contorno/sombra leve para destacar o ícone sobre qualquer tile e com o brilho do mapa
+  (item 22); rótulo do indicativo (camada "Rótulos", item 1) proporcional ao novo tamanho.
+- **Área de toque** de pelo menos 48 dp por estação; em áreas cheias, evitar que ícones maiores escondam
+  vizinhos (deslocamento leve ou prioridade para a estação selecionada/seguida/favorita).
+- **Desempenho:** cache dos bitmaps por símbolo+overlay+tamanho+densidade; sem queda de fluidez com
+  centenas de estações; memória sob controle.
+- Mesma regra para o próprio ícone, objetos/itens (item 48), estação seguida (item 11) e widget/modo carro
+  quando usarem os mesmos símbolos.
+
+**Dependências/relacionados:** itens 1, 22, 48, 58.
+**Critérios de aceite:** comparação antes/depois em telas de baixa e alta densidade (mdpi a xxxhdpi),
+zoom próximo e distante, três tamanhos, tema/brilho diferentes, símbolos das tabelas primária e alternativa
+com overlay; capturas anexadas; toque correto em estações próximas; rolagem fluida com muitas estações.
+- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+- Numeração: o **#62** está reservado ao P0 registrado na PR #16 (v0.1.10/0.1.12 QA), por isso este item é o #63.
 
 ## Consolidação das sugestões aprovadas com itens já existentes
 
