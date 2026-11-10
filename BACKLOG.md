@@ -2345,6 +2345,43 @@ de aba; repetir com app em segundo plano e tela desligada, voltando ao app; test
 chegada de mensagem com a lista rolada.
 - **Status:** registrado em 10/11/2026; não implementado.
 
+### 65. Mensagens: tela mais compacta (cabeçalho menor e ícone de enviar)
+_Solicitado em 10/11/2026 (v0.1.13), com [captura](docs/relatos/item65-mensagens.png) de uma conversa aberta:
+"otimize essa tela para caber mais coisas. A parte superior está ocupando 1/4 de toda a tela. Não precisa da
+descrição da estação, só do indicativo dela. 'enviar' pode ser substituído por um ícone pequeno, de enviar,
+usando em outros apps."_
+
+**Problema (na captura):** acima das mensagens ficam o indicativo (PT2YW-9), o texto "PT2VHF APRS Client for
+Android" quebrado em três linhas ao lado do botão Enviar beacon, a linha de chips APRS-IS/TNC/GPS e a barra
+"‹ Voltar PT2VHF-9", cerca de 1/4 da tela. Embaixo, a linha "Para:", o campo de duas linhas e o botão "Enviar"
+largo tomam mais espaço. Sobram só três balões visíveis.
+
+**Onde está no código:** `ui/App.kt` → `TopBar()`, que é global (indicativo + texto fixo "PT2VHF APRS Client for
+Android", Enviar beacon, Configurações e, em outra linha, os chips). `ui/MessagesUi.kt` → `Conversation()` (barra
+Voltar + contato) e `Composer()` (linha "Para:", `OutlinedTextField` e `Button` com o texto `R.string.send`).
+
+**Comportamento exigido:**
+- **Cabeçalho:** mostrar só o **indicativo**, sem o texto "PT2VHF APRS Client for Android" (manter o aviso de
+  perfil "Somente recepção" de forma curta, ex.: selo pequeno ao lado do indicativo). Indicativo, Enviar beacon,
+  Configurações e chips APRS-IS/TNC/GPS em **uma ou no máximo duas linhas baixas**, sem quebra de texto. Avaliar
+  levar o mesmo cabeçalho compacto às demais abas, para não "pular" ao trocar de aba.
+- **Barra da conversa:** Voltar como ícone (←) na mesma linha do contato, altura reduzida; tocar no contato
+  continua abrindo a ficha da estação.
+- **Enviar:** trocar o botão "Enviar" por **ícone pequeno de enviar** (avião de papel, `Icons.AutoMirrored.Filled.Send`),
+  como em apps de mensagens, com área de toque de 48 dp, `contentDescription` "Enviar" e estados
+  desabilitado/enviando visíveis (ex.: indicador de progresso no lugar do ícone).
+- **Compositor:** campo de uma linha que cresce até 3–5 linhas ao digitar; a linha "Para:" fica menor ou vira
+  dica do próprio campo, sem perder o destino visível (exigência do #20).
+- Resultado esperado: bem mais balões visíveis na mesma tela; nada cortado em 320/360/412 dp e fonte ampliada.
+
+**Relacionados:** #28 (espaço com teclado aberto; este item vale também com o teclado fechado), #24 (largura dos
+balões), #36 (estados do Enviar beacon, que precisam continuar visíveis no cabeçalho compacto) e #64.
+
+**Critérios de aceite:** captura antes/depois na mesma conversa mostrando mais mensagens; teclado aberto e
+fechado; retrato e paisagem; fonte 150%/200%; TalkBack lê "Enviar" e "Voltar"; chips e Enviar beacon continuam
+funcionando.
+- **Status:** registrado em 10/11/2026; não implementado.
+
 ## Consolidação das sugestões aprovadas com itens já existentes
 
 A comparação com o APRSdroid também aprovou os recursos abaixo, que **já estavam
