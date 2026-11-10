@@ -2090,7 +2090,30 @@ países são aceitos com e sem SSID; mensagens para destinos táticos continuam 
   Retornar motivo claro, país/prefixo identificado quando possível, e testes
   automatizados com casos positivos, negativos e limítrofes.
 
-- **Status:** requisito reforçado e registrado; **não implementado**. Nenhum APK novo gerado.
+**Complemento de 10/11/2026 — terceiro pedido do mantenedor:**
+"Backlog: apenas permitir indicativos válidos no mundo, para evitar que qualquer pessoa use qualquer
+palavra e consiga entrar."
+
+- **Objetivo explícito: impedir a entrada.** Com indicativo inválido o app não deve concluir a
+  configuração nem **entrar** em nada: sem login/conexão APRS-IS, sem TX por RF/TNC/AFSK, sem beacon.
+  O app não tem conta própria; "entrar" = conectar ao APRS-IS e transmitir.
+- **O passcode não protege:** `aprsPasscode()` (`core/Aprs.kt`) gera o passcode a partir do próprio
+  indicativo, com algoritmo público. Qualquer palavra recebe passcode "verificado" pelo servidor, então
+  a única barreira possível no app é a validação do indicativo antes de conectar.
+- **SSID:** manter `-0` a `-15` (padrão APRS), validado à parte do indicativo base; o passcode
+  continua calculado sobre o indicativo sem SSID.
+- **Situação nas branches de QA (PR #16, v0.1.12, não publicada):** já existe
+  `plausibleAmateurCallsign()` (formato prefixo + algarismo + sufixo, aceita dígito inicial como `2E0ABC`),
+  usada em Configurações e em `Settings.configured`, que bloqueia a conexão. Recusa `CASA`/`TESTE`,
+  mas **aceita** palavras com algarismo no meio (ex.: `AB1CD`, `XX9XX`) e prefixos inexistentes.
+  **Falta:** tabela embarcada de blocos de prefixos ITU (com prefixos de algarismo inicial e exceções),
+  motivo da recusa e país identificado, aviso claro quando o indicativo já salvo for inválido
+  (hoje o app apenas não conecta), validação na importação de backup (#50)
+  e testes com prefixos não alocados.
+- **Próximo passo quando for implementado:** partir da branch da PR #16, não da `main`.
+
+- **Status:** requisito reforçado três vezes (07/11, 08/11 e 10/11); **parcial** na PR #16
+  (só formato); tabela ITU **não implementada**. Nenhum APK novo gerado.
 
 ### 60. Mensagens: envio não conclui, permanece tentando indefinidamente (P0)
 _Solicitado em 08/11/2026: "Backlog: O app não consegue enviar msg...fica tentando.."_
