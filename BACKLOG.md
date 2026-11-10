@@ -2511,6 +2511,32 @@ seletor de símbolo; símbolos das duas tabelas e com overlay; tema claro/escuro
 **Dependências/relacionados:** itens 1, 58, 63.
 - **Status:** **cancelado em 10/11/2026** pelo mantenedor: "Esquece o background branco. Falha minha. Está tudo certo." Nada a implementar.
 
+### 72. Estações: campo de busca corta o texto digitado
+_Relatado em 10/11/2026 (após a v0.1.14), com captura: "campo na aba estações está cortando."_
+
+**Problema:** na aba Estações, o texto digitado no campo de busca aparece cortado na parte de baixo (na
+captura, "pt2" fica com a base das letras escondida). O campo está baixo demais para o texto.
+
+**Causa provável (verificado no código em 10/11/2026, v0.1.14):** `ui/Screens.kt`, cabeçalho da lista de
+estações (~linha 648): o `OutlinedTextField` da busca tem `Modifier.weight(1f).height(48.dp)`. O
+`OutlinedTextField` do Material 3 tem altura mínima de 56 dp com preenchimento interno de 16 dp em cima e
+embaixo; forçado a 48 dp, a área do texto fica menor que a linha e a base é recortada. O placeholder usa
+`fontSize = 12.sp`, mas o texto digitado usa o tamanho padrão (16 sp), o que piora o corte.
+
+**Comportamento exigido:**
+1. O texto digitado e o placeholder aparecem inteiros, centralizados na vertical, em qualquer tamanho de fonte
+   do sistema (incluindo fonte grande de acessibilidade).
+2. Manter o cabeçalho compacto (#58/#65): campo, botão de filtro ☷ e lixeira 🗑 na mesma linha.
+3. Solução sugerida: tirar a altura fixa (usar `heightIn(min = …)`) ou trocar por um campo compacto
+   (`BasicTextField` com `OutlinedTextFieldDefaults.DecorationBox` e `contentPadding` menor), com
+   `textStyle` no mesmo tamanho do placeholder.
+4. O mesmo padrão existe na busca da aba Logs (`ui/LogsUi.kt` ~linha 138, `height(48.dp)`): corrigir junto.
+
+**Critérios de aceite:** capturas antes/depois da aba Estações com texto digitado, em fonte normal e grande,
+tema claro e escuro; sem regressão no filtro e na lixeira.
+
+**Dependências/relacionados:** itens 56 e 58.
+
 ## Consolidação das sugestões aprovadas com itens já existentes
 
 A comparação com o APRSdroid também aprovou os recursos abaixo, que **já estavam
