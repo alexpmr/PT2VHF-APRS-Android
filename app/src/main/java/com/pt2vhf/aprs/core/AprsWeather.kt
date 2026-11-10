@@ -55,3 +55,21 @@ fun parseAprsWeather(info: String, receivedAt: Long = System.currentTimeMillis()
         it.rain24hMm != null || it.rainSinceMidnightMm != null
     }
 }
+
+/** Clima a partir do comentário de uma estação WX já guardada (#67), sem o cabeçalho de posição. */
+fun parseWeatherComment(comment: String, receivedAt: Long): AprsWeather? =
+    parseAprsWeather("!0000.00N/00000.00E_$comment", receivedAt)
+
+/**
+ * Rótulo curto da camada de clima do mapa (#67): temperatura e vento do último relatório.
+ * Só o que veio no pacote; sem temperatura nem vento não há rótulo.
+ */
+fun weatherMapLabel(w: AprsWeather): String? {
+    val parts = ArrayList<String>()
+    w.temperatureC?.let { parts += "%.0f°C".format(java.util.Locale.ROOT, it) }
+    w.windKmh?.let { kmh ->
+        val dir = w.windDirectionDeg?.takeIf { kmh > 0.5 }?.let { " " + compassName(it % 360) }.orEmpty()
+        parts += "%.0f km/h".format(java.util.Locale.ROOT, kmh) + dir
+    }
+    return parts.takeIf { it.isNotEmpty() }?.joinToString(" · ")
+}

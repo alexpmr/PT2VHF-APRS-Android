@@ -52,7 +52,17 @@ data class StationInsights(
     val phg: String?,
     /** Pacotes da estação, mais recentes primeiro (aba Bruto). */
     val packets: List<PacketLogEntry>,
+    /** Posições transmitidas pela estação, mais antigas primeiro (aba Trilha, #58.4). */
+    val positions: List<TrackPoint> = emptyList(),
 )
+
+/** Pontos da trilha dentro do período (#58.4: 1 h, 6 h, 1 d, 3 d, 7 d), em ordem de tempo. */
+fun trailWithin(points: List<TrackPoint>, now: Long, periodMs: Long): List<TrackPoint> =
+    points.filter { now - it.recordedAt in 0..periodMs }.sortedBy { it.recordedAt }
+
+/** Distância total percorrida somando os trechos entre pontos consecutivos. */
+fun trailDistanceKm(points: List<TrackPoint>): Double =
+    points.zipWithNext().sumOf { (a, b) -> haversineKm(a.lat, a.lon, b.lat, b.lon) }
 
 private val ALTITUDE = Regex("/A=(-?\\d{6})")
 private val PHG = Regex("PHG(\\d{4})")
@@ -167,5 +177,7 @@ fun buildStationInsights(
         altitudeM = altitude,
         phg = phg,
         packets = mine.asReversed(),
+        positions = unique.mapNotNull { (e, p) -> parsePosition(p.info)?.let { TrackPoint(it.lat, it.lon, e.time) } }
+            .filterNot { it.lat == 0.0 && it.lon == 0.0 },
     )
 }

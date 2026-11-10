@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
 package com.pt2vhf.aprs.ui
 
 import android.annotation.SuppressLint
@@ -225,6 +227,11 @@ fun MapScreen(settings: Settings, onStation: (String) -> Unit, onSettingsChanged
     var onlyMyLinks by remember { mutableStateOf(layer("map_only_my_links", false)) }
     var showCoverage by remember { mutableStateOf(layer("map_layer_coverage", false)) }
     var showLabels by remember { mutableStateOf(layer("map_layer_labels", true)) }
+    // #66 agrupamento e #67 camada de clima.
+    var clusterOn by remember { mutableStateOf(layer("map_layer_cluster", true)) }
+    var showWeather by remember { mutableStateOf(layer("map_layer_weather", false)) }
+    var zoomLevel by remember { mutableStateOf(0) }
+    val weatherLive by AprsRepository.weatherHistory.collectAsState()
     var clock by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) { while (true) { delay(30_000); clock = System.currentTimeMillis() } }
     val maxAgeMs = settings.stationMaxAgeHours * 3_600_000L
@@ -242,6 +249,15 @@ fun MapScreen(settings: Settings, onStation: (String) -> Unit, onSettingsChanged
                 setTileSource(TileSourceFactory.MAPNIK)
                 setMultiTouchControls(true)
                 mapRef[0] = this
+                // #66: reagrupar quando o zoom muda (passo inteiro, para não redesenhar a cada quadro).
+                addMapListener(object : org.osmdroid.events.MapListener {
+                    override fun onScroll(event: org.osmdroid.events.ScrollEvent?): Boolean = false
+                    override fun onZoom(event: org.osmdroid.events.ZoomEvent?): Boolean {
+                        val z = kotlin.math.round(zoomLevelDouble).toInt()
+                        if (z != zoomLevel) zoomLevel = z
+                        return false
+                    }
+                })
                 setOnTouchListener { view, event ->
                     if (activeFollow != null && event.actionMasked == android.view.MotionEvent.ACTION_MOVE)
                         followPaused = true
@@ -349,15 +365,38 @@ fun MapScreen(settings: Settings, onStation: (String) -> Unit, onSettingsChanged
                 }
             }
             // #63: ícones no tamanho escolhido, na densidade real; seguida/favoritas por cima das demais.
-            fun stationMarker(label: String, table: Char, symbol: Char) = StationMarker(map,
-                if (showLabels) label else "", iconPx, touchPx, iconSize.labelSp * scaledDensity, density).apply {
+            fun stationMarker(label: String, table: Char, symbol: Char, subLabel: String = "", subDim: Boolean = false) =
+                StationMarker(map, if (showLabels) label else "", iconPx, touchPx, iconSize.labelSp * scaledDensity, density,
+                    subLabel, subDim).apply {
                 icon = AprsSymbolIcons.mapIcon(context, table, symbol, iconPx)
             }
             val drawOrder = stations.values.sortedBy { s ->
                 when (s.call) { followedCall -> 2; in favorites -> 1; else -> 0 }
             }
+            // #66: estações próximas viram um círculo com a contagem; seguida e favoritas nunca entram em grupo.
+            val zoomNow = map.zoomLevelDouble.takeIf { zoomLevel >= 0 } ?: 3.0
+            val clusterable = if (clusterOn) drawOrder.filter { it.call != followedCall && it.call !in favorites } else emptyList()
+            val clusters = com.pt2vhf.aprs.data.clusterStations(
+                clusterable.map { com.pt2vhf.aprs.data.ClusterPoint(it.call, it.lat, it.lon) }, zoomNow,
+                (iconPx * 1.4).toDouble()).filter { it.size > 1 }
+            val grouped = clusters.flatMap { it.keys }.toHashSet()
+            for (c in clusters) {
+                map.overlays.add(ClusterMarker(map, c.size, (22f + 4f * kotlin.math.log10(c.size.toFloat())) * density, density).apply {
+                    position = GeoPoint(c.lat, c.lon)
+                    setOnMarkerClickListener { m, mv ->
+                        mv.controller.animateTo(m.position, (mv.zoomLevelDouble + 2.0).coerceAtMost(19.0), 400L); true
+                    }
+                })
+            }
             for (s in drawOrder) {
-                map.overlays.add(stationMarker(s.call, s.symbolTable, s.symbol).apply {
+                if (s.call in grouped) continue
+                // #67: rótulo de clima (temperatura e vento) sobre as estações WX; dado com mais de 2 h fica esmaecido.
+                val wx = if (showWeather && s.role == "Estação meteorológica")
+                    (weatherLive[s.call]?.lastOrNull() ?: com.pt2vhf.aprs.core.parseWeatherComment(s.comment, s.lastHeard))
+                else null
+                val wxLabel = wx?.let { com.pt2vhf.aprs.core.weatherMapLabel(it) }.orEmpty()
+                map.overlays.add(stationMarker(s.call, s.symbolTable, s.symbol, wxLabel,
+                    wx != null && now - wx.timestamp > 2 * 3_600_000L).apply {
                     position = GeoPoint(s.lat, s.lon)
                     title = s.call
                     snippet = "${UiText.role(s.role)} · ${ago(s.lastHeard)}"
@@ -414,6 +453,12 @@ fun MapScreen(settings: Settings, onStation: (String) -> Unit, onSettingsChanged
                 }
                 LayerToggle(UiText.text(R.string.layer_coverage), showCoverage) {
                     showCoverage = it; Settings.saveOption(context, "map_layer_coverage", it.toString())
+                }
+                LayerToggle(UiText.text(R.string.layer_cluster), clusterOn) {
+                    clusterOn = it; Settings.saveOption(context, "map_layer_cluster", it.toString())
+                }
+                LayerToggle(UiText.text(R.string.layer_weather), showWeather) {
+                    showWeather = it; Settings.saveOption(context, "map_layer_weather", it.toString())
                 }
             }
         }
@@ -558,22 +603,31 @@ fun StationsScreen(maxAgeHours: Int, onStation: (String) -> Unit) {
     var firstUntil by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_first_until", "")) }
     var minDistance by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_min_distance", "")) }
     var maxDistance by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_max_distance", "")) }
+    // #58.3: região (país pelo prefixo), SSID, símbolo, visto por último e só com posição.
+    var countries by remember {
+        mutableStateOf(Settings.readOption(context, "station_countries", "").split("|").filter { it.isNotBlank() }.toSet())
+    }
+    var ssids by remember {
+        mutableStateOf(Settings.readOption(context, "station_ssids", "").split("|").mapNotNull { it.toIntOrNull() }.toSet())
+    }
+    var symbolFilter by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_symbol", "")) }
+    var lastSeenMin by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_last_seen", "0").toIntOrNull() ?: 0) }
+    var withPosition by rememberSaveable { mutableStateOf(Settings.readOption(context, "station_with_position", "false") == "true") }
 
-    val activeFilters = query.isNotBlank() || roles.isNotEmpty() || source != "all" || favoritesOnly ||
-        receivedFrom.isNotBlank() || receivedUntil.isNotBlank() || firstFrom.isNotBlank() ||
-        firstUntil.isNotBlank() || minDistance.isNotBlank() || maxDistance.isNotBlank()
     val stations = if (maxAgeHours > 0)
         allStations.filterValues { refreshClock - it.lastHeard <= maxAgeHours * 3_600_000L } else allStations
-    val list = selectStations(
-        stations.values, StationCriteria(
+    val criteria = StationCriteria(
             callsign = query, sort = sort, descending = descending, roleNames = roles,
             source = source, favoritesOnly = favoritesOnly,
             receivedFrom = receivedFrom, receivedUntil = receivedUntil,
             firstFrom = firstFrom, firstUntil = firstUntil,
             minDistanceKm = minDistance.replace(',', '.').toDoubleOrNull()?.takeIf { it >= 0 },
             maxDistanceKm = maxDistance.replace(',', '.').toDoubleOrNull()?.takeIf { it >= 0 },
-        ), status.lat, status.lon, favorites,
-    )
+            countries = countries, ssids = ssids, symbol = symbolFilter, lastSeenMinutes = lastSeenMin,
+            withPositionOnly = withPosition,
+        )
+    val list = selectStations(stations.values, criteria, status.lat, status.lon, favorites, refreshClock)
+    val filterCount = com.pt2vhf.aprs.data.activeStationFilterCount(criteria)
     fun saveFilters() {
         mapOf(
             "station_search" to query,
@@ -583,16 +637,21 @@ fun StationsScreen(maxAgeHours: Int, onStation: (String) -> Unit) {
             "station_received_from" to receivedFrom, "station_received_until" to receivedUntil,
             "station_first_from" to firstFrom, "station_first_until" to firstUntil,
             "station_min_distance" to minDistance, "station_max_distance" to maxDistance,
+            "station_countries" to countries.sorted().joinToString("|"),
+            "station_ssids" to ssids.sorted().joinToString("|"), "station_symbol" to symbolFilter,
+            "station_last_seen" to lastSeenMin.toString(), "station_with_position" to withPosition.toString(),
         ).forEach { (key, value) -> Settings.saveOption(context, key, value) }
     }
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             OutlinedTextField(query, { query = it; Settings.saveOption(context, "station_search", it) },
-                placeholder = { Text(UiText.text(R.string.search_callsign_short), fontSize = 12.sp, maxLines = 1) },
+                placeholder = { Text(UiText.text(R.string.search_call_or_comment), fontSize = 12.sp, maxLines = 1) },
                 singleLine = true, modifier = Modifier.weight(1f).height(48.dp))
-            TextButton(onClick = { filterOpen = true }) {
-                Text("☷" + if (activeFilters) " ●" else "", fontSize = 20.sp)
+            TextButton(onClick = { filterOpen = true }, modifier = Modifier.semantics {
+                contentDescription = UiText.text(R.string.station_filter_action) + if (filterCount > 0) " ($filterCount)" else ""
+            }) {
+                Text("☷" + if (filterCount > 0) " $filterCount" else "", fontSize = 20.sp)
             }
             TextButton(onClick = { clearStationsOpen = true }, enabled = !clearingStations && allStations.isNotEmpty(),
                 modifier = Modifier.semantics {
@@ -746,6 +805,44 @@ fun StationsScreen(maxAgeHours: Int, onStation: (String) -> Unit) {
                         label = { Text(UiText.text(R.string.station_distance_min)) })
                     OutlinedTextField(maxDistance, { maxDistance = it }, singleLine = true,
                         label = { Text(UiText.text(R.string.station_distance_max)) })
+                    // #58.3 Localização: região pelo prefixo e só estações com posição conhecida.
+                    Text(UiText.text(R.string.filter_region), fontWeight = FontWeight.Bold)
+                    val regionChoices = remember(stations) {
+                        stations.values.mapNotNull { com.pt2vhf.aprs.core.callsignCountry(it.call) }
+                            .groupingBy { it }.eachCount().entries.sortedByDescending { it.value }.take(16).map { it.key }
+                    }
+                    androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        OutlinedChoice(UiText.text(R.string.filter_all), countries.isEmpty()) { countries = emptySet() }
+                        (regionChoices + countries).distinct().forEach { iso ->
+                            OutlinedChoice(com.pt2vhf.aprs.core.flagEmoji(iso) + " " + iso, iso in countries) {
+                                countries = if (iso in countries) countries - iso else countries + iso
+                            }
+                        }
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = withPosition, onCheckedChange = { withPosition = it })
+                        Text(UiText.text(R.string.filter_with_position), modifier = Modifier.clickable { withPosition = !withPosition })
+                    }
+                    // #58.3 Tipo: SSID 0-15 e símbolo.
+                    Text(UiText.text(R.string.filter_ssid), fontWeight = FontWeight.Bold)
+                    androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        (0..15).forEach { n ->
+                            OutlinedChoice(if (n == 0) "—" else "-$n", n in ssids) {
+                                ssids = if (n in ssids) ssids - n else ssids + n
+                            }
+                        }
+                    }
+                    OutlinedTextField(symbolFilter, { symbolFilter = it.take(2) }, singleLine = true,
+                        label = { Text(UiText.text(R.string.filter_symbol)) }, placeholder = { Text("/_  \\&  >") })
+                    // #58.3 Tempo: visto por último.
+                    Text(UiText.text(R.string.filter_last_seen), fontWeight = FontWeight.Bold)
+                    androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        listOf(0 to R.string.filter_all, 1 to R.string.period_1min, 15 to R.string.period_15min,
+                            60 to R.string.period_1h, 360 to R.string.period_6h, 1440 to R.string.period_24h,
+                            10080 to R.string.period_7d, 43200 to R.string.period_30d).forEach { (min, label) ->
+                            OutlinedChoice(UiText.text(label), lastSeenMin == min) { lastSeenMin = min }
+                        }
+                    }
                 }
             },
             confirmButton = {
@@ -758,6 +855,7 @@ fun StationsScreen(maxAgeHours: Int, onStation: (String) -> Unit) {
                     query = ""; sort = "distance"; descending = false; roles = emptySet()
                     source = "all"; favoritesOnly = false; receivedFrom = ""; receivedUntil = ""
                     firstFrom = ""; firstUntil = ""; minDistance = ""; maxDistance = ""
+                    countries = emptySet(); ssids = emptySet(); symbolFilter = ""; lastSeenMin = 0; withPosition = false
                     saveFilters(); filterOpen = false
                 }) { Text(UiText.text(R.string.station_filter_clear)) }
             },

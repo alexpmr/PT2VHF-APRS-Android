@@ -26,6 +26,9 @@ class MainActivity : ComponentActivity() {
         requestPermissions()
         if (Settings.load(this).configured) AprsService.send(this, AprsService.ACTION_RELOAD)
         if (intent?.getBooleanExtra(EXTRA_SHOW_UPDATE, false) == true) showUpdateRequests.value = showUpdateRequests.value + 1
+        // #56/#28: sem isso o Compose não recebe a altura do teclado (WindowInsets.ime = 0) e o cabeçalho
+        // e a barra inferior continuavam na tela, esmagando o campo de escrever a mensagem.
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         setContent { App(onExit = { finish() }) }
     }
 

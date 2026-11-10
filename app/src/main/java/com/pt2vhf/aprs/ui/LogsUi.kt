@@ -33,6 +33,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
@@ -113,6 +115,7 @@ fun LogsScreen(onStation: (String) -> Unit) {
     var typeMenu by remember { mutableStateOf(false) }
     var optionsOpen by remember { mutableStateOf(false) }
     var details by remember { mutableStateOf<PacketLogEntry?>(null) }
+    var toolsRaw by remember { mutableStateOf<String?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
     var exportCsv by remember { mutableStateOf(false) }
     val source = if (paused) frozen else all
@@ -138,6 +141,10 @@ fun LogsScreen(onStation: (String) -> Unit) {
                 if (!paused) frozen = all
                 paused = !paused
             }) { Text(if (paused) "▶" else "⏸", fontSize = 18.sp) }
+            // #69: ferramentas (decodificador de pacote e frequências APRS).
+            TextButton(onClick = { toolsRaw = "" }, modifier = Modifier.semantics {
+                contentDescription = UiText.text(R.string.tools_title)
+            }) { Text("🛠", fontSize = 18.sp) }
             TextButton(onClick = { optionsOpen = true }) { Text("⋮", fontSize = 20.sp) }
         }
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp),
@@ -181,7 +188,9 @@ fun LogsScreen(onStation: (String) -> Unit) {
             }
         }
     }
-    details?.let { e -> PacketDetailsDialog(e, onDismiss = { details = null }, onStation = { details = null; onStation(it) }) }
+    details?.let { e -> PacketDetailsDialog(e, onDismiss = { details = null }, onStation = { details = null; onStation(it) },
+        onDecode = { raw -> details = null; toolsRaw = raw }) }
+    toolsRaw?.let { raw -> ToolsDialog(raw, onDismiss = { toolsRaw = null }) }
     if (optionsOpen) LogOptionsDialog(
         onDismiss = { optionsOpen = false },
         onExport = { csv -> optionsOpen = false; exportCsv = csv; message = null
@@ -243,7 +252,7 @@ private fun LogOptionsDialog(onDismiss: () -> Unit, onExport: (Boolean) -> Unit,
 }
 
 @Composable
-private fun PacketDetailsDialog(e: PacketLogEntry, onDismiss: () -> Unit, onStation: (String) -> Unit) {
+private fun PacketDetailsDialog(e: PacketLogEntry, onDismiss: () -> Unit, onStation: (String) -> Unit, onDecode: (String) -> Unit = {}) {
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
     val packet = remember(e.raw) { AprsPacket.parse(e.raw) }
@@ -282,6 +291,7 @@ private fun PacketDetailsDialog(e: PacketLogEntry, onDismiss: () -> Unit, onStat
                 Row {
                     TextButton(onClick = { clipboard.setText(AnnotatedString(e.raw)) }) { Text(UiText.text(R.string.logs_copy)) }
                     TextButton(onClick = { shareText(context, "APRS", e.raw) }) { Text(UiText.text(R.string.logs_share)) }
+                    TextButton(onClick = { onDecode(e.raw) }) { Text(UiText.text(R.string.tools_decode)) }
                 }
                 if (packet != null && AprsRepository.stations.value.containsKey(packet.source))
                     TextButton(onClick = { onStation(packet.source) }) { Text(UiText.text(R.string.logs_open_station)) }

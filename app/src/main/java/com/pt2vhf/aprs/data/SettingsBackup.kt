@@ -53,12 +53,25 @@ object SettingsBackup {
         return root.toString(2)
     }
 
-    data class Preview(val callsign: String, val keys: Int, val messages: Int, val appVersion: String, val json: JSONObject)
+    data class Preview(val callsign: String, val keys: Int, val messages: Int, val appVersion: String, val json: JSONObject,
+                       /** #70: arquivo convertido do APRSdroid. */
+                       val fromAprsDroid: Boolean = false, val ignored: Int = 0)
 
     /** Valida o arquivo sem alterar nada. Lança IllegalArgumentException com o motivo. */
     fun preview(text: String): Preview {
-        val root = runCatching { JSONObject(text) }.getOrElse { throw IllegalArgumentException("json") }
-        require(root.optString("app") == APP) { "app" }
+        val root = runCatching { JSONObject(text) }.getOrNull()
+        if (root == null || root.optString("app") != APP) {
+            // #70: preferências (XML) ou perfil (JSON) do APRSdroid.
+            val conv = parseFlatPrefs(text)?.let { convertAprsDroid(it) }
+                ?: throw IllegalArgumentException(if (root == null) "json" else "app")
+            val prefs = JSONObject()
+            conv.prefs.forEach { p ->
+                val value: Any = when (p.type) { "i" -> p.value.toInt(); "b" -> p.value.toBoolean(); else -> p.value }
+                prefs.put(p.key, JSONObject().put("t", p.type).put("v", value))
+            }
+            val json = JSONObject().put("format", FORMAT).put("app", APP).put("prefs", prefs)
+            return Preview(conv.callsign, prefs.length(), 0, "APRSdroid", json, fromAprsDroid = true, ignored = conv.ignored)
+        }
         val format = root.optInt("format", -1)
         require(format in 1..FORMAT) { "format" }
         val prefs = root.optJSONObject("prefs") ?: throw IllegalArgumentException("prefs")

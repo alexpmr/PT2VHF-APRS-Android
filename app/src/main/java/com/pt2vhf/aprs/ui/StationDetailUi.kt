@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -138,6 +140,8 @@ fun StationSheet(initialCall: String, onDismiss: () -> Unit, onMessage: (String)
         }
     }
     var tab by rememberSaveable(call) { mutableIntStateOf(0) }
+    val settings = remember { com.pt2vhf.aprs.data.Settings.load(context) }
+    var replyTo by remember(call) { mutableStateOf<Long?>(null) }
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(Modifier.fillMaxSize(), color = Pal.ground) {
             Column(Modifier.fillMaxSize()) {
@@ -156,8 +160,9 @@ fun StationSheet(initialCall: String, onDismiss: () -> Unit, onMessage: (String)
                             UiText.text(if (call in favorites) R.string.favorite_remove else R.string.favorite_add))
                     }
                 }
-                val tabs = listOf(R.string.sheet_tab_overview, R.string.sheet_tab_path,
-                    R.string.sheet_tab_telemetry, R.string.sheet_tab_raw)
+                // #58.4: abas completas — Visão geral, Caminho, Trilha, Telemetria, Mensagens e Bruto.
+                val tabs = listOf(R.string.sheet_tab_overview, R.string.sheet_tab_path, R.string.sheet_tab_trail,
+                    R.string.sheet_tab_telemetry, R.string.sheet_tab_messages, R.string.sheet_tab_raw)
                 ScrollableTabRow(selectedTabIndex = tab, containerColor = Pal.bar, edgePadding = 8.dp) {
                     tabs.forEachIndexed { i, id ->
                         Tab(selected = tab == i, onClick = { tab = i }, text = { Text(UiText.text(id), fontSize = 13.sp) })
@@ -170,7 +175,12 @@ fun StationSheet(initialCall: String, onDismiss: () -> Unit, onMessage: (String)
                     else when (tab) {
                         0 -> OverviewTab(s, data, status.lat, status.lon, stations.values, weatherLive[call].orEmpty()) { call = it }
                         1 -> PathTab(data)
-                        2 -> TelemetryTab(data, weatherLive[call].orEmpty())
+                        2 -> TrailTab(call, data)
+                        3 -> TelemetryTab(data, weatherLive[call].orEmpty())
+                        4 -> Box(Modifier.fillMaxSize().imePadding()) {
+                            Conversation(settings, call, replyTo, onReplyChange = { replyTo = it }, onBack = {},
+                                onStation = { call = it }, showHeader = false)
+                        }
                         else -> RawTab(data)
                     }
                 }
@@ -197,6 +207,11 @@ private fun SheetHeader(call: String, s: Station?, onDismiss: () -> Unit) {
                 append(base)
                 if (ssid.isNotEmpty()) withStyle(SpanStyle(color = Pal.accent)) { append("-$ssid") }
             }, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Pal.text)
+            // #59/#58.4: país pelo prefixo ITU do indicativo (não comprova licença).
+            com.pt2vhf.aprs.core.callsignCountry(call)?.let { iso ->
+                Text(com.pt2vhf.aprs.core.flagEmoji(iso) + " " +
+                    (com.pt2vhf.aprs.core.countryName(iso, UiText.locale()) ?: iso), color = Pal.muted, fontSize = 12.sp)
+            }
             if (s != null) {
                 val live = now - s.lastHeard <= LIVE_MS
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -493,5 +508,61 @@ private fun RawTab(data: StationInsights) {
                 }
             }
         }
+    }
+}
+
+private val TRAIL_PERIODS = listOf(
+    R.string.period_1h to 3_600_000L, R.string.period_6h to 6 * 3_600_000L, R.string.period_1d to 86_400_000L,
+    R.string.period_3d to 3 * 86_400_000L, R.string.period_7d to 7 * 86_400_000L,
+)
+
+/** #58.4 Trilha: posições transmitidas pela estação no período, desenhadas no mapa, com pontos e distância. */
+@Composable
+private fun TrailTab(call: String, data: StationInsights) {
+    var period by rememberSaveable(call) { mutableIntStateOf(1) }
+    val now = remember(data) { System.currentTimeMillis() }
+    val points = remember(data, period) { com.pt2vhf.aprs.data.trailWithin(data.positions, now, TRAIL_PERIODS[period].second) }
+    val distance = remember(points) { com.pt2vhf.aprs.data.trailDistanceKm(points) }
+    Column(Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            TRAIL_PERIODS.forEachIndexed { i, (label, _) ->
+                OutlinedChoice(UiText.text(label), period == i) { period = i }
+            }
+        }
+        CardGrid(listOf(
+            UiText.text(R.string.trail_points) to points.size.toString(),
+            UiText.text(R.string.trail_distance) to (if (points.size > 1) km(distance) else null),
+        ))
+        if (points.isEmpty()) Text(UiText.text(R.string.trail_empty), color = Pal.muted)
+        else androidx.compose.ui.viewinterop.AndroidView(
+            modifier = Modifier.fillMaxWidth().weight(1f).background(Pal.card, RoundedCornerShape(8.dp)),
+            factory = { ctx ->
+                org.osmdroid.views.MapView(ctx).apply {
+                    setTileSource(org.osmdroid.tileprovider.tilesource.TileSourceFactory.MAPNIK)
+                    setMultiTouchControls(true)
+                }
+            },
+            update = { map ->
+                map.overlays.clear()
+                val geo = points.map { org.osmdroid.util.GeoPoint(it.lat, it.lon) }
+                if (geo.size > 1) map.overlays.add(org.osmdroid.views.overlay.Polyline(map).apply {
+                    setPoints(geo)
+                    outlinePaint.color = 0xFFFFB877.toInt()
+                    outlinePaint.strokeWidth = 8f
+                })
+                map.overlays.add(org.osmdroid.views.overlay.Marker(map).apply {
+                    position = geo.last(); title = call
+                    setAnchor(org.osmdroid.views.overlay.Marker.ANCHOR_CENTER, org.osmdroid.views.overlay.Marker.ANCHOR_BOTTOM)
+                })
+                if (geo.size > 1) {
+                    val box = org.osmdroid.util.BoundingBox.fromGeoPointsSafe(geo)
+                    map.post { runCatching { map.zoomToBoundingBox(box.increaseByScale(1.3f), false) } }
+                } else {
+                    map.controller.setZoom(14.0); map.controller.setCenter(geo.last())
+                }
+                map.invalidate()
+            },
+        )
+        Text(UiText.text(R.string.trail_source_notice), color = Pal.muted, fontSize = 11.sp)
     }
 }

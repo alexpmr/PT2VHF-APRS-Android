@@ -18,6 +18,15 @@ ou pelo próprio áudio do celular (modem AFSK 1200).
 - TNC KISS por Bluetooth (Mobilinkd, BTECH UV-Pro, Radtel RT-950 Pro e similares) com monitor ao vivo.
 - Aviso de nova versão pelo site www.pt2vhf.com (o aviso de "Downloads no site oficial" na abertura saiu na 0.1.8).
 
+## Novidades da 0.1.14
+
+- Tela de Mensagens compacta e legível com o teclado aberto, Enviar em ícone e atualização na hora de mensagens novas.
+- Só indicativos de radioamador válidos no mundo (tabela de prefixos da ITU), com o país do prefixo.
+- Ficha da estação com abas **Trilha** e **Mensagens**; filtros por região, SSID, símbolo e visto por último.
+- Nova aba **Comunidade** com rodadas de check-in (ex.: APRS Thursday), participantes e países.
+- Mapa com agrupamento de estações próximas e camada de clima; decodificador de pacote e tabela de frequências APRS.
+- Importação das configurações do APRSdroid.
+
 ## Novidades da 0.1.13
 
 Primeira versão pública depois da 0.1.9 (reúne as candidatas QA 0.1.10 a 0.1.12):

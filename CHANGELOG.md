@@ -1,5 +1,40 @@
 # Changelog
 
+## 0.1.14 — Publicada (10/11/2026, beta; testes item a item pendentes)
+
+- **Mensagens mais compactas e legíveis (#56, #65, #28):**
+  - Causa do #56 encontrada: a janela do app não repassava a altura do teclado à tela, então o cabeçalho e a barra
+    inferior continuavam visíveis e o campo de escrever virava uma faixa fina. Agora, com o teclado aberto, cabeçalho
+    e barra inferior somem, o campo tem sempre uma linha inteira e cresce até 5 linhas; o histórico é que encolhe.
+  - Cabeçalho em duas linhas baixas: só o **indicativo** (sem "PT2VHF APRS Client for Android"), selo "Somente
+    recepção" quando for o caso, Enviar beacon, Configurações e chips APRS-IS/TNC/GPS menores.
+  - Conversa: **Voltar em ícone (←)** na mesma linha do contato; **Enviar virou ícone** de avião de papel com área de
+    toque de 48 dp e indicador de progresso; a linha "Para:" só aparece nos chats Geral e Boletins.
+- **#64 Mensagens atualizam sozinhas:** a lista de conversas volta ao topo quando chega mensagem nova (ou mostra
+  "↑ Nova mensagem" se você rolou para baixo); conversa, Geral e Boletins rolam para a nova se você estava no fim,
+  senão aparece "↓ Nova mensagem".
+- **#59 Só indicativos válidos no mundo:** tabela de blocos de prefixos da ITU embarcada (sem internet). Recusa
+  palavras e prefixos inexistentes com o motivo; mostra o país do prefixo enquanto você digita; avisa quando o
+  indicativo salvo ou o do backup é inválido (o app não conecta nem transmite). Destinos de mensagem (CQ, BLN,
+  objetos, serviços) continuam livres, só com aviso. Prefixo válido não comprova licença.
+- **Ficha da estação (#58.4):** novas abas **Trilha** (1 h · 6 h · 1 dia · 3 dias · 7 dias, mapa, pontos e
+  distância total) e **Mensagens** (conversa com a estação e campo para responder); bandeira e país pelo prefixo.
+- **Filtros das estações (#58.3):** busca por indicativo ou comentário, região (país pelo prefixo), só com posição
+  conhecida, SSID 0–15, símbolo, visto por último (1 min a 30 dias) e contador de filtros ativos no botão.
+- **Comunidade (#58.5):** nova aba em Mensagens com rodadas de check-in (APRS Thursday já cadastrada e rodadas
+  próprias), data da rodada, busca, participantes, países com bandeira e lista por país; check-in pelo app com
+  confirmação antes de transmitir. Conta só o que este app ouviu.
+- **Mapa:** **agrupar estações próximas** num círculo com a contagem (tocar aproxima; favoritas e seguida ficam
+  de fora) e **camada de clima** com temperatura e vento das estações WX (#66, #67), ambas em Camadas.
+- **Ferramentas (#69):** botão 🛠 na aba Logs (e "Decodificar" nos detalhes do pacote) com **decodificador de
+  pacote** campo a campo e caminho explicado, e **tabela de frequências APRS** por região.
+- **Importar do APRSdroid (#70):** Configurações → Backup → Importar aceita o arquivo de preferências (XML) ou o
+  perfil (JSON) do APRSdroid; mostra o que foi reconhecido antes de aplicar e nunca importa o passcode.
+- Fica para depois: **Android Auto (#68)**, que exige a biblioteca Car App, aprovação de categoria pelo Google e
+  teste em carro/DHU.
+- Testes de unidade novos: prefixos ITU, acompanhamento de mensagens, APRSdroid, agrupamento, clima, decodificador,
+  filtros, trilha e rodadas.
+
 ## 0.1.13 — Publicada (10/11/2026, beta; testes item a item pendentes)
 
 Primeira versão pública depois da 0.1.9: inclui tudo das candidatas QA 0.1.10, 0.1.11 e 0.1.12 (abaixo) e as
