@@ -2603,6 +2603,40 @@ existentes de configurações continuam passando.
 
 **Dependências/relacionados:** itens 10, 38, 58, 70.
 
+### 75. Banner de abertura ao iniciar o app
+_Pedido do mantenedor em 10/11/2026: "Backlog: Adicione este banner de entrada para mostrar assim que o app é aberto,
+por alguns segundos"._
+
+**Imagem enviada:** [`docs/inspiracao/item75-banner-abertura.png`](docs/inspiracao/item75-banner-abertura.png)
+(941 × 1672 px, vertical, ~1,8 MB): fundo azul-escuro, torre com ondas laranja, satélite, "APRS",
+"Automatic Packet Reporting System", globo com marcadores/carro/rádio e "www.PT2VHF.com".
+
+**O que fazer:**
+1. Ao abrir o app (partida a frio), mostrar o banner em tela cheia por **alguns segundos** (sugestão: ~2 s) e então
+   seguir para o mapa.
+2. Toque no banner pula a espera. Não mostrar de novo ao girar a tela, ao voltar do segundo plano nem ao reabrir pela
+   notificação/widget com o app já em memória.
+3. Não atrasar o que já roda na abertura: conexão APRS-IS, rastreador e pedidos de permissão continuam em paralelo;
+   o banner só cobre a interface.
+4. Imagem centralizada sem distorcer (`ContentScale.Fit`), com o fundo azul-escuro preenchendo as bordas em telas de
+   proporção diferente, em pé e deitado; respeitar barras do sistema.
+
+**Notas técnicas:**
+- No Android 12+ (API 31) o sistema sempre mostra a splash nativa (ícone sobre cor de fundo) e ela **não aceita
+  imagem em tela cheia**. Caminho provável: `androidx.core:core-splashscreen` com fundo na mesma cor azul do banner e
+  `installSplashScreen()` saindo logo, seguido de uma tela Compose própria com o banner (estado em `App.kt` controlado
+  por `rememberSaveable`/ViewModel para não repetir na recriação). minSdk 26: a biblioteca cobre 26–30 igual.
+- Otimizar a imagem antes de embutir (WebP em `res/drawable-nodpi`, alvo < 300 KB) para não pesar o APK.
+- Conferir o texto da arte: na imagem, "Reporting" parece ter um caractere estranho no "i"; confirmar com o
+  mantenedor se a arte final será outra.
+- Não confundir com o #38 (remoção do aviso "Downloads no site oficial" ao abrir): o banner é só visual, sem botão.
+
+**Critérios de aceite:** banner aparece uma vez por abertura a frio, some sozinho após o tempo definido ou ao toque;
+não reaparece em rotação/retorno; sem tela branca/preta entre a splash do sistema e o banner; abertura do mapa não
+fica mais lenta que o tempo do banner; aumento do APK pequeno.
+
+**Dependências/relacionados:** itens 38 e 74.
+
 ## Consolidação das sugestões aprovadas com itens já existentes
 
 A comparação com o APRSdroid também aprovou os recursos abaixo, que **já estavam
