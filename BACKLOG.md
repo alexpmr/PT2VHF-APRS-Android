@@ -2304,6 +2304,47 @@ com overlay; capturas anexadas; toque correto em estações próximas; rolagem f
   físico; nenhuma versão publicada.
 - Numeração: o **#62** está reservado ao P0 registrado na PR #16 (v0.1.10/0.1.12 QA), por isso este item é o #63.
 
+### 64. Mensagens: tela não atualiza sozinha com mensagens novas
+_Relatado em 10/11/2026 (v0.1.13): "tela de mensagens não está atualizando em background. Só atualiza quando eu
+mudo para outra aba como mapa e volto."_
+
+**Problema:** com a aba Mensagens aberta, mensagens que chegam (APRS-IS ou RF) não aparecem na tela; elas só
+surgem depois de trocar de aba (ex.: Mapa) e voltar. Não confundir com #55 (aviso de chegada) nem com #2/#23
+(ordenação): aqui a mensagem já está no histórico, mas a tela não mostra.
+
+**Investigação inicial no código (hipóteses, não confirmadas em aparelho):**
+- O fluxo de dados é reativo: `AprsRepository.add()` faz `_messages.update { it + message }` e
+  `MessagesScreen`/`Conversation` observam `AprsRepository.messages.collectAsState()`; o serviço roda no mesmo
+  processo. Não há recarga do SQLite ao trocar de aba (`init()` só roda uma vez). Ou seja, a lista em memória
+  provavelmente já está atualizada e o problema é de apresentação.
+- **Causa mais provável — lista Conversas:** `ui/MessagesUi.kt` usa `LazyColumn` sem estado próprio com
+  `items(byContact, key = { it.first })`, ordenada da conversa mais recente para a mais antiga (padrão). O Compose
+  preserva a posição de rolagem pela **chave** do primeiro item visível: quando chega mensagem de um contato novo
+  (entra no índice 0) ou um contato existente sobe para o topo, a lista continua ancorada no item que estava no
+  topo e a conversa atualizada fica **acima da área visível**, parecendo que nada mudou. Ao sair da aba e voltar,
+  o estado da lista é recriado no índice 0 e a mensagem "aparece". Ao trocar de aba o app também fecha a conversa
+  aberta (`App.kt`: `chatWith = null`), o que reforça a impressão de "recarregar".
+- **Conversa aberta / Geral / Boletins:** a rolagem automática depende de `LaunchedEffect(list.size)`; ela não
+  dispara quando o tamanho não muda (ex.: limpeza por retenção no mesmo instante) e rola sempre, mesmo quando o
+  usuário está lendo mensagens antigas. Verificar se a mensagem nova entra fora da área visível sem indicação.
+- Se o relato for com o app **em segundo plano** (tela desligada) e a tela não mostrar as novas ao voltar,
+  verificar também se o serviço continua recebendo nesse período (economia de bateria/Doze) e se o
+  `collectAsState` retoma ao voltar ao primeiro plano.
+
+**Comportamento exigido:**
+- Mensagem nova aparece **na hora** na aba aberta (Conversas, conversa privada, Geral e Boletins), sem trocar de aba.
+- Na lista Conversas, se o usuário estiver no topo, manter o topo visível (rolar para a conversa nova/atualizada);
+  se estiver rolado para baixo, não pular a tela, mas mostrar indicação "nova mensagem ↑" que leva ao topo.
+- Na conversa e nos chats de grupo, rolar para a nova só se o usuário já estiver no fim; caso contrário, mostrar
+  indicação "nova mensagem ↓".
+- Atualização de status (ACK, retentativa, falha) refletida no balão sem sair da tela.
+
+**Critérios de aceite:** com a aba Mensagens aberta em cada sub-aba e dentro de uma conversa, receber mensagens
+por APRS-IS e por RF (contato novo, contato existente fora do topo, CQ e boletim) e ver a atualização sem trocar
+de aba; repetir com app em segundo plano e tela desligada, voltando ao app; teste de unidade/UI que simule a
+chegada de mensagem com a lista rolada.
+- **Status:** registrado em 10/11/2026; não implementado.
+
 ## Consolidação das sugestões aprovadas com itens já existentes
 
 A comparação com o APRSdroid também aprovou os recursos abaixo, que **já estavam
