@@ -59,6 +59,7 @@ object UiText {
         raw == "Rejeitada" -> text(R.string.rejected)
         raw == "Enviando" -> text(R.string.msg_sending)
         raw == "Sem conexão para enviar" -> text(R.string.no_connection)
+        raw == com.pt2vhf.aprs.data.INTERRUPTED_STATUS -> text(R.string.msg_interrupted)
         raw == "Sem ACK após 5 tentativas" -> text(R.string.no_ack)
         raw.startsWith("Sem ACK após ") && raw.endsWith(" tentativas") ->
             raw.removePrefix("Sem ACK após ").removeSuffix(" tentativas").toIntOrNull()

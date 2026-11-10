@@ -99,6 +99,7 @@
     <string name="ack_received">ACK recebido</string>
     <string name="rejected">Rejeitada</string>
     <string name="msg_sending">Enviando</string>
+    <string name="msg_interrupted">Interrompida (app parou antes da confirmação)</string>
     <string name="no_connection">Sem conexão para enviar</string>
     <string name="msg_sent_via">Enviada · %1$s</string>
     <string name="no_ack">Sem ACK após 5 tentativas</string>

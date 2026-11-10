@@ -62,6 +62,7 @@ import com.pt2vhf.aprs.core.AprsMessage
 import com.pt2vhf.aprs.core.CALLSIGN_RE
 import com.pt2vhf.aprs.data.AprsRepository
 import com.pt2vhf.aprs.data.ChatMessage
+import com.pt2vhf.aprs.data.INTERRUPTED_STATUS
 import com.pt2vhf.aprs.data.MessageCriteria
 import com.pt2vhf.aprs.data.OutboundSendResult
 import com.pt2vhf.aprs.data.Settings
@@ -292,7 +293,7 @@ private fun deliveryIcon(m: ChatMessage): Pair<String, androidx.compose.ui.graph
     !m.outgoing -> null
     m.status == "ACK recebido" -> "✓✓" to Pal.green
     m.status == "Rejeitada" -> "⛔" to androidx.compose.ui.graphics.Color(0xFFF26F70)
-    m.status.startsWith("Sem ACK") || m.status == "Sem conexão para enviar" -> "✗" to Pal.orange
+    m.status.startsWith("Sem ACK") || m.status == "Sem conexão para enviar" || m.status == INTERRUPTED_STATUS -> "✗" to Pal.orange
     m.status == "Cancelada" -> "⊘" to Pal.muted
     m.status.startsWith("Aguardando ACK") || m.status.startsWith("Enviada") -> "✓" to Pal.green
     m.status == "Enviando" -> "🕓" to Pal.yellow
@@ -300,7 +301,8 @@ private fun deliveryIcon(m: ChatMessage): Pair<String, androidx.compose.ui.graph
 }
 
 private fun canResend(m: ChatMessage) = m.outgoing && m.msgId != null &&
-    (m.status.startsWith("Sem ACK") || m.status == "Rejeitada" || m.status == "Sem conexão para enviar" || m.status == "Cancelada")
+    (m.status.startsWith("Sem ACK") || m.status == "Rejeitada" || m.status == "Sem conexão para enviar" || m.status == "Cancelada" ||
+        m.status == INTERRUPTED_STATUS)
 
 private fun canCancel(m: ChatMessage) = m.outgoing && (m.status.startsWith("Aguardando") || m.status == "Enviando")
 

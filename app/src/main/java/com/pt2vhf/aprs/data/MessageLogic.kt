@@ -19,8 +19,14 @@ data class MessageCriteria(
 
 fun isPendingStatus(status: String): Boolean = status == "Enviando" || status.startsWith("Aguardando ACK")
 
+/** #60: envio cujo serviço morreu no meio; sem isso o balão ficaria "tentando" para sempre. */
+const val INTERRUPTED_STATUS = "Interrompida"
+
+fun interruptPending(list: List<ChatMessage>): List<ChatMessage> =
+    list.map { if (it.outgoing && isPendingStatus(it.status)) it.copy(status = INTERRUPTED_STATUS) else it }
+
 fun isFailedStatus(status: String): Boolean =
-    status == "Sem conexão para enviar" || status.startsWith("Sem ACK após ") || status == "Rejeitada"
+    status == "Sem conexão para enviar" || status == INTERRUPTED_STATUS || status.startsWith("Sem ACK após ") || status == "Rejeitada"
 
 fun matchesMessage(m: ChatMessage, c: MessageCriteria, now: Long = System.currentTimeMillis()): Boolean {
     val text = c.text.trim()

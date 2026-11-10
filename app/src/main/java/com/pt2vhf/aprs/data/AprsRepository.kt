@@ -145,7 +145,11 @@ object AprsRepository {
             val victims = retentionVictims(all, retentionPolicy)
             if (victims.isNotEmpty()) msgStore.delete(victims)
             val kept = all.filter { it.id !in victims }
-            _messages.value = kept
+            // #60: no retry survives a process restart, so a pending send must not stay "tentando".
+            val settled = interruptPending(kept)
+            val interrupted = settled.filterIndexed { i, m -> m !== kept[i] }
+            if (interrupted.isNotEmpty()) msgStore.upsert(interrupted)
+            _messages.value = settled
             nextId = maxOf(nextId, (kept.maxOfOrNull { it.id } ?: 0) + 1)
         }
         packetLogStore = PacketLogStore(context.applicationContext)
@@ -618,6 +622,19 @@ object AprsRepository {
         }
         val snapshot = changed.toList()
         snapshot.forEach { setRetry(it.id, 0, null) }
+        diskWorker.execute { runCatching { messageStore?.upsert(snapshot) } }
+    }
+
+    /** #60: chamado quando o serviço para; as retentativas agendadas morrem junto com ele. */
+    fun interruptPendingMessages() {
+        val changed = ArrayList<ChatMessage>()
+        _messages.update { list ->
+            changed.clear()
+            interruptPending(list).also { out -> out.forEachIndexed { i, m -> if (m !== list[i]) changed += m } }
+        }
+        if (changed.isEmpty()) return
+        _retryAt.update { it - changed.map { m -> m.id }.toSet() }
+        val snapshot = changed.toList()
         diskWorker.execute { runCatching { messageStore?.upsert(snapshot) } }
     }
 

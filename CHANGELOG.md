@@ -1,5 +1,11 @@
 # Changelog
 
+## Em desenvolvimento (10/11/2026; sem versão, não publicada)
+
+- **#60 P0:** mensagem que estava "Enviando"/"Aguardando ACK" quando o serviço parou ou o app foi encerrado passa a
+  "Interrompida" (✗, com Reenviar), em vez de ficar tentando para sempre; antes, nenhuma retentativa sobrevivia ao
+  reinício e o balão permanecia pendente (e imune à retenção). ACK que chegar depois ainda confirma a mensagem.
+
 ## 0.1.11 — candidata de correção QA (08/11/2026; não publicada)
 
 - **#62 P0:** relato de fechamento do aplicativo após apagar mensagens ou estações na 0.1.10 QA.

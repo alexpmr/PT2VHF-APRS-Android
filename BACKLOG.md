@@ -2156,6 +2156,10 @@ sem ACK, esgotar o limite e mostrar "Sem ACK", sem loop infinito. Verificar
 envio após troca Wi-Fi/dados móveis, queda/reconexão e app em primeiro/segundo plano.
 Registrar pacotes brutos e carimbos de tempo do emissor e receptor para distinguir
 falha de TX, roteamento e ACK. Cobrir com testes de unidade/instrumentação.
+**Progresso em 10/11/2026 (branch claude/project-thread-tny6jj, sobre a QA 0.1.12):** causa adicional
+comprovada no código: retentativas vivem só no `Handler` do serviço; se o serviço parar ou o processo morrer, a
+mensagem ficava "Enviando"/"Aguardando ACK" para sempre. Agora vira "Interrompida" (falha com Reenviar) ao parar
+o serviço e ao reabrir o app. Teste de unidade em `MessageLogicTest`.
 - **Status:** relatado e registrado; **não corrigido, não homologado e nenhum APK novo gerado**.
 
 ### 61. Estações: ícone de lixeira para apagar estações armazenadas
