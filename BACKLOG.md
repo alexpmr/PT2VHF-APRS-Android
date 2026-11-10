@@ -2052,7 +2052,11 @@ ordem é invertida. Ícones das estações no mapa são maiores e mais nítidas.
 em tempo real; toque abre a ficha em tela cheia com as 5 abas preenchidas a partir do histórico local;
 recepção/caminho coerentes com os pacotes brutos; trilha por período desenhada; comunidade mostrando
 participantes e países de uma rodada. Nenhum elemento visual copiado do app de referência.
-- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+- **Status:** **58.6 implementado em 10/11/2026** na [PR #19](https://github.com/alexpmr/PT2VHF-APRS-Android/pull/19)
+  (draft, empilhada sobre a #17): ficha em tela cheia (Visão geral com recepção 24 h e outros SSIDs, Caminho,
+  Telemetria e clima com gráficos, Bruto) e ordenação Tipo/Nome/Distância/Recentes com toque para inverter.
+  Ficam para depois: abas Trilha e Mensagens da ficha, chips com contagem no mapa, filtros 58.3 e Comunidade 58.5.
+  Aguarda CI, teste físico e OK do mantenedor; nenhuma versão publicada.
 
 ### 59. Indicativo: aceitar só indicativos de radioamador válidos no mundo
 _Solicitado em 07/11/2026: "Backlog: Permitir apenas indicativos válidos no mundo, para evitar de qualquer pessoa escrever uma palavra e o app aceitar."_
@@ -2246,7 +2250,10 @@ reconhecer, principalmente em telas de alta densidade e com o mapa em movimento.
 **Critérios de aceite:** comparação antes/depois em telas de baixa e alta densidade (mdpi a xxxhdpi),
 zoom próximo e distante, três tamanhos, tema/brilho diferentes, símbolos das tabelas primária e alternativa
 com overlay; capturas anexadas; toque correto em estações próximas; rolagem fluida com muitas estações.
-- **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+- **Status:** **implementado em 10/11/2026** na [PR #19](https://github.com/alexpmr/PT2VHF-APRS-Android/pull/19):
+  atlas de 128 px reduzido com filtragem para a densidade real, sombra leve, Pequeno 26 / Médio 34 (padrão) /
+  Grande 44 dp, rótulo proporcional, toque de 48 dp, seguida/favoritas por cima. Aguarda CI, capturas e teste
+  físico; nenhuma versão publicada.
 - Numeração: o **#62** está reservado ao P0 registrado na PR #16 (v0.1.10/0.1.12 QA), por isso este item é o #63.
 
 ## Consolidação das sugestões aprovadas com itens já existentes
