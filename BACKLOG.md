@@ -2537,6 +2537,33 @@ tema claro e escuro; sem regressão no filtro e na lixeira.
 
 **Dependências/relacionados:** itens 56 e 58.
 
+### 73. Mensagens: alternar "minhas / todas" e "agrupadas por emissor / lista normal"
+_Pedido do mantenedor em 10/11/2026 (após a v0.1.14): "Uma sugestão é um botão para alternar entre minhas
+mensagens e todas as mensagens. Também outro botão para alternar entre mensagens agrupadas por emissor ou normal."_
+
+**Situação atual (verificado no código em 10/11/2026, v0.1.14):** a aba Mensagens só mostra mensagens de/para o
+próprio indicativo (com ou sem SSID), boletins (BLN) e gerais (CQ...). As mensagens entre outras estações chegam
+ao app (o filtro padrão `r/4000` do APRS-IS já as entrega e elas aparecem na aba Logs, tipo "Mensagem"), mas são
+descartadas antes de ir para a lista: `data/AprsRepository.kt` ~linha 587, `if (!forUs && !general) return null`.
+
+**Comportamento exigido:**
+1. **Botão "Minhas / Todas"** no cabeçalho da aba Mensagens. "Minhas" (padrão) mantém o comportamento atual.
+   "Todas" inclui também as mensagens trocadas entre outras estações (monitor), recebidas por RF e APRS-IS.
+2. Mensagens de terceiros são **só leitura**: não geram ACK, não disparam notificação nem contador de não lidas,
+   e não abrem campo de resposta como se fossem conversa própria. Identificar claramente origem → destino.
+3. Guardar as mensagens de terceiros mesmo com o modo "Minhas" ativo (para que "Todas" mostre o histórico),
+   respeitando a retenção existente e sem duplicar (mesma origem/ID/texto). ACK/REJ de terceiros não viram balão.
+4. **Botão "Agrupadas / Lista"**: "Agrupadas" mostra as conversas agrupadas por emissor (ou par origem↔destino,
+   no caso de terceiros); "Lista" mostra todas as mensagens em ordem cronológica, uma por linha.
+5. As duas escolhas são independentes, ficam salvas entre aberturas do app e mantêm o cabeçalho compacto (#65).
+6. Textos nos idiomas do app.
+
+**Critérios de aceite:** com "Minhas", nada muda em relação à v0.1.14; com "Todas", mensagens entre terceiros
+recebidas aparecem e conferem com a aba Logs; nenhuma notificação/ACK para terceiros; alternância de agrupamento
+funciona nos dois modos; testes de unidade para o filtro (próprias, gerais, boletins, terceiros, ACK/REJ).
+
+**Dependências/relacionados:** itens 54, 56, 64 e 65.
+
 ## Consolidação das sugestões aprovadas com itens já existentes
 
 A comparação com o APRSdroid também aprovou os recursos abaixo, que **já estavam
