@@ -2639,6 +2639,34 @@ fica mais lenta que o tempo do banner; aumento do APK pequeno.
 
 **Dependências/relacionados:** itens 38 e 74.
 
+### 76. Traduções: textos fixos no código que aparecem sempre em português
+_Pedido do mantenedor em 10/11/2026, após a verificação das traduções ("backlog")._
+
+**Situação atual (verificado no código em 10/11/2026, v0.1.14):** os 5 idiomas (en padrão, pt, es, fr, it) têm as
+mesmas 213 strings em `values*/strings.xml`, sem chaves faltando, e `locales_config.xml` está configurado. Restam
+textos fixos no código que não passam pelos recursos:
+
+1. `ui/MessagesUi.kt` (~linha 450): erro "Sem resposta do serviço de envio. Confira a aba Logs antes de tentar
+   novamente." aparece sempre em português.
+2. `service/Connections.kt` (~linha 96): "Erro na escrita APRS-IS: <exceção>" não é tratado por
+   `UiText.connectionError` e aparece sempre em português.
+3. `ui/Screens.kt` (~linhas 797–803): o exemplo de data "AAAA-MM-DD" nos filtros de estações é fixo em português
+   (em inglês "YYYY-MM-DD"; cada idioma com o seu).
+
+**Fragilidade a corrigir junto:** tipos de estação, status de mensagens e erros de conexão são guardados como frases
+em português (`data/Models.kt`, `service/Connections.kt`, `service/UsbTnc.kt`, `data/MessageLogic.kt`) e só são
+traduzidos na exibição por comparação de texto em `UiText.kt` (`role`, `messageStatus`, `connectionError`,
+`serverLabel`). Se alguém mudar uma dessas frases no código, a tradução quebra sem aviso (cai no `else -> raw`).
+Preferir códigos estáveis (enum/constante) mapeados para `R.string`, mantendo compatibilidade com os valores já
+gravados no banco/preferências; no mínimo, constantes compartilhadas e um teste de unidade que garanta que todo
+valor interno tem tradução.
+
+**Critérios de aceite:** com o app em en/es/fr/it, os três textos acima aparecem no idioma escolhido; nenhuma
+frase interna em português chega à tela; mensagens e estações gravadas por versões anteriores continuam exibidas
+corretamente; testes de unidade passam.
+
+**Dependências/relacionados:** regra T66 (textos novos nos 5 idiomas).
+
 ## Consolidação das sugestões aprovadas com itens já existentes
 
 A comparação com o APRSdroid também aprovou os recursos abaixo, que **já estavam
