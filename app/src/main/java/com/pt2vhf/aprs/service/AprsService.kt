@@ -327,6 +327,7 @@ class AprsService : Service(), LocationListener {
     override fun onDestroy() {
         handler.removeCallbacksAndMessages(null)
         txWorker.shutdownNow()
+        AprsRepository.interruptPendingMessages()
         aprsIs.stop()
         tnc.disconnect()
         tcpTnc.disconnect()

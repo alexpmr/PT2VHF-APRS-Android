@@ -73,4 +73,19 @@ class MessageLogicTest {
         assertEquals(setOf(1L, 4L), retentionVictims(list, byCount, now))
         assertTrue(retentionVictims(list, RetentionPolicy(RetentionRule(0, 0), RetentionRule(0, 0), RetentionRule(0, 0)), now).isEmpty())
     }
+
+    @Test fun pendingOutgoingBecomesInterruptedAfterServiceLoss() {
+        val list = listOf(
+            msg(1, "ME", "PY2ABC", true, 0, "Enviando"),
+            msg(2, "ME", "PY2ABC", true, 0, "Aguardando ACK · APRS-IS"),
+            msg(3, "ME", "PY2ABC", true, 0, "Aguardando ACK (3ª tentativa)"),
+            msg(4, "ME", "PY2ABC", true, 0, "ACK recebido"),
+            msg(5, "PY2ABC", "ME", false, 0, "Recebida"),
+        )
+        val fixed = interruptPending(list)
+        assertEquals(listOf(INTERRUPTED_STATUS, INTERRUPTED_STATUS, INTERRUPTED_STATUS, "ACK recebido", "Recebida"),
+            fixed.map { it.status })
+        assertTrue(fixed.take(3).all { isFailedStatus(it.status) && !isPendingStatus(it.status) })
+        assertTrue(interruptPending(fixed) == fixed)
+    }
 }
