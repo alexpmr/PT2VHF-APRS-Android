@@ -1,5 +1,6 @@
 package com.pt2vhf.aprs.service
 
+import com.pt2vhf.aprs.data.InternalText
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Notification
@@ -242,12 +243,12 @@ class AprsService : Service(), LocationListener {
                 txWorker.execute { runCatching { audioTnc.testTone() } }
             ACTION_MSG_CANCEL -> intent.getStringExtra(EXTRA_MESSAGE_ID)?.toLongOrNull()?.let { id ->
                 AprsRepository.setRetry(id, 0, null)
-                AprsRepository.setStatus(id, "Cancelada")
+                AprsRepository.setStatus(id, InternalText.MSG_CANCELLED)
             }
             ACTION_MSG_RESEND -> intent.getStringExtra(EXTRA_MESSAGE_ID)?.toLongOrNull()?.let { id ->
                 val local = AprsRepository.message(id)
                 if (local != null && local.outgoing && !settings.rxOnly) {
-                    AprsRepository.setStatus(id, "Enviando")
+                    AprsRepository.setStatus(id, InternalText.MSG_SENDING)
                     txWorker.execute { runCatching { sendWithRetry(local, local.to, local.text, local.msgId, 0) } }
                 }
             }
@@ -377,7 +378,7 @@ class AprsService : Service(), LocationListener {
                 AprsRepository.logPacket("TX", Medium.INTERNET, line)
                 AprsRepository.monitorLine("TX APRS-IS $line")
                 AprsRepository.add(ChatMessage(AprsRepository.newId(), settings.fullCall, ANNOUNCE_DEST, text,
-                    System.currentTimeMillis(), true, Medium.INTERNET, "APRS-IS", null, "Enviada · APRS-IS",
+                    System.currentTimeMillis(), true, Medium.INTERNET, "APRS-IS", null, InternalText.sent("APRS-IS"),
                     AprsMessage.Kind.BULLETIN))
             }
         }
@@ -731,7 +732,7 @@ class AprsService : Service(), LocationListener {
         for (part in splitMessage(text)) {
             val msgId = if (general) null else nextMsgId()
             val local = ChatMessage(AprsRepository.newId(), settings.fullCall, dest, part, System.currentTimeMillis(),
-                true, null, msgId = msgId, status = "Enviando",
+                true, null, msgId = msgId, status = InternalText.MSG_SENDING,
                 kind = if (dest.startsWith("BLN")) AprsMessage.Kind.BULLETIN else AprsMessage.Kind.MESSAGE,
                 replyToId = replyTo)
             AprsRepository.add(local)
@@ -751,21 +752,21 @@ class AprsService : Service(), LocationListener {
         val frameInfo = messageInfo(dest, text, msgId)
         val medium = if (msgId != null) transmitPrivateMessage(frameInfo) else transmit(frameInfo)
         when {
-            medium == null -> { AprsRepository.setRetry(local.id, 0, null); AprsRepository.setStatus(local.id, "Sem conexão para enviar") }
-            msgId == null -> AprsRepository.setStatus(local.id, "Enviada · ${medium.label}")
+            medium == null -> { AprsRepository.setRetry(local.id, 0, null); AprsRepository.setStatus(local.id, InternalText.MSG_NO_CONNECTION) }
+            msgId == null -> AprsRepository.setStatus(local.id, InternalText.sent(medium.label))
             attempt >= retries - 1 -> {
                 AprsRepository.setRetry(local.id, 0, null)
                 // Wait one more interval for a late ACK before declaring failure.
                 val delay = settings.msgRetryBaseSec * 1000L * (attempt + 1)
-                AprsRepository.setStatus(local.id, "Aguardando ACK (${attempt + 1}ª tentativa)")
+                AprsRepository.setStatus(local.id, InternalText.retry(attempt + 1))
                 handler.postDelayed({
                     if (AprsRepository.containsMessage(local.id) && !AprsRepository.isAcked(local.id))
-                        AprsRepository.setStatus(local.id, "Sem ACK após $retries tentativas")
+                        AprsRepository.setStatus(local.id, InternalText.noAck(retries))
                 }, delay)
             }
             else -> {
-                AprsRepository.setStatus(local.id, if (attempt == 0) "Aguardando ACK · ${medium.label}"
-                    else "Aguardando ACK (${attempt + 1}ª tentativa)")
+                AprsRepository.setStatus(local.id, if (attempt == 0) InternalText.awaiting(medium.label)
+                    else InternalText.retry(attempt + 1))
                 val delay = settings.msgRetryBaseSec * 1000L * (attempt + 1)
                 AprsRepository.setRetry(local.id, attempt + 1, System.currentTimeMillis() + delay)
                 handler.postDelayed({

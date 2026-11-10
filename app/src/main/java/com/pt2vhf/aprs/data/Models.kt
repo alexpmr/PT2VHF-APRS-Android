@@ -11,14 +11,14 @@ import com.pt2vhf.aprs.core.AprsMessage
 fun stationRole(symbolTable: Char, symbol: Char): String {
     val primary = symbolTable == '/'
     return when {
-        symbol == '#' -> "Digipeater"
-        symbol == '&' || (symbolTable == 'I' || symbolTable == 'R') -> "iGate"
-        symbol == '_' -> "Estação meteorológica"
-        (primary && symbol in setOf('\'', '^', 'X', 'g')) || (!primary && symbol in setOf('^', 'g')) -> "Aeronave"
-        (primary && symbol in setOf('s', 'Y', 'C')) || (!primary && symbol in setOf('s', 'C')) -> "Embarcação"
-        primary && symbol in setOf('[', 'L', 'e') -> "Pessoa"
-        symbol in setOf('>', 'k', 'u', 'v', 'j', '<', 'b', 'U', 'R', 'O', 'f', 'a', 'P') -> "Móvel"
-        else -> "Estação"
+        symbol == '#' -> InternalText.ROLE_DIGI
+        symbol == '&' || (symbolTable == 'I' || symbolTable == 'R') -> InternalText.ROLE_IGATE
+        symbol == '_' -> InternalText.ROLE_WEATHER
+        (primary && symbol in setOf('\'', '^', 'X', 'g')) || (!primary && symbol in setOf('^', 'g')) -> InternalText.ROLE_AIRCRAFT
+        (primary && symbol in setOf('s', 'Y', 'C')) || (!primary && symbol in setOf('s', 'C')) -> InternalText.ROLE_VESSEL
+        primary && symbol in setOf('[', 'L', 'e') -> InternalText.ROLE_PERSON
+        symbol in setOf('>', 'k', 'u', 'v', 'j', '<', 'b', 'U', 'R', 'O', 'f', 'a', 'P') -> InternalText.ROLE_MOBILE
+        else -> InternalText.ROLE_STATION
     }
 }
 

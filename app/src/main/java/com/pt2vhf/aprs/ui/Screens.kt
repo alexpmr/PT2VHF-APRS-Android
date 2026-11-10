@@ -2,6 +2,7 @@
 
 package com.pt2vhf.aprs.ui
 
+import com.pt2vhf.aprs.data.InternalText
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothManager
 import android.content.Intent
@@ -391,7 +392,7 @@ fun MapScreen(settings: Settings, onStation: (String) -> Unit, onSettingsChanged
             for (s in drawOrder) {
                 if (s.call in grouped) continue
                 // #67: rótulo de clima (temperatura e vento) sobre as estações WX; dado com mais de 2 h fica esmaecido.
-                val wx = if (showWeather && s.role == "Estação meteorológica")
+                val wx = if (showWeather && s.role == InternalText.ROLE_WEATHER)
                     (weatherLive[s.call]?.lastOrNull() ?: com.pt2vhf.aprs.core.parseWeatherComment(s.comment, s.lastHeard))
                 else null
                 val wxLabel = wx?.let { com.pt2vhf.aprs.core.weatherMapLabel(it) }.orEmpty()
@@ -645,9 +646,8 @@ fun StationsScreen(maxAgeHours: Int, onStation: (String) -> Unit) {
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            OutlinedTextField(query, { query = it; Settings.saveOption(context, "station_search", it) },
-                placeholder = { Text(UiText.text(R.string.search_call_or_comment), fontSize = 12.sp, maxLines = 1) },
-                singleLine = true, modifier = Modifier.weight(1f).height(48.dp))
+            CompactSearchField(query, { query = it; Settings.saveOption(context, "station_search", it) },
+                UiText.text(R.string.search_call_or_comment), Modifier.weight(1f))
             TextButton(onClick = { filterOpen = true }, modifier = Modifier.semantics {
                 contentDescription = UiText.text(R.string.station_filter_action) + if (filterCount > 0) " ($filterCount)" else ""
             }) {
@@ -748,8 +748,8 @@ fun StationsScreen(maxAgeHours: Int, onStation: (String) -> Unit) {
             "callsign" to R.string.station_sort_name,
             "type" to R.string.station_sort_type,
         )
-        val roleChoices = listOf("Estação", "Móvel", "Pessoa", "Digipeater", "iGate", "Estação meteorológica",
-            "Aeronave", "Embarcação")
+        val roleChoices = listOf(InternalText.ROLE_STATION, InternalText.ROLE_MOBILE, InternalText.ROLE_PERSON,
+            InternalText.ROLE_DIGI, InternalText.ROLE_IGATE, InternalText.ROLE_WEATHER, InternalText.ROLE_AIRCRAFT, InternalText.ROLE_VESSEL)
         AlertDialog(
             onDismissRequest = { filterOpen = false },
             containerColor = Pal.bar,
@@ -794,13 +794,13 @@ fun StationsScreen(maxAgeHours: Int, onStation: (String) -> Unit) {
                         })
                     }
                     OutlinedTextField(receivedFrom, { receivedFrom = it }, singleLine = true,
-                        label = { Text(UiText.text(R.string.station_received_from)) }, placeholder = { Text("AAAA-MM-DD") })
+                        label = { Text(UiText.text(R.string.station_received_from)) }, placeholder = { Text(UiText.text(R.string.date_format_hint)) })
                     OutlinedTextField(receivedUntil, { receivedUntil = it }, singleLine = true,
-                        label = { Text(UiText.text(R.string.station_received_until)) }, placeholder = { Text("AAAA-MM-DD") })
+                        label = { Text(UiText.text(R.string.station_received_until)) }, placeholder = { Text(UiText.text(R.string.date_format_hint)) })
                     OutlinedTextField(firstFrom, { firstFrom = it }, singleLine = true,
-                        label = { Text(UiText.text(R.string.station_first_from)) }, placeholder = { Text("AAAA-MM-DD") })
+                        label = { Text(UiText.text(R.string.station_first_from)) }, placeholder = { Text(UiText.text(R.string.date_format_hint)) })
                     OutlinedTextField(firstUntil, { firstUntil = it }, singleLine = true,
-                        label = { Text(UiText.text(R.string.station_first_until)) }, placeholder = { Text("AAAA-MM-DD") })
+                        label = { Text(UiText.text(R.string.station_first_until)) }, placeholder = { Text(UiText.text(R.string.date_format_hint)) })
                     OutlinedTextField(minDistance, { minDistance = it }, singleLine = true,
                         label = { Text(UiText.text(R.string.station_distance_min)) })
                     OutlinedTextField(maxDistance, { maxDistance = it }, singleLine = true,

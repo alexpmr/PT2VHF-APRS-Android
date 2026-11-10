@@ -1,5 +1,6 @@
 package com.pt2vhf.aprs.service
 
+import com.pt2vhf.aprs.data.InternalText
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothSocket
@@ -52,12 +53,12 @@ class AprsIsClient(
                         val line = reader.readLine() ?: break
                         if (line.startsWith("#")) {
                             if (line.contains("logresp") && line.contains(" verified") && epoch.get() == sessionEpoch) onState(true, true, "")
-                            if (line.contains("unverified") && epoch.get() == sessionEpoch) onState(true, false, "Passcode não verificado pelo servidor")
+                            if (line.contains("unverified") && epoch.get() == sessionEpoch) onState(true, false, InternalText.ERR_UNVERIFIED)
                             continue
                         }
                         onLine(line)
                     }
-                    if (epoch.get() == sessionEpoch) onState(false, false, if (running) "Servidor encerrou a conexão" else "")
+                    if (epoch.get() == sessionEpoch) onState(false, false, if (running) InternalText.ERR_SERVER_CLOSED else "")
                 } catch (e: Exception) {
                     if (epoch.get() == sessionEpoch) onState(false, false, e.message ?: e.javaClass.simpleName)
                 } finally {
@@ -93,7 +94,7 @@ class AprsIsClient(
             }
         }
         if (writeError != null && running) {
-            onState(false, false, "Erro na escrita APRS-IS: ${writeError!!.javaClass.simpleName}")
+            onState(false, false, InternalText.writeError(writeError!!.javaClass.simpleName))
             runCatching { socket?.close() } // reconnect via existing reader loop
         }
         return sent
@@ -150,9 +151,9 @@ class BluetoothTnc(
                         runCatching { onFrame(Ax25.toTnc2(frame)) }
                     }
                 }
-                onState(false, name, if (running) "Conexão Bluetooth encerrada" else "")
+                onState(false, name, if (running) InternalText.ERR_BT_CLOSED else "")
             } catch (e: Exception) {
-                onState(false, name, e.message ?: "Falha ao conectar")
+                onState(false, name, e.message ?: InternalText.ERR_CONNECT_FAILED)
             } finally {
                 runCatching { socket?.close() }
                 socket = null
@@ -217,9 +218,9 @@ class KissTcpTnc(
                         if (n < 0) break
                         for (frame in decoder.feed(buf.copyOf(n))) runCatching { onFrame(Ax25.toTnc2(frame)) }
                     }
-                    if (epoch.get() == session) onState(false, name, if (running) "Conexão KISS TCP encerrada" else "")
+                    if (epoch.get() == session) onState(false, name, if (running) InternalText.ERR_KISS_CLOSED else "")
                 } catch (e: Exception) {
-                    if (epoch.get() == session) onState(false, name, e.message ?: "Falha ao conectar")
+                    if (epoch.get() == session) onState(false, name, e.message ?: InternalText.ERR_CONNECT_FAILED)
                 } finally {
                     runCatching { s?.close() }
                     if (socket === s) socket = null

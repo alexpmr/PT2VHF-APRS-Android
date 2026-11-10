@@ -1,5 +1,6 @@
 package com.pt2vhf.aprs.ui
 
+import com.pt2vhf.aprs.data.InternalText
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -77,7 +79,10 @@ import com.pt2vhf.aprs.data.INTERRUPTED_STATUS
 import com.pt2vhf.aprs.data.MessageCriteria
 import com.pt2vhf.aprs.data.OutboundSendResult
 import com.pt2vhf.aprs.data.Settings
-import com.pt2vhf.aprs.data.conversations
+import com.pt2vhf.aprs.data.isThirdPartyMessage
+import com.pt2vhf.aprs.data.privateGroups
+import com.pt2vhf.aprs.data.privateTimeline
+import com.pt2vhf.aprs.data.thirdPartyKey
 import com.pt2vhf.aprs.data.matchesMessage
 import com.pt2vhf.aprs.data.searchCallsigns
 import com.pt2vhf.aprs.service.AprsService
@@ -126,16 +131,17 @@ fun MessagesScreen(
     var newChatOpen by rememberSaveable { mutableStateOf(false) }
     var deleteOpen by remember { mutableStateOf(false) }
     var deleteResult by remember { mutableStateOf<String?>(null) }
+    var showAll by rememberSaveable { mutableStateOf(Settings.readOption(context, "messages_scope", "mine") == "all") }
+    var listMode by rememberSaveable { mutableStateOf(Settings.readOption(context, "messages_layout", "grouped") == "list") }
+    var thirdPartyOpen by rememberSaveable { mutableStateOf<String?>(null) }
     val clock = minuteClock()
     val keyboardVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     Column(Modifier.fillMaxSize()) {
         if (!keyboardVisible) Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            OutlinedTextField(criteria.text, {
+            CompactSearchField(criteria.text, {
                 criteria = criteria.copy(text = it); saveCriteria(context, criteria)
-            }, placeholder = {
-                Text(UiText.text(R.string.messages_filter), fontSize = 12.sp, maxLines = 1)
-            }, modifier = Modifier.weight(1f).height(48.dp), singleLine = true)
+            }, UiText.text(R.string.messages_filter), Modifier.weight(1f))
             TextButton(onClick = { filterOpen = true },
                 modifier = Modifier.semantics { contentDescription = UiText.text(R.string.messages_filters_title) }) {
                 Text("☷" + if (criteria.copy(text = "").active) " ●" else "", fontSize = 20.sp)
@@ -155,20 +161,36 @@ fun MessagesScreen(
         }
         when (tab) {
             0 -> {
-                val byContact = conversations(messages, settings.fullCall, criteria, newestFirst)
+                val own = settings.fullCall
+                val byContact = privateGroups(messages, own, criteria, newestFirst, showAll)
+                val timeline = if (listMode) privateTimeline(messages, own, criteria, newestFirst, showAll) else emptyList()
                 Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically) {
-                    Button(onClick = { newChatOpen = true }) { Text("✉ " + UiText.text(R.string.new_message)) }
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Button(onClick = { newChatOpen = true }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp)) {
+                        Text("✉ " + UiText.text(R.string.new_message), maxLines = 1, fontSize = 13.sp)
+                    }
+                    Spacer(Modifier.weight(1f))
+                    // #73: "Minhas / Todas" e "Agrupadas / Lista", independentes e lembrados entre aberturas.
+                    CompactToggle(UiText.text(if (showAll) R.string.msg_scope_all else R.string.msg_scope_mine), showAll) {
+                        showAll = !showAll
+                        Settings.saveOption(context, "messages_scope", if (showAll) "all" else "mine")
+                    }
+                    CompactToggle(UiText.text(if (listMode) R.string.msg_layout_list else R.string.msg_layout_grouped), listMode) {
+                        listMode = !listMode
+                        Settings.saveOption(context, "messages_layout", if (listMode) "list" else "grouped")
+                    }
                 }
                 if (byContact.isEmpty()) Empty(UiText.text(if (criteria.active) R.string.no_chats_filtered else R.string.no_chats))
                 // #64: mensagem nova aparece na hora; se a pessoa rolou para baixo, aviso "nova mensagem ↑".
                 val listState = rememberLazyListState()
-                val newestKey = byContact.firstOrNull()?.let { (c, l) -> c + "#" + l.maxOf { m -> m.id } }
+                val itemCount = if (listMode) timeline.size else byContact.size
+                val newestKey = if (listMode) timeline.maxOfOrNull { it.id }?.toString()
+                    else byContact.firstOrNull()?.let { (c, l) -> c + "#" + l.maxOf { m -> m.id } }
                 var unseenTop by remember { mutableStateOf(false) }
-                LaunchedEffect(newestKey, newestFirst) {
+                LaunchedEffect(newestKey, newestFirst, listMode) {
                     if (newestKey == null) return@LaunchedEffect
                     if (!newestFirst) {
-                        if (byContact.isNotEmpty()) listState.scrollToItem(byContact.size - 1)
+                        if (itemCount > 0) listState.scrollToItem(itemCount - 1)
                     } else if (followNewestAtTop(listState.firstVisibleItemIndex)) {
                         listState.scrollToItem(0); unseenTop = false
                     } else unseenTop = true
@@ -178,14 +200,31 @@ fun MessagesScreen(
                 val pillScope = androidx.compose.runtime.rememberCoroutineScope()
                 Box(Modifier.fillMaxSize()) {
                 LazyColumn(state = listState) {
-                    items(byContact, key = { it.first }) { (contact, list) ->
-                        val last = list.maxBy { it.time }
-                        Column(Modifier.fillMaxWidth().clickable { onOpenChat(contact, null) }.padding(16.dp, 12.dp)) {
+                    if (listMode) items(timeline, key = { "m" + it.id }) { m ->
+                        val third = isThirdPartyMessage(m, own)
+                        Column(Modifier.fillMaxWidth().clickable {
+                            if (third) thirdPartyOpen = thirdPartyKey(m) else onOpenChat(if (m.outgoing) m.to else m.from, null)
+                        }.padding(16.dp, 8.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(contact, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), maxLines = 1)
+                                Text("${m.from} → ${m.to}", fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1,
+                                    color = if (third) Pal.muted else Pal.text, modifier = Modifier.weight(1f))
+                                Text(messageTimeLabel(m.time, clock), color = Pal.muted, fontSize = 12.sp, maxLines = 1)
+                            }
+                            Text(m.text, color = if (third) Pal.muted else Pal.text, fontSize = 14.sp)
+                        }
+                    } else items(byContact, key = { it.first }) { (contact, list) ->
+                        val last = list.maxBy { it.time }
+                        val third = isThirdPartyMessage(last, own)
+                        Column(Modifier.fillMaxWidth().clickable {
+                            if (third) thirdPartyOpen = contact else onOpenChat(contact, null)
+                        }.padding(16.dp, 12.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(contact, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), maxLines = 1,
+                                    color = if (third) Pal.muted else Pal.text)
+                                if (third) Text("👁 ", fontSize = 12.sp)
                                 Text(messageTimeLabel(last.time, clock), color = Pal.muted, fontSize = 12.sp, maxLines = 1)
                             }
-                            Text((if (last.outgoing) "↗ " else "") + last.text, color = Pal.muted, maxLines = 1,
+                            Text((if (last.outgoing) "↗ " else if (third) last.from + ": " else "") + last.text, color = Pal.muted, maxLines = 1,
                                 overflow = TextOverflow.Ellipsis, fontSize = 14.sp)
                         }
                     }
@@ -216,6 +255,10 @@ fun MessagesScreen(
         filterOpen = false
     }
     if (deleteOpen) DeleteMessagesDialog(onDismiss = { deleteOpen = false }, onResult = { deleteResult = it })
+    thirdPartyOpen?.let { key ->
+        ThirdPartyDialog(key, messages.filter { isThirdPartyMessage(it, settings.fullCall) && thirdPartyKey(it) == key }, clock,
+            onDismiss = { thirdPartyOpen = null }, onStation = { thirdPartyOpen = null; onStation(it) })
+    }
     if (newChatOpen) NewMessageDialog(settings, onDismiss = { newChatOpen = false }) { call ->
         newChatOpen = false
         onOpenChat(call, null)
@@ -323,26 +366,59 @@ private fun NewMessageDialog(settings: Settings, onDismiss: () -> Unit, onOpen: 
     )
 }
 
+/** #73: mensagens entre outras estações, só leitura (sem responder, sem ACK). */
+@Composable
+private fun ThirdPartyDialog(key: String, list: List<ChatMessage>, clock: Long, onDismiss: () -> Unit, onStation: (String) -> Unit) {
+    val sorted = list.sortedWith(compareBy<ChatMessage> { it.time }.thenBy { it.id })
+    val calls = key.split(" ↔ ")
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Pal.bar,
+        title = { Text(key, maxLines = 1) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(UiText.text(R.string.msg_third_party_notice), color = Pal.muted, fontSize = 12.sp)
+                LazyColumn(Modifier.heightIn(max = 380.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    items(sorted, key = { it.id }) { m ->
+                        Column(Modifier.fillMaxWidth().background(Pal.card, RoundedCornerShape(8.dp)).padding(8.dp)) {
+                            Row {
+                                Text("${m.from} → ${m.to}", fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                                Text(messageTimeLabel(m.time, clock), color = Pal.muted, fontSize = 11.sp)
+                            }
+                            Text(m.text, fontSize = 14.sp)
+                            if (m.via.isNotBlank()) Text(UiText.receptionVia(m.via), color = Pal.muted, fontSize = 11.sp)
+                        }
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    calls.forEach { c -> OutlinedButton(onClick = { onStation(c) }) { Text(c, maxLines = 1) } }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(UiText.text(R.string.close)) } },
+    )
+}
+
 /** Ações da pressão longa (#20). Nenhuma delas transmite; só o botão Enviar transmite. */
 private enum class BubbleAction { REPLY, REPLY_PUBLIC, REPLY_PRIVATE, DIRECT, COPY, RESEND, CANCEL }
 
 /** #47: ícone, cor e texto do estado de entrega; null para mensagens recebidas ou sem confirmação. */
 private fun deliveryIcon(m: ChatMessage): Pair<String, androidx.compose.ui.graphics.Color>? = when {
     !m.outgoing -> null
-    m.status == "ACK recebido" -> "✓✓" to Pal.green
-    m.status == "Rejeitada" -> "⛔" to androidx.compose.ui.graphics.Color(0xFFF26F70)
-    m.status.startsWith("Sem ACK") || m.status == "Sem conexão para enviar" || m.status == INTERRUPTED_STATUS -> "✗" to Pal.orange
-    m.status == "Cancelada" -> "⊘" to Pal.muted
-    m.status.startsWith("Aguardando ACK") || m.status.startsWith("Enviada") -> "✓" to Pal.green
-    m.status == "Enviando" -> "🕓" to Pal.yellow
+    m.status == InternalText.MSG_ACKED -> "✓✓" to Pal.green
+    m.status == InternalText.MSG_REJECTED -> "⛔" to androidx.compose.ui.graphics.Color(0xFFF26F70)
+    m.status.startsWith(InternalText.MSG_NO_ACK_PREFIX) || m.status == InternalText.MSG_NO_CONNECTION || m.status == INTERRUPTED_STATUS -> "✗" to Pal.orange
+    m.status == InternalText.MSG_CANCELLED -> "⊘" to Pal.muted
+    m.status.startsWith(InternalText.MSG_AWAITING_STEM) || m.status.startsWith(InternalText.MSG_SENT_PREFIX) -> "✓" to Pal.green
+    m.status == InternalText.MSG_SENDING -> "🕓" to Pal.yellow
     else -> null
 }
 
 private fun canResend(m: ChatMessage) = m.outgoing && m.msgId != null &&
-    (m.status.startsWith("Sem ACK") || m.status == "Rejeitada" || m.status == "Sem conexão para enviar" || m.status == "Cancelada" ||
+    (m.status.startsWith(InternalText.MSG_NO_ACK_PREFIX) || m.status == InternalText.MSG_REJECTED || m.status == InternalText.MSG_NO_CONNECTION || m.status == InternalText.MSG_CANCELLED ||
         m.status == INTERRUPTED_STATUS)
 
-private fun canCancel(m: ChatMessage) = m.outgoing && (m.status.startsWith("Aguardando") || m.status == "Enviando")
+private fun canCancel(m: ChatMessage) = m.outgoing && (m.status.startsWith("Aguardando") || m.status == InternalText.MSG_SENDING)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -389,7 +465,7 @@ private fun Bubble(
                         if (icon != null) Text(icon.first + " ", color = icon.second, fontSize = 13.sp,
                             modifier = Modifier.clickable(enabled = actions.contains(BubbleAction.RESEND) ||
                                 actions.contains(BubbleAction.CANCEL)) { menu = true })
-                        Text(meta, color = icon?.second?.takeIf { m.status != "Enviando" } ?: Pal.muted, fontSize = 11.sp)
+                        Text(meta, color = icon?.second?.takeIf { m.status != InternalText.MSG_SENDING } ?: Pal.muted, fontSize = 11.sp)
                     }
                 }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
@@ -447,7 +523,7 @@ private fun Composer(
         if (request != null) {
             kotlinx.coroutines.delay(15_000L)
             if (pendingId == request && AprsRepository.sendResults.value[request] == null) {
-                error = "Sem resposta do serviço de envio. Confira a aba Logs antes de tentar novamente."
+                error = UiText.text(R.string.msg_send_no_response)
                 pendingId = null
             }
         }
@@ -635,6 +711,16 @@ internal fun OutlinedChoice(label: String, selected: Boolean, onClick: () -> Uni
     OutlinedButton(onClick = onClick, border = androidx.compose.foundation.BorderStroke(1.dp,
         if (selected) Pal.green else Pal.line)) {
         Text(label, color = if (selected) Pal.green else Pal.muted, fontSize = 12.sp)
+    }
+}
+
+/** #73: botão de alternância compacto; verde quando fora do padrão. */
+@Composable
+private fun CompactToggle(label: String, on: Boolean, onClick: () -> Unit) {
+    OutlinedButton(onClick = onClick, border = androidx.compose.foundation.BorderStroke(1.dp, if (on) Pal.green else Pal.line),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+        modifier = Modifier.heightIn(min = 36.dp)) {
+        Text(label, color = if (on) Pal.green else Pal.text, fontSize = 12.sp, maxLines = 1)
     }
 }
 

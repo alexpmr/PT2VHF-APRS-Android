@@ -129,6 +129,9 @@ fun App(onExit: () -> Unit) {
     var exitDialog by rememberSaveable { mutableStateOf(false) }
     val serviceStatus by AprsRepository.status.collectAsState()
     val keyboardVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+    // #75: banner de abertura; conexão, rastreador e permissões já seguem em paralelo (MainActivity/serviço).
+    var banner by remember { mutableStateOf(!MainActivity.bannerShown) }
+    LaunchedEffect(Unit) { MainActivity.bannerShown = true }
     BackHandler {
         when {
             selectedStation != null -> selectedStation = null
@@ -208,7 +211,7 @@ fun App(onExit: () -> Unit) {
                 selectedStation = null; chatWith = target; replyToId = null; tab = Tab.MESSAGES
             })
         }
-        if (showSettings) {
+        if (showSettings && !banner) {
             SettingsDialog(settings, onDismiss = { if (settings.configured) showSettings = false }, onSave = {
                 Settings.save(context, it); settings = Settings.load(context); showSettings = false
                 AprsService.send(context, AprsService.ACTION_RELOAD)
@@ -245,11 +248,11 @@ fun App(onExit: () -> Unit) {
             )
         }
         val available = updateState.available
-        if (!showSettings && available != null && (forceUpdateDialog ||
+        if (!showSettings && !banner && available != null && (forceUpdateDialog ||
                 (updateDismissed != available.version && UpdateManager.ignoredVersion(context) != available.version))) {
             UpdateDialog(available, onDismiss = { updateDismissed = available.version; forceUpdateDialog = false })
         }
-        crashText?.let {
+        crashText?.takeIf { !banner }?.let {
             AlertDialog(
                 onDismissRequest = { CrashLog.markSeen(context); crashText = null },
                 containerColor = Pal.bar,
@@ -265,6 +268,10 @@ fun App(onExit: () -> Unit) {
         }
         if (carMode) {
             Box(Modifier.fillMaxSize().background(Pal.ground).systemBarsPadding()) { CarModeScreen(settings, onExit = { carMode = false }) }
+        }
+        androidx.compose.animation.AnimatedVisibility(visible = banner, enter = androidx.compose.animation.EnterTransition.None,
+            exit = androidx.compose.animation.fadeOut()) {
+            LaunchBanner(onDone = { banner = false })
         }
     }
 }
@@ -394,5 +401,32 @@ fun KeyValue(key: String, value: String) {
     Row(Modifier.fillMaxWidth().height(24.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(key, color = Pal.muted, fontSize = 14.sp, modifier = Modifier.weight(1f))
         Text(value, color = Pal.text, fontSize = 14.sp)
+    }
+}
+
+/** Cores medidas nas bordas da arte do banner (#75), para a emenda com o fundo não aparecer. */
+private val bannerTop = Color(0xFF001032)
+private val bannerBottom = Color(0xFF00123E)
+
+/**
+ * #75: banner de abertura em tela cheia por ~2 s; toque pula. A arte é quase quadrada: aparece inteira
+ * (ContentScale.Fit), centralizada, sobre um degradê com as cores das bordas.
+ */
+@Composable
+private fun LaunchBanner(onDone: () -> Unit) {
+    LaunchedEffect(Unit) { delay(2_000); onDone() }
+    Box(
+        Modifier.fillMaxSize()
+            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(bannerTop, bannerBottom)))
+            .clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                indication = null, onClick = onDone),
+        contentAlignment = Alignment.Center,
+    ) {
+        androidx.compose.foundation.Image(
+            painter = androidx.compose.ui.res.painterResource(R.drawable.splash_banner),
+            contentDescription = "APRS · www.PT2VHF.com",
+            contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+            modifier = Modifier.fillMaxSize().systemBarsPadding(),
+        )
     }
 }

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -244,6 +245,8 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
     var expanded by remember { mutableStateOf(false) }
     var symbolPicker by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf("") }
+    // #74: abas por assunto; primeira configuração abre em Estação, depois lembra a última aba da sessão.
+    var tab by remember { mutableStateOf(if (current.configured) SettingsTabMemory.last else SettingsTab.STATION) }
     var confirmEmptyFilter by remember { mutableStateOf(false) }
     var clearTarget by remember { mutableStateOf<Int?>(null) }
     var clearBusy by remember { mutableStateOf(false) }
@@ -260,16 +263,17 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
         if (!force) when {
             !plausibleAmateurCallsign(full) || ssidN !in 0..15 -> {
                 error = UiText.text(R.string.invalid_call) + "\n" + callsignHint(com.pt2vhf.aprs.core.checkAmateurCallsign(full))
+                tab = SettingsTab.STATION
                 return null
             }
-            !validHostPort(server, portN) -> { error = UiText.text(R.string.invalid_server); return null }
-            symbol.length != 2 -> { error = UiText.text(R.string.invalid_symbol); return null }
+            !validHostPort(server, portN) -> { error = UiText.text(R.string.invalid_server); tab = SettingsTab.APRS_IS; return null }
+            symbol.length != 2 -> { error = UiText.text(R.string.invalid_symbol); tab = SettingsTab.STATION; return null }
             voiceFreq.isNotBlank() && formatVoiceFrequency(voiceFreq) == null -> {
-                error = UiText.text(R.string.invalid_frequency); return null
+                error = UiText.text(R.string.invalid_frequency); tab = SettingsTab.STATION; return null
             }
             positionSource == "manual" && (manualLat.replace(',', '.').toDoubleOrNull()?.takeIf { it in -90.0..90.0 } == null ||
                 manualLon.replace(',', '.').toDoubleOrNull()?.takeIf { it in -180.0..180.0 } == null) -> {
-                error = UiText.text(R.string.manual_invalid); return null
+                error = UiText.text(R.string.manual_invalid); tab = SettingsTab.POSITION; return null
             }
         }
         val pd = retPrivDays
@@ -333,12 +337,33 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
     } }
     val maxOptions = listOf(500, 1000, 5000, 0).map { it to (if (it == 0) UiText.text(R.string.retention_no_limit) else "%,d".format(it)) }
 
-    AlertDialog(
+    // #74: tela cheia com abas por assunto; cada aba rola sozinha e o "Salvar" grava todas de uma vez.
+    androidx.compose.ui.window.Dialog(
         onDismissRequest = onDismiss,
-        containerColor = Pal.bar,
-        title = { Text(UiText.text(R.string.settings)) },
-        text = {
-            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false),
+    ) {
+        androidx.compose.material3.Surface(Modifier.fillMaxSize(), color = Pal.ground, contentColor = Pal.text) {
+        Column(Modifier.fillMaxSize()) {
+            Row(Modifier.fillMaxWidth().background(Pal.bar).padding(start = 16.dp, end = 4.dp, top = 12.dp, bottom = 6.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                Text(UiText.text(R.string.settings), fontSize = 19.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            }
+            androidx.compose.material3.ScrollableTabRow(selectedTabIndex = tab.ordinal, containerColor = Pal.bar,
+                contentColor = Pal.accent, edgePadding = 8.dp) {
+                SettingsTab.entries.forEach { t ->
+                    androidx.compose.material3.Tab(selected = tab == t, onClick = { tab = t; SettingsTabMemory.last = t },
+                        selectedContentColor = Pal.accent, unselectedContentColor = Pal.muted,
+                        text = { Text(t.label(), fontSize = 13.sp, maxLines = 1) })
+                }
+            }
+            if (!current.configured && tab == SettingsTab.STATION)
+                Text(UiText.text(R.string.settings_first_run), color = Pal.yellow, fontSize = 12.sp,
+                    modifier = Modifier.fillMaxWidth().background(Pal.card).padding(horizontal = 16.dp, vertical = 6.dp))
+            androidx.compose.runtime.key(tab) {
+            Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                when (tab) {
+                SettingsTab.STATION -> {
                 // ----- Perfil (#10) -----
                 SectionTitle(UiText.text(R.string.profile_section))
                 Choices(Settings.PROFILES.map { it to profileLabel(it) }, profile) { loadProfile(it) }
@@ -348,7 +373,7 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
                 // ----- Estação -----
                 SectionTitle(UiText.text(R.string.station_section))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(call, { call = it.uppercase().take(6) }, label = { Text(UiText.text(R.string.callsign)) }, singleLine = true,
+                    OutlinedTextField(call, { call = it.uppercase().take(6) }, label = { Text(UiText.text(R.string.callsign) + " *") }, singleLine = true,
                         modifier = Modifier.weight(2f), keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters))
                     OutlinedTextField(ssid, { ssid = it.filter(Char::isDigit).take(2) }, label = { Text("SSID") }, singleLine = true,
                         modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
@@ -376,8 +401,9 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
                 OutlinedTextField(voiceFreq, { voiceFreq = it.take(12) }, label = { Text(UiText.text(R.string.voice_frequency)) }, singleLine = true,
                     supportingText = { Text(UiText.text(R.string.voice_frequency_hint)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
+                }
 
-                // ----- APRS-IS -----
+                SettingsTab.APRS_IS -> {
                 SectionTitle("APRS-IS")
                 ExposedDropdownMenuBox(expanded, { expanded = it }) {
                     OutlinedTextField(
@@ -398,8 +424,9 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
                 CheckRow(UiText.text(R.string.aprs_auto_connect), autoAprsIs) { autoAprsIs = it }
                 OutlinedTextField(filter, { filter = it }, label = { Text(UiText.text(R.string.aprs_filter)) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
                     supportingText = { Text(UiText.text(R.string.filter_hint, DEFAULT_FILTER)) })
+                }
 
-                // ----- Transmissão e beacon -----
+                SettingsTab.BEACON -> {
                 SectionTitle(UiText.text(R.string.beacon_section))
                 OutlinedTextField(path, { path = it.uppercase() }, label = { Text(UiText.text(R.string.rf_path)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 CheckRow(UiText.text(R.string.tx_rf), txRf) { txRf = it }
@@ -428,8 +455,9 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
                     }
                     NumberField(UiText.text(R.string.smart_stopped_minutes), stoppedMin, { stoppedMin = it })
                 }
+                }
 
-                // ----- Posição (#6) -----
+                SettingsTab.POSITION -> {
                 SectionTitle(UiText.text(R.string.position_section))
                 Choices(listOf("gps" to UiText.text(R.string.position_source_gps), "manual" to UiText.text(R.string.position_source_manual)),
                     positionSource) { positionSource = it }
@@ -453,13 +481,6 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
                     CheckRow(UiText.text(R.string.use_network_location), useNetwork) { useNetwork = it }
                 }
 
-                // ----- Economia de bateria (#49) -----
-                SectionTitle(UiText.text(R.string.battery_section))
-                Choices(listOf("off" to UiText.text(R.string.battery_off), "on" to UiText.text(R.string.battery_on),
-                    "auto" to UiText.text(R.string.battery_auto)), batterySaver) { batterySaver = it }
-                if (batterySaver == "auto") NumberField(UiText.text(R.string.battery_auto_percent), batteryAuto, { batteryAuto = it.take(2) })
-                Text(UiText.text(R.string.battery_notice), color = Pal.muted, fontSize = 12.sp)
-
                 // ----- Privacidade -----
                 SectionTitle(UiText.text(R.string.privacy_section))
                 Text(UiText.text(R.string.ambiguity_label), fontSize = 13.sp)
@@ -468,7 +489,15 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
                 CheckRow(UiText.text(R.string.send_course_speed), courseSpeed) { courseSpeed = it }
                 CheckRow(UiText.text(R.string.send_altitude), altitude) { altitude = it }
 
-                // ----- Tela e mapa -----
+                // ----- Economia de bateria (#49) -----
+                SectionTitle(UiText.text(R.string.battery_section))
+                Choices(listOf("off" to UiText.text(R.string.battery_off), "on" to UiText.text(R.string.battery_on),
+                    "auto" to UiText.text(R.string.battery_auto)), batterySaver) { batterySaver = it }
+                if (batterySaver == "auto") NumberField(UiText.text(R.string.battery_auto_percent), batteryAuto, { batteryAuto = it.take(2) })
+                Text(UiText.text(R.string.battery_notice), color = Pal.muted, fontSize = 12.sp)
+                }
+
+                SettingsTab.MAP -> {
                 SectionTitle(UiText.text(R.string.display_section))
                 CheckRow(UiText.text(R.string.keep_screen_on), keepScreen) { keepScreen = it }
                 Text(UiText.text(R.string.station_max_age), fontSize = 13.sp)
@@ -483,11 +512,12 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
                     Settings.saveOption(context, MapIconSize.OPTION_KEY, it.key)
                     MapIconPrefs.changed.value = it
                 }
+                }
 
+                SettingsTab.MESSAGES -> {
                 // ----- Notificações e alertas (#6, #12) -----
                 SectionTitle(UiText.text(R.string.notifications_section))
                 CheckRow(UiText.text(R.string.notify_messages), notifyMsg) { notifyMsg = it }
-                CheckRow(UiText.text(R.string.update_notify), updateNotify) { updateNotify = it }
                 Text(UiText.text(R.string.alerts_favorites), fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 CheckRow(UiText.text(R.string.alert_opt_first), favFirst) { favFirst = it }
                 CheckRow(UiText.text(R.string.alert_opt_return), favReturn) { favReturn = it }
@@ -502,6 +532,14 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
                 }
                 Text(UiText.text(R.string.alerts_notice), color = Pal.muted, fontSize = 12.sp)
 
+                // #47 reenvio e #43 boletim de versão
+                SectionTitle(UiText.text(R.string.nav_messages))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    NumberField(UiText.text(R.string.msg_retries), retries, { retries = it.take(2) }, Modifier.weight(1f))
+                    NumberField(UiText.text(R.string.msg_retry_base), retryBase, { retryBase = it.take(3) }, Modifier.weight(1f))
+                }
+                CheckRow(UiText.text(R.string.announce_version), announce) { announce = it }
+
                 // ----- Mensagens: retenção (#26) -----
                 SectionTitle(UiText.text(R.string.retention_section))
                 val stored = AprsRepository.messages.value.size
@@ -515,14 +553,18 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
                     RetentionRow(UiText.text(R.string.bulletins), retBlnDays, retBlnMax, dayOptions, maxOptions, { retBlnDays = it }, { retBlnMax = it })
                 }
                 Text(UiText.text(R.string.retention_notice), color = Pal.muted, fontSize = 12.sp)
-                // #47 reenvio e #43 boletim de versão
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    NumberField(UiText.text(R.string.msg_retries), retries, { retries = it.take(2) }, Modifier.weight(1f))
-                    NumberField(UiText.text(R.string.msg_retry_base), retryBase, { retryBase = it.take(3) }, Modifier.weight(1f))
-                }
-                CheckRow(UiText.text(R.string.announce_version), announce) { announce = it }
                 val preview = build(force = true)?.let { AprsRepository.retentionPreview(it.retention) } ?: 0
                 if (preview > 0) Text(UiText.text(R.string.retention_preview, preview), color = Pal.orange, fontSize = 12.sp)
+                OutlinedButton(onClick = { deleteMessagesOpen = true; clearResult = null },
+                    enabled = !clearBusy, modifier = Modifier.fillMaxWidth()) {
+                    Text(UiText.text(R.string.msg_delete_title), color = Pal.orange)
+                }
+                clearResult?.let { Text(it, color = Pal.muted, fontSize = 13.sp) }
+                }
+
+                SettingsTab.SYSTEM -> {
+                SectionTitle(UiText.text(R.string.notifications_section))
+                CheckRow(UiText.text(R.string.update_notify), updateNotify) { updateNotify = it }
 
                 // ----- API (#15) -----
                 SectionTitle(UiText.text(R.string.api_section))
@@ -542,10 +584,6 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
                 OutlinedButton(onClick = { clearTarget = 1; clearResult = null },
                     enabled = !clearBusy, modifier = Modifier.fillMaxWidth()) {
                     Text(UiText.text(R.string.clear_all_stations), color = Pal.orange)
-                }
-                OutlinedButton(onClick = { deleteMessagesOpen = true; clearResult = null },
-                    enabled = !clearBusy, modifier = Modifier.fillMaxWidth()) {
-                    Text(UiText.text(R.string.msg_delete_title), color = Pal.orange)
                 }
                 clearResult?.let { Text(it, color = Pal.muted, fontSize = 13.sp) }
 
@@ -570,26 +608,37 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
                 Text("www.PT2VHF.com", color = Pal.accent, fontWeight = FontWeight.Bold,
                     textDecoration = TextDecoration.Underline,
                     modifier = Modifier.clickable { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(UpdateCheck.SITE))) })
-                if (error.isNotEmpty()) Text(error, color = Pal.orange, fontSize = 13.sp)
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                val s = build() ?: return@TextButton
-                if (s.filter.isBlank() && !confirmEmptyFilter) { confirmEmptyFilter = true; error = UiText.text(R.string.filter_empty); return@TextButton }
-                // A retention change that deletes messages right away needs a second, explicit tap.
-                val victims = AprsRepository.retentionPreview(s.retention)
-                if (victims > 0 && retentionConfirmedFor != victims) {
-                    retentionConfirmedFor = victims
-                    error = UiText.text(R.string.retention_confirm, victims)
-                    return@TextButton
                 }
-                onSave(s)
-                AprsRepository.applyRetention(s.retention)
-            }) { Text(UiText.text(R.string.save)) }
-        },
-        dismissButton = { if (current.configured) TextButton(onClick = onDismiss) { Text(UiText.text(R.string.cancel)) } },
-    )
+                }
+            }
+            }
+            // Rodapé fixo: erro de validação (a aba do campo já foi aberta) e Salvar.
+            Column(Modifier.fillMaxWidth().background(Pal.bar).padding(horizontal = 16.dp, vertical = 4.dp)) {
+                if (error.isNotEmpty()) Text(error, color = Pal.orange, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    if (current.configured) TextButton(onClick = onDismiss) { Text(UiText.text(R.string.cancel)) }
+                    TextButton(onClick = {
+                        val s = build() ?: return@TextButton
+                        if (s.filter.isBlank() && !confirmEmptyFilter) {
+                            confirmEmptyFilter = true; error = UiText.text(R.string.filter_empty); tab = SettingsTab.APRS_IS
+                            return@TextButton
+                        }
+                        // A retention change that deletes messages right away needs a second, explicit tap.
+                        val victims = AprsRepository.retentionPreview(s.retention)
+                        if (victims > 0 && retentionConfirmedFor != victims) {
+                            retentionConfirmedFor = victims
+                            error = UiText.text(R.string.retention_confirm, victims)
+                            tab = SettingsTab.MESSAGES
+                            return@TextButton
+                        }
+                        onSave(s)
+                        AprsRepository.applyRetention(s.retention)
+                    }) { Text(UiText.text(R.string.save), fontWeight = FontWeight.Bold) }
+                }
+            }
+        }
+        }
+    }
     if (symbolPicker) SymbolPicker(symbol, onPick = { symbol = it; symbolPicker = false }, onDismiss = { symbolPicker = false })
     if (deleteMessagesOpen) DeleteMessagesDialog(onDismiss = { deleteMessagesOpen = false }, onResult = { clearResult = it })
     importPreview?.let { preview ->
@@ -660,6 +709,24 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
         )
     }
 }
+
+/** #74: abas da tela de configurações, na ordem exibida. */
+internal enum class SettingsTab {
+    STATION, APRS_IS, BEACON, POSITION, MAP, MESSAGES, SYSTEM;
+
+    fun label(): String = when (this) {
+        STATION -> UiText.text(R.string.station_section)
+        APRS_IS -> "APRS-IS"
+        BEACON -> UiText.text(R.string.settings_tab_beacon)
+        POSITION -> UiText.text(R.string.position_section)
+        MAP -> UiText.text(R.string.nav_map)
+        MESSAGES -> UiText.text(R.string.nav_messages)
+        SYSTEM -> UiText.text(R.string.settings_tab_system)
+    }
+}
+
+/** #74: última aba aberta, lembrada enquanto o app está em memória. */
+internal object SettingsTabMemory { var last: SettingsTab = SettingsTab.STATION }
 
 /** #59: texto curto do resultado da validação do indicativo. */
 private fun callsignHint(c: com.pt2vhf.aprs.core.CallsignCheck): String = when {

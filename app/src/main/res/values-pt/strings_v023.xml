@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 0.1.15: #72/#73/#74/#75/#76 -->
+<resources>
+    <string name="settings_tab_beacon">Beacon</string>
+    <string name="settings_tab_system">Sistema</string>
+    <string name="settings_first_run">Primeira configuração: preencha o indicativo (obrigatório, marcado com *) e toque em Salvar.</string>
+    <string name="msg_scope_mine">Minhas</string>
+    <string name="msg_scope_all">Todas</string>
+    <string name="msg_layout_grouped">Agrupadas</string>
+    <string name="msg_layout_list">Lista</string>
+    <string name="msg_third_party_notice">Mensagens entre outras estações (só leitura): sem resposta, ACK ou notificação.</string>
+    <string name="msg_send_no_response">Sem resposta do serviço de envio. Confira a aba Logs antes de tentar novamente.</string>
+    <string name="err_aprs_write">Erro na escrita APRS-IS: %1$s</string>
+    <string name="date_format_hint">AAAA-MM-DD</string>
+</resources>

@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.1.15 — Publicada (10/11/2026, beta; testes item a item pendentes)
+
+- **Banner de abertura (#75):** a arte "APRS · www.PT2VHF.com" aparece em tela cheia por cerca de 2 s ao abrir o app
+  (só na abertura a frio; girar a tela, voltar do segundo plano ou abrir pela notificação não repete). Tocar pula.
+  A imagem aparece inteira sobre o mesmo azul das bordas, inclusive na splash do sistema; conexão, rastreador e
+  permissões continuam carregando por trás.
+- **Configurações em 7 abas (#74):** Estação, APRS-IS, Beacon, Posição, Mapa, Mensagens e Sistema, em tela cheia com
+  Salvar fixo embaixo. Nenhuma opção mudou de efeito, só de lugar; trocar de aba não perde o que foi digitado e um
+  erro de validação abre a aba do campo. Na primeira configuração abre em Estação com o aviso do indicativo
+  obrigatório; a última aba aberta é lembrada durante a sessão.
+- **Mensagens: "Minhas / Todas" e "Agrupadas / Lista" (#73):** em Conversas, "Todas" mostra também as mensagens
+  trocadas entre outras estações (só leitura: sem ACK, notificação ou resposta, com origem → destino); "Lista" mostra
+  uma mensagem por linha em ordem cronológica. As duas escolhas ficam salvas. As mensagens de terceiros passam a ser
+  guardadas (com a mesma retenção) para o histórico aparecer ao trocar para "Todas".
+- **Busca sem cortar o texto (#72):** os campos de busca de Estações, Logs e Mensagens mostram o texto inteiro,
+  inclusive com fonte grande.
+- **Traduções (#76):** o erro "sem resposta do serviço de envio", o erro de escrita no APRS-IS e o formato de data
+  dos filtros agora seguem o idioma do app. Tipos de estação, situação das mensagens e erros de conexão vêm de
+  constantes únicas, com teste garantindo que todos têm tradução (dados gravados antes continuam reconhecidos).
+- Fica para depois: **Android Auto (#68)** (biblioteca Car App, aprovação do Google e teste em carro/DHU). Os P0
+  #60/#62 e os itens #25/#37/#54 continuam dependendo de teste em aparelho, servidor e rádio reais.
+- Testes de unidade novos: mensagens de terceiros, agrupamento/lista e cobertura das traduções dos valores internos.
+
 ## 0.1.14 — Publicada (10/11/2026, beta; testes item a item pendentes)
 
 - **Mensagens mais compactas e legíveis (#56, #65, #28):**
