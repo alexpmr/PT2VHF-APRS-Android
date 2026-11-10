@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 0.1.15: #72/#73/#74/#75/#76 -->
+<resources>
+    <string name="settings_tab_beacon">Balise</string>
+    <string name="settings_tab_system">Système</string>
+    <string name="settings_first_run">Première configuration : saisissez votre indicatif (obligatoire, marqué *) puis touchez Enregistrer.</string>
+    <string name="msg_scope_mine">Les miens</string>
+    <string name="msg_scope_all">Tous</string>
+    <string name="msg_layout_grouped">Groupés</string>
+    <string name="msg_layout_list">Liste</string>
+    <string name="msg_third_party_notice">Messages entre d\'autres stations (lecture seule) : pas de réponse, d\'ACK ni de notification.</string>
+    <string name="msg_send_no_response">Aucune réponse du service d\'envoi. Vérifiez l\'onglet Logs avant de réessayer.</string>
+    <string name="err_aprs_write">Erreur d\'écriture APRS-IS : %1$s</string>
+    <string name="date_format_hint">AAAA-MM-JJ</string>
+</resources>

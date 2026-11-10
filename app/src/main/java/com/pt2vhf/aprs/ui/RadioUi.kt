@@ -219,7 +219,7 @@ fun RadioScreen(settings: Settings, onSettingsChanged: (Settings) -> Unit) {
             KeyValue(UiText.text(R.string.tnc_sent), status.tncTx.toString())
             KeyValue(UiText.text(R.string.diag_beacons), "${status.beaconsSent} / ${status.beaconsDigipeated}")
             KeyValue(UiText.text(R.string.diag_pending_ack), AprsRepository.messages.value
-                .count { it.outgoing && it.status.startsWith("Aguardando ACK") }.toString())
+                .count { it.outgoing && it.status.startsWith(com.pt2vhf.aprs.data.InternalText.MSG_AWAITING_STEM) }.toString())
             KeyValue(UiText.text(R.string.station_count), stations.size.toString())
             KeyValue(UiText.text(R.string.rf_link_count), links.size.toString())
             KeyValue("GPS", status.gpsAccuracyM?.let { "±${it.toInt()} m" } ?: UiText.text(R.string.no_gps))

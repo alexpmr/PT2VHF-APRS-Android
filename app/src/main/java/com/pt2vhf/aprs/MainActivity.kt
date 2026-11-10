@@ -19,6 +19,8 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // #75: a janela abre com o tema azul do banner; o app volta ao tema normal antes de desenhar.
+        setTheme(R.style.Theme_Pt2vhf)
         super.onCreate(savedInstanceState)
         Configuration.getInstance().userAgentValue = "PT2VHF-APRS-Android/${BuildConfig.VERSION_NAME}"
         Configuration.getInstance().osmdroidBasePath = filesDir
@@ -42,6 +44,8 @@ class MainActivity : ComponentActivity() {
         /** #39: a notificação de nova versão abre o app já com o aviso. */
         const val EXTRA_SHOW_UPDATE = "show_update"
         val showUpdateRequests = kotlinx.coroutines.flow.MutableStateFlow(0)
+        /** #75: banner só na abertura a frio; rotação, volta do segundo plano e notificação não repetem. */
+        var bannerShown = false
     }
 
     fun requestPermissions() {

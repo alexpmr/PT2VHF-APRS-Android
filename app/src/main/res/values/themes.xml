@@ -5,6 +5,13 @@
         <item name="android:statusBarColor">@color/bar</item>
         <item name="android:navigationBarColor">@color/bar</item>
     </style>
+    <!-- #75: janela inicial na cor da borda do banner de abertura, sem tela preta/branca antes dele. -->
+    <style name="Theme.Pt2vhf.Starting" parent="Theme.Pt2vhf">
+        <item name="android:windowBackground">@color/splash_blue</item>
+        <item name="android:statusBarColor">@color/splash_blue</item>
+        <item name="android:navigationBarColor">@color/splash_blue</item>
+    </style>
+    <color name="splash_blue">#011236</color>
     <color name="ground">#0B131C</color>
     <color name="bar">#111C28</color>
     <color name="accent">#2F86D6</color>

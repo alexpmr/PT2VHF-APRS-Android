@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 0.1.15: #72/#73/#74/#75/#76 -->
+<resources>
+    <string name="settings_tab_beacon">Beacon</string>
+    <string name="settings_tab_system">System</string>
+    <string name="settings_first_run">First setup: fill in your callsign (required, marked with *) and tap Save.</string>
+    <string name="msg_scope_mine">Mine</string>
+    <string name="msg_scope_all">All</string>
+    <string name="msg_layout_grouped">Grouped</string>
+    <string name="msg_layout_list">List</string>
+    <string name="msg_third_party_notice">Messages between other stations (read only): no reply, ACK or notification.</string>
+    <string name="msg_send_no_response">No response from the sending service. Check the Logs tab before trying again.</string>
+    <string name="err_aprs_write">APRS-IS write error: %1$s</string>
+    <string name="date_format_hint">YYYY-MM-DD</string>
+</resources>

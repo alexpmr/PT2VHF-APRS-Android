@@ -124,8 +124,9 @@ fun selectStations(
  * Ordem estável dos tipos para "ordenar por tipo" (#58.6): móveis primeiro, depois fixas,
  * clima, infraestrutura (digi, iGate) e por fim as demais. Documentada no CHANGELOG.
  */
-val STATION_TYPE_ORDER = listOf("Móvel", "Pessoa", "Aeronave", "Embarcação", "Estação",
-    "Estação meteorológica", "Digipeater", "iGate")
+val STATION_TYPE_ORDER = listOf(InternalText.ROLE_MOBILE, InternalText.ROLE_PERSON,
+    InternalText.ROLE_AIRCRAFT, InternalText.ROLE_VESSEL, InternalText.ROLE_STATION, InternalText.ROLE_WEATHER,
+    InternalText.ROLE_DIGI, InternalText.ROLE_IGATE)
 
 fun stationTypeRank(role: String): Int = STATION_TYPE_ORDER.indexOf(role).let { if (it < 0) STATION_TYPE_ORDER.size else it }
 

@@ -135,8 +135,7 @@ fun LogsScreen(onStation: (String) -> Unit) {
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            OutlinedTextField(text, { text = it }, singleLine = true, modifier = Modifier.weight(1f).height(48.dp),
-                placeholder = { Text(UiText.text(R.string.logs_filter_hint), fontSize = 12.sp, maxLines = 1) })
+            CompactSearchField(text, { text = it }, UiText.text(R.string.logs_filter_hint), Modifier.weight(1f))
             TextButton(onClick = {
                 if (!paused) frozen = all
                 paused = !paused

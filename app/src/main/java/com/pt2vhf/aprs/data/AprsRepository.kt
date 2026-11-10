@@ -584,19 +584,24 @@ object AprsRepository {
             else -> {
                 val general = msg.kind == AprsMessage.Kind.BULLETIN || msg.addressee == "CQ" ||
                     msg.addressee.startsWith("CQ")
-                if (!forUs && !general) return null
+                // #73: mensagens entre outras estações também são guardadas (só leitura, modo "Todas"),
+                // mas nunca geram ACK, notificação ou contador: só "forUs" é devolvido ao serviço.
+                val thirdParty = !forUs && !general
                 val via = if (medium == Medium.RF)
-                    packet.thirdPartyGateway?.let { "RF via iGate $it" } ?:
-                    packet.rfDigipeaters.firstOrNull()?.let { "RF via $it" } ?: "RF direto"
+                    packet.thirdPartyGateway?.let { InternalText.VIA_RF_PREFIX + "iGate $it" } ?:
+                    packet.rfDigipeaters.firstOrNull()?.let { InternalText.VIA_RF_PREFIX + it } ?: InternalText.VIA_RF_DIRECT
                 else "APRS-IS"
                 // Display text only (#27): IDs/ACK and the raw packet keep the original bytes.
                 val text = decodeAprsText(msg.text)
                 val duplicate = _messages.value.any {
                     !it.outgoing && it.from == packet.source && it.msgId != null && it.msgId == msg.id && it.text == text
-                }
+                } || (thirdParty && msg.id == null && _messages.value.any {
+                    !it.outgoing && it.from == packet.source && it.to == msg.addressee && it.text == text &&
+                        now - it.time < 10 * 60_000L
+                })
                 if (duplicate) return null
                 val chat = ChatMessage(nextId++, packet.source, msg.addressee, text, now, false, medium, via, msg.id,
-                    "Recebida", msg.kind)
+                    InternalText.MSG_RECEIVED, msg.kind)
                 add(chat)
                 if (forUs) chat else null
             }
@@ -630,7 +635,7 @@ object AprsRepository {
             changed.clear()
             list.map {
                 if (it.outgoing && it.to == from && it.msgId == msgId)
-                    it.copy(status = if (ack) "ACK recebido" else "Rejeitada").also { c -> changed += c }
+                    it.copy(status = if (ack) InternalText.MSG_ACKED else InternalText.MSG_REJECTED).also { c -> changed += c }
                 else it
             }
         }
@@ -654,6 +659,6 @@ object AprsRepository {
 
     fun isAcked(localId: Long): Boolean =
         _messages.value.firstOrNull { it.id == localId }?.status?.let {
-            it == "ACK recebido" || it == "Rejeitada" || it == "Cancelada"
+            it == InternalText.MSG_ACKED || it == InternalText.MSG_REJECTED || it == InternalText.MSG_CANCELLED
         } == true
 }

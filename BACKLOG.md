@@ -4,6 +4,11 @@ Itens registrados para as próximas versões. Não implementar até o pedido de 
 
 ## Onde estamos (10/11/2026)
 
+- **v0.1.15** (10/11/2026, autorizada pelo mantenedor: "Sugestões aceitas. Implemente todos os itens do backlog e gere
+  nova versão"): #72 (busca), #73 (Minhas/Todas e Agrupadas/Lista), #74 (Configurações em 7 abas), #75 (banner de
+  abertura) e #76 (traduções/constantes internas). As ideias do APRS World #66/#67/#69/#70 já tinham saído na 0.1.14.
+  **Ficaram de fora:** #68 Android Auto (Car App, aprovação do Google, teste em carro/DHU) e os itens que dependem de
+  aparelho/servidor/rádio reais (#60, #62, #25, #37, #54, #44, #52). Tudo aguarda teste físico e OK do mantenedor.
 - **v0.1.14** (10/11/2026, autorizada pelo mantenedor: "Implemente os 4 itens e gere uma nova versão"): pacote de
   Mensagens (#56/#64/#65/#28), #59 com tabela ITU, #58.3/#58.4/#58.5, #66/#67/#69/#70 (PR #21). **#68 Android Auto ficou
   de fora.** Itens aguardam teste físico e OK do mantenedor.
@@ -2444,6 +2449,7 @@ _Registrado em 10/11/2026 (ideia do APRS World aprovada)._
 - **Teste:** unidade da formatação do rótulo (temperatura em °C, vento em km/h e rumo, dado ausente).
 
 ### 68. Android Auto
+**Status 0.1.15:** continua fora (mesmos motivos); o modo carro do app segue valendo.
 **Status 0.1.14:** **não implementado na 0.1.14** (exige biblioteca Car App, aprovação de categoria pelo Google e teste em carro/DHU).
 
 _Registrado em 10/11/2026 (ideia do APRS World aprovada)._
@@ -2512,6 +2518,7 @@ seletor de símbolo; símbolos das duas tabelas e com overlay; tema claro/escuro
 - **Status:** **cancelado em 10/11/2026** pelo mantenedor: "Esquece o background branco. Falha minha. Está tudo certo." Nada a implementar.
 
 ### 72. Estações: campo de busca corta o texto digitado
+**Status 0.1.15:** implementado (campo compacto `CompactSearchField` em Estações, Logs e Mensagens, só com altura mínima). Aguarda teste em aparelho com fonte grande.
 _Relatado em 10/11/2026 (após a v0.1.14), com captura: "campo na aba estações está cortando."_
 
 **Problema:** na aba Estações, o texto digitado no campo de busca aparece cortado na parte de baixo (na
@@ -2538,6 +2545,7 @@ tema claro e escuro; sem regressão no filtro e na lixeira.
 **Dependências/relacionados:** itens 56 e 58.
 
 ### 73. Mensagens: alternar "minhas / todas" e "agrupadas por emissor / lista normal"
+**Status 0.1.15:** implementado em Mensagens → Conversas (botões Minhas/Todas e Agrupadas/Lista, salvos). Terceiros são guardados e mostrados só para leitura (diálogo do par A ↔ B). Aguarda teste com tráfego real.
 _Pedido do mantenedor em 10/11/2026 (após a v0.1.14): "Uma sugestão é um botão para alternar entre minhas
 mensagens e todas as mensagens. Também outro botão para alternar entre mensagens agrupadas por emissor ou normal."_
 
@@ -2565,6 +2573,7 @@ funciona nos dois modos; testes de unidade para o filtro (próprias, gerais, bol
 **Dependências/relacionados:** itens 54, 56, 64 e 65.
 
 ### 74. Configurações: reorganizar por assunto, em abas
+**Status 0.1.15:** implementado (tela cheia, 7 abas, Salvar único no rodapé, erro abre a aba do campo). Aguarda teste em aparelho.
 _Pedido do mantenedor em 10/11/2026 (após a v0.1.14): "refaça a parte de configuração. Está tudo junto em uma coisa
 comprida. Organize por assuntos e use abas."_
 
@@ -2604,6 +2613,7 @@ existentes de configurações continuam passando.
 **Dependências/relacionados:** itens 10, 38, 58, 70.
 
 ### 75. Banner de abertura ao iniciar o app
+**Status 0.1.15:** implementado (WebP de 47 KB em `drawable-nodpi`, ~2 s, toque pula, tema inicial e splash do Android 12+ no mesmo azul, sem nova biblioteca). Aguarda teste de abertura a frio em aparelho.
 _Pedido do mantenedor em 10/11/2026: "Backlog: Adicione este banner de entrada para mostrar assim que o app é aberto,
 por alguns segundos". Arte substituída no mesmo dia pela versão correta ("Backlog: o banner correto é este")._
 
@@ -2640,6 +2650,7 @@ fica mais lenta que o tempo do banner; aumento do APK pequeno.
 **Dependências/relacionados:** itens 38 e 74.
 
 ### 76. Traduções: textos fixos no código que aparecem sempre em português
+**Status 0.1.15:** implementado (`InternalText` com os valores internos, `UiTextKeys` puro e teste `Features0115Test` cobrindo todos). Aguarda conferência nos 5 idiomas.
 _Pedido do mantenedor em 10/11/2026, após a verificação das traduções ("backlog")._
 
 **Situação atual (verificado no código em 10/11/2026, v0.1.14):** os 5 idiomas (en padrão, pt, es, fr, it) têm as

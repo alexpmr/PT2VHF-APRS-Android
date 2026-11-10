@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- #75: no Android 12+ a splash do sistema é obrigatória (ícone sobre cor); usa o mesmo azul do banner. -->
+    <style name="Theme.Pt2vhf.Starting" parent="Theme.Pt2vhf">
+        <item name="android:windowBackground">@color/splash_blue</item>
+        <item name="android:statusBarColor">@color/splash_blue</item>
+        <item name="android:navigationBarColor">@color/splash_blue</item>
+        <item name="android:windowSplashScreenBackground">@color/splash_blue</item>
+    </style>
+</resources>

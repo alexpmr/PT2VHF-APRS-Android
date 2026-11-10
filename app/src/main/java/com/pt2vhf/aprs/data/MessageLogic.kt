@@ -17,7 +17,7 @@ data class MessageCriteria(
         status != "all" || period != "all"
 }
 
-fun isPendingStatus(status: String): Boolean = status == "Enviando" || status.startsWith("Aguardando ACK")
+fun isPendingStatus(status: String): Boolean = status == InternalText.MSG_SENDING || status.startsWith(InternalText.MSG_AWAITING_STEM)
 
 /** #60: envio cujo serviço morreu no meio; sem isso o balão ficaria "tentando" para sempre. */
 const val INTERRUPTED_STATUS = "Interrompida"
@@ -26,7 +26,8 @@ fun interruptPending(list: List<ChatMessage>): List<ChatMessage> =
     list.map { if (it.outgoing && isPendingStatus(it.status)) it.copy(status = INTERRUPTED_STATUS) else it }
 
 fun isFailedStatus(status: String): Boolean =
-    status == "Sem conexão para enviar" || status == INTERRUPTED_STATUS || status.startsWith("Sem ACK após ") || status == "Rejeitada"
+    status == InternalText.MSG_NO_CONNECTION || status == INTERRUPTED_STATUS || status.startsWith(InternalText.MSG_NO_ACK_PREFIX) ||
+        status == InternalText.MSG_REJECTED
 
 fun matchesMessage(m: ChatMessage, c: MessageCriteria, now: Long = System.currentTimeMillis()): Boolean {
     val text = c.text.trim()
@@ -74,6 +75,53 @@ fun conversations(
     return grouped.sortedWith(if (newestFirst) order.reversed() else order)
 }
 
+// ---------- Minhas / Todas e Agrupadas / Lista (#73) ----------
+
+/** #73: mensagem privada trocada entre outras estações (monitor). É só leitura: sem ACK, notificação ou resposta. */
+fun isThirdPartyMessage(m: ChatMessage, ownCall: String): Boolean {
+    if (m.outgoing || m.kind != AprsMessage.Kind.MESSAGE || messageCategory(m) != MessageCategory.PRIVATE) return false
+    val to = m.to.uppercase(Locale.ROOT)
+    val own = ownCall.uppercase(Locale.ROOT)
+    return to != own && to != own.substringBefore('-')
+}
+
+/** Chave do grupo de mensagens de terceiros: o par origem↔destino, em ordem alfabética. */
+fun thirdPartyKey(m: ChatMessage): String = listOf(m.from, m.to).sorted().joinToString(" ↔ ")
+
+/**
+ * #73: conversas privadas no modo escolhido. "Minhas" ([all] = false) é igual a [conversations]; "Todas" junta os
+ * grupos de terceiros, com chave "A ↔ B". A ordem segue a última atividade de cada grupo.
+ */
+fun privateGroups(
+    messages: List<ChatMessage>,
+    ownCall: String,
+    criteria: MessageCriteria,
+    newestFirst: Boolean,
+    all: Boolean,
+    now: Long = System.currentTimeMillis(),
+): List<Pair<String, List<ChatMessage>>> {
+    val mine = conversations(messages, ownCall, criteria, newestFirst, now)
+    if (!all) return mine
+    val others = messages.filter { isThirdPartyMessage(it, ownCall) && matchesMessage(it, criteria, now) }
+        .groupBy(::thirdPartyKey).toList()
+    val order = compareBy<Pair<String, List<ChatMessage>>> { (_, list) -> list.maxOf { it.time } }.thenBy { it.first }
+    return (mine + others).sortedWith(if (newestFirst) order.reversed() else order)
+}
+
+/** #73: lista normal — uma mensagem privada por linha, em ordem cronológica (próprias e, em "Todas", de terceiros). */
+fun privateTimeline(
+    messages: List<ChatMessage>,
+    ownCall: String,
+    criteria: MessageCriteria,
+    newestFirst: Boolean,
+    all: Boolean,
+    now: Long = System.currentTimeMillis(),
+): List<ChatMessage> {
+    val list = privateGroups(messages, ownCall, criteria, newestFirst, all, now).flatMap { it.second }
+    val order = compareBy<ChatMessage> { it.time }.thenBy { it.id }
+    return list.sortedWith(if (newestFirst) order.reversed() else order)
+}
+
 // ---------- Busca de indicativo para nova conversa (#21) ----------
 
 data class CallsignHit(val call: String, val lastContact: Long?, val medium: Medium?, val inHistory: Boolean)
@@ -99,7 +147,7 @@ fun searchCallsigns(
         hits[call] = CallsignHit(call, s.lastHeard, s.medium, false)
     }
     for (m in messages) {
-        if (m.kind != AprsMessage.Kind.MESSAGE) continue
+        if (m.kind != AprsMessage.Kind.MESSAGE || isThirdPartyMessage(m, ownCall)) continue
         val other = (if (m.outgoing) m.to else m.from).uppercase(Locale.ROOT)
         if (other == own || other == "CQ" || other.startsWith("CQ") || other.startsWith("BLN")) continue
         if (!other.contains(q) || !CALLSIGN_RE.matches(other)) continue
