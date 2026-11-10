@@ -2406,6 +2406,52 @@ fechado; retrato e paisagem; fonte 150%/200%; TalkBack lê "Enviar" e "Voltar"; 
 funcionando.
 - **Status:** registrado em 10/11/2026; não implementado.
 
+### 66. Mapa: agrupar estações em áreas cheias
+_Registrado em 10/11/2026 a partir das ideias do APRS World aprovadas pelo mantenedor ("Implemente os 4 itens")._
+
+- Com muitas estações próximas, juntar os ícones que se sobrepõem num **círculo com a contagem** conforme o zoom;
+  tocar no grupo aproxima o mapa até separar as estações. Estação seguida, favoritas e a própria posição nunca
+  entram em grupo.
+- Opção na lista de camadas do mapa ("Agrupar estações"), ligada por padrão e lembrada entre sessões.
+- **Teste:** unidade do agrupamento (grade em pixels por zoom, estações isoladas continuam soltas).
+
+### 67. Mapa: camada de clima com as estações meteorológicas
+_Registrado em 10/11/2026 (ideia do APRS World aprovada)._
+
+- Camada opcional que mostra, sobre cada estação WX recebida, a **temperatura** e o **vento** do último relatório
+  (dados APRS próprios, sem serviço externo nem radar de terceiros). Valores antigos (mais de 2 h) aparecem
+  esmaecidos; estação sem dado de clima não ganha rótulo.
+- **Teste:** unidade da formatação do rótulo (temperatura em °C, vento em km/h e rumo, dado ausente).
+
+### 68. Android Auto
+_Registrado em 10/11/2026 (ideia do APRS World aprovada)._
+
+- Tela própria no painel do carro (mapa/lista das estações próximas, última mensagem, beacon agora).
+- **Atenção:** exige a biblioteca Car App do Android, categoria de app aceita pelo Google e, para APK fora da
+  Play Store, o modo desenvolvedor do Android Auto. Precisa de teste num carro ou na unidade principal de
+  desenvolvimento (DHU). O "modo carro" atual do app continua valendo enquanto isso.
+
+### 69. Ferramentas: decodificador de pacote APRS e tabela de frequências
+_Registrado em 10/11/2026 (ideia do APRS World aprovada)._
+
+- **Decodificador:** colar ou digitar um pacote bruto (`ORIGEM>DESTINO,PATH:info`) e ver campo a campo: origem,
+  destino, caminho com o significado de cada salto, tipo do pacote, posição, símbolo, curso/velocidade,
+  altitude, clima, telemetria, mensagem/ACK e comentário. Nada é transmitido.
+- Atalho "Decodificar" a partir de um pacote da aba Logs e da aba Bruto da ficha.
+- **Tabela de frequências APRS** por região (ex.: 145,570 MHz no Brasil, 144,390 MHz nas Américas do Norte,
+  144,800 MHz na Europa/África), com aviso para conferir o plano de banda local.
+- **Teste:** unidade do decodificador com pacotes de posição, Mic-E/sem posição, clima, telemetria e mensagem.
+
+### 70. Importar configurações do APRSdroid
+_Registrado em 10/11/2026 (ideia do APRS World aprovada)._
+
+- Em Configurações → Backup, aceitar também o arquivo de perfil/preferências do APRSdroid e aproveitar o que
+  tem equivalente: indicativo, SSID, símbolo, comentário/status, caminho digipeater, servidor e filtro APRS-IS,
+  intervalo de beacon e SmartBeaconing ligado/desligado.
+- Mostrar antes de aplicar o que foi reconhecido; não importar passcode (é calculado do indicativo) e validar o
+  indicativo pela regra do #59. Chaves desconhecidas são ignoradas, sem apagar as configurações atuais.
+- **Teste:** unidade da conversão com arquivo XML de preferências e com JSON de perfil.
+
 ## Consolidação das sugestões aprovadas com itens já existentes
 
 A comparação com o APRSdroid também aprovou os recursos abaixo, que **já estavam
