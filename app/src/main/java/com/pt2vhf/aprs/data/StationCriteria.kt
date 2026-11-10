@@ -21,7 +21,38 @@ data class StationCriteria(
     val firstUntil: String = "",
     val minDistanceKm: Double? = null,
     val maxDistanceKm: Double? = null,
+    // #58.3 painel de filtros
+    /** Países (ISO) pelo prefixo do indicativo; vazio = todos. */
+    val countries: Set<String> = emptySet(),
+    /** SSIDs 0-15 (sem SSID = 0); vazio = todos. */
+    val ssids: Set<Int> = emptySet(),
+    /** Símbolo "tabela+código" (ex.: "/_") ou só o código ("_"); vazio = todos. */
+    val symbol: String = "",
+    /** Visto nos últimos N minutos; 0 = qualquer época. */
+    val lastSeenMinutes: Int = 0,
+    val withPositionOnly: Boolean = false,
 )
+
+/** SSID do indicativo; sem SSID conta como 0. */
+fun stationSsid(call: String): Int = call.substringAfter('-', "").toIntOrNull()?.takeIf { it in 0..15 } ?: 0
+
+/** Posição conhecida: coordenadas válidas e diferentes de 0,0 (estação sem posição nunca é plotada em 0,0). */
+fun hasKnownPosition(s: Station): Boolean =
+    s.lat in -90.0..90.0 && s.lon in -180.0..180.0 && !(s.lat == 0.0 && s.lon == 0.0)
+
+/** Quantos filtros estão ativos (#58.2: contador no botão de filtro). Ordenação não conta. */
+fun activeStationFilterCount(c: StationCriteria): Int = listOf(
+    c.callsign.isNotBlank(), c.roleNames.isNotEmpty(), c.source != "all", c.favoritesOnly,
+    c.receivedFrom.isNotBlank() || c.receivedUntil.isNotBlank(), c.firstFrom.isNotBlank() || c.firstUntil.isNotBlank(),
+    c.minDistanceKm != null || c.maxDistanceKm != null, c.countries.isNotEmpty(), c.ssids.isNotEmpty(),
+    c.symbol.isNotBlank(), c.lastSeenMinutes > 0, c.withPositionOnly,
+).count { it }
+
+private fun symbolMatches(s: Station, wanted: String): Boolean = when (wanted.length) {
+    0 -> true
+    1 -> s.symbol == wanted[0]
+    else -> s.symbolTable == wanted[0] && s.symbol == wanted[1]
+}
 
 private fun startOfDay(value: String): Long? = runCatching {
     LocalDate.parse(value.trim()).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
@@ -37,6 +68,8 @@ fun selectStations(
     ownLat: Double?,
     ownLon: Double?,
     favorites: Set<String> = emptySet(),
+    now: Long = System.currentTimeMillis(),
+    countryOf: (String) -> String? = { com.pt2vhf.aprs.core.callsignCountry(it) },
 ): List<Station> {
     fun km(s: Station): Double? = if (ownLat != null && ownLon != null &&
         ownLat in -90.0..90.0 && ownLon in -180.0..180.0 &&
@@ -48,7 +81,13 @@ fun selectStations(
     val firstUntil = dayAfter(criteria.firstUntil)
     val selected = stations.filter { s ->
         val distance = km(s)
-        (criteria.callsign.isBlank() || s.call.contains(criteria.callsign.trim(), ignoreCase = true)) &&
+        (criteria.callsign.isBlank() || s.call.contains(criteria.callsign.trim(), ignoreCase = true) ||
+            s.comment.contains(criteria.callsign.trim(), ignoreCase = true)) &&
+        (criteria.countries.isEmpty() || countryOf(s.call) in criteria.countries) &&
+        (criteria.ssids.isEmpty() || stationSsid(s.call) in criteria.ssids) &&
+        symbolMatches(s, criteria.symbol.trim()) &&
+        (criteria.lastSeenMinutes <= 0 || now - s.lastHeard <= criteria.lastSeenMinutes * 60_000L) &&
+        (!criteria.withPositionOnly || hasKnownPosition(s)) &&
         (criteria.roleNames.isEmpty() || s.role in criteria.roleNames) &&
         (!criteria.favoritesOnly || s.call in favorites) &&
         (criteria.source == "all" || (criteria.source == "rf" && s.medium == Medium.RF) ||

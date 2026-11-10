@@ -30,19 +30,10 @@ fun fullCallsign(callsign: String, ssid: Int): String {
 val CALLSIGN_RE = Regex("^[A-Z0-9]{1,6}(-([0-9]|1[0-5]))?$")
 
 /**
- * Plausible worldwide amateur callsign syntax, deliberately separate from AX.25 tactical
- * addressees. Syntax validation is NOT proof of an issued license. Prefix allocation and
- * country-specific exceptional calls are tracked in backlog #59.
+ * Indicativo de radioamador plausível no mundo (#59): formato + prefixo alocado pela ITU
+ * ([checkAmateurCallsign]). Não prova titularidade; destinos táticos (CQ, BLN1) não passam por aqui.
  */
-fun plausibleAmateurCallsign(value: String): Boolean {
-    val call = value.trim().uppercase(Locale.ROOT)
-    val base = call.substringBefore('-')
-    if (!CALLSIGN_RE.matches(call) || base.length !in 3..6) return false
-    // Most international amateur calls use a prefix with a numeral and a letter suffix.
-    // Do not reject numbers at the beginning (e.g., 2E0ABC, 3D2ABC).
-    return Regex("^[A-Z0-9]{1,3}[0-9][A-Z]{1,4}$").matches(base) &&
-        base.any { it.isLetter() }
-}
+fun plausibleAmateurCallsign(value: String): Boolean = checkAmateurCallsign(value).ok
 
 /** Servidores oferecidos na lista; "Outro…" permite digitar. Padrão igual ao desktop. */
 data class AprsServer(val host: String, val label: String)
