@@ -4,7 +4,7 @@ import androidx.annotation.StringRes
 import com.pt2vhf.aprs.data.INTERRUPTED_STATUS
 import com.pt2vhf.aprs.data.InternalText as T
 import com.pt2vhf.aprs.service.AudioTnc
-import com.pt2vhf.aprs.service.UsbTnc
+import com.pt2vhf.aprs.service.UsbSerialTnc as UsbTnc
 
 /** Recurso de texto + argumentos, resolvido por [UiText]. */
 data class TextRes(@StringRes val id: Int, val args: List<Any> = emptyList())

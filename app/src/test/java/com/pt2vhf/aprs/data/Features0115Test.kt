@@ -4,7 +4,7 @@ import com.pt2vhf.aprs.R
 import com.pt2vhf.aprs.UiTextKeys
 import com.pt2vhf.aprs.core.AprsMessage
 import com.pt2vhf.aprs.service.AudioTnc
-import com.pt2vhf.aprs.service.UsbTnc
+import com.pt2vhf.aprs.service.UsbSerialTnc as UsbTnc
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
