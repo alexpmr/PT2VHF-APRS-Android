@@ -1895,6 +1895,30 @@ gerais (CQ) e nos boletins.
 aparece inteiro e legível no campo.
 - **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
 
+**REABERTO — P1 (10/11/2026, v0.1.13):** a correção da v0.1.10 QA (`heightIn(min = 56.dp)`, cor `Pal.text`,
+1 a 4 linhas) **não resolveu**. Novo relato: _"Veja como não consigo ler o que estou escrevendo ao enviar uma
+mensagem."_ Captura: [item56-reaberto-v0113.png](docs/relatos/item56-reaberto-v0113.png) (conversa com PT2YW-9,
+teclado aberto; o campo virou uma faixa fina e só se vê um traço/cursor).
+
+**Causa provável (análise do código, a confirmar no aparelho):** não é cor nem altura mínima do campo, e sim
+**falta de altura na tela**. Com o teclado aberto sobram cerca de 330 dp, e quase tudo é ocupado por elementos
+fixos: `TopBar()` global (indicativo + "PT2VHF APRS Client for Android" em duas linhas + Enviar beacon + linha de
+chips), barra Voltar/contato, linha "Para:" e a `NavigationBar` inferior, que continua visível acima do teclado.
+Na `Column` de `Conversation()`, os filhos sem peso são medidos com a altura que resta; quando ela acaba, o
+último (o compositor) recebe uma altura máxima menor que 56 dp e o `heightIn(min)` é ignorado, porque não pode
+passar do limite que o pai impõe. O histórico (`weight(1f)`) já fica com zero.
+
+**Correção exigida (prioridade: o texto digitado tem de ficar legível):**
+- Com o teclado aberto, **esconder a `NavigationBar`** e reduzir o `TopBar()` global a uma linha (ou escondê-lo)
+  na aba Mensagens; ver #28 e #65, que tratam do mesmo espaço e devem ser feitos juntos.
+- Reservar altura para o compositor **antes** do histórico (o histórico é que encolhe), com no mínimo 1 linha
+  inteira visível e crescimento até 4 linhas.
+- A linha "Para:" pode virar dica do campo com o teclado aberto (o destino continua visível, #20).
+- Teste automatizado de layout (Compose UI test) simulando altura pequena (ex.: 320 dp de altura útil) que
+  verifique que o texto digitado aparece inteiro.
+**Critério de aceite:** no aparelho do relato e em 320/360/412 dp, fonte 100%/130%, teclado aberto, conversa,
+Geral e Boletins: o texto digitado aparece inteiro e legível enquanto se digita.
+
 ### 57. Mensagens: balões no estilo WhatsApp com 1 ou 2 checks verdes
 _Solicitado em 06/11/2026: "Backlog: formato das mensagens estilo whatsapp, com 1 ou 2 checks verdes"_
 
