@@ -1882,6 +1882,7 @@ não toca por padrão; reenvio do mesmo ID não toca de novo.
 
 ### 56. Mensagens: texto digitado não aparece no campo de escrever
 **Status 0.1.14:** corrigido na 0.1.14: a causa era a janela não repassar a altura do teclado ao Compose (WindowInsets.ime = 0); agora cabeçalho e barra inferior somem e o campo tem sempre uma linha inteira. Aguarda teste em aparelho.
+**Validado em aparelho (10/11/2026):** Alex testou a 0.1.14 e aprovou o tamanho do campo de envio de mensagens ("ficou bom").
 
 _Solicitado em 06/11/2026: "Backlog: Quando escrevo msg, não consigo ler o que estou escrevendo"_ — print:
 [item56-campo-mensagem-ilegivel.png](docs/inspiracao/item56-campo-mensagem-ilegivel.png)
