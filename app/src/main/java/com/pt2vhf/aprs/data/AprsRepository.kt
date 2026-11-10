@@ -237,6 +237,20 @@ object AprsRepository {
         }
     }
 
+    /**
+     * #58.6: pacotes guardados de uma estação (e definições de telemetria para ela), mais recentes
+     * primeiro, somando os que ainda estão só na memória. Lido na fila de disco, depois das gravações.
+     */
+    suspend fun stationPackets(call: String, limit: Int = 5000): List<PacketLogEntry> {
+        val live = _packetLog.value.filter { belongsToStation(it, call) }
+        val store = packetLogStore ?: return live
+        val stored = withContext(Dispatchers.IO) {
+            runCatching { diskWorker.submit<List<PacketLogEntry>> { store.readForStation(call, limit) }.get() }
+                .getOrElse { emptyList() }
+        }
+        return (live + stored).distinctBy { it.id }.sortedByDescending { it.time }.take(limit)
+    }
+
     fun packetLogCount(): Long = packetLogStore?.count() ?: 0L
 
     // ---------- Meus objetos (#48) ----------

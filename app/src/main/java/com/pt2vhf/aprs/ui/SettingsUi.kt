@@ -61,6 +61,7 @@ import com.pt2vhf.aprs.core.formatVoiceFrequency
 import com.pt2vhf.aprs.core.validHostPort
 import com.pt2vhf.aprs.data.AprsRepository
 import com.pt2vhf.aprs.data.Settings
+import com.pt2vhf.aprs.data.MapIconSize
 import com.pt2vhf.aprs.data.UpdateCheck
 import kotlinx.coroutines.launch
 
@@ -182,6 +183,7 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
     var courseSpeed by remember { mutableStateOf(current.sendCourseSpeed) }
     var altitude by remember { mutableStateOf(current.sendAltitude) }
     var keepScreen by remember { mutableStateOf(current.keepScreenOn) }
+    var mapIconSize by remember { mutableStateOf(MapIconSize.fromKey(Settings.readOption(context, MapIconSize.OPTION_KEY, "medium"))) }
     var maxAge by remember { mutableStateOf(current.stationMaxAgeHours) }
     var notifyMsg by remember { mutableStateOf(current.notifyMessages) }
     var monitorOn by remember { mutableStateOf(current.monitorEnabled) }
@@ -463,6 +465,15 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
                 Text(UiText.text(R.string.station_max_age), fontSize = 13.sp)
                 Choices(listOf(0, 1, 6, 24, 72, 168).map { it to (if (it == 0) UiText.text(R.string.filter_all) else UiText.text(R.string.hours_n, it)) },
                     maxAge) { maxAge = it }
+                // #63: tamanho dos ícones no mapa, salvo na hora (vale ao voltar para o mapa).
+                Text(UiText.text(R.string.map_icon_size), fontSize = 13.sp)
+                Choices(listOf(MapIconSize.SMALL to UiText.text(R.string.map_icon_small),
+                    MapIconSize.MEDIUM to UiText.text(R.string.map_icon_medium),
+                    MapIconSize.LARGE to UiText.text(R.string.map_icon_large)), mapIconSize) {
+                    mapIconSize = it
+                    Settings.saveOption(context, MapIconSize.OPTION_KEY, it.key)
+                    MapIconPrefs.changed.value = it
+                }
 
                 // ----- Notificações e alertas (#6, #12) -----
                 SectionTitle(UiText.text(R.string.notifications_section))

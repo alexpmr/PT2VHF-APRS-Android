@@ -195,8 +195,9 @@ fun App(onExit: () -> Unit) {
         }
 
         selectedStation?.let { call ->
-            StationDialog(call, onDismiss = { selectedStation = null }, onMessage = {
-                selectedStation = null; chatWith = call; replyToId = null; tab = Tab.MESSAGES
+            // #58.6: ficha completa em tela cheia (substitui o diálogo simples).
+            StationSheet(call, onDismiss = { selectedStation = null }, onMessage = { target ->
+                selectedStation = null; chatWith = target; replyToId = null; tab = Tab.MESSAGES
             })
         }
         if (showSettings) {
