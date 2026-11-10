@@ -20,6 +20,17 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.runtime.derivedStateOf
+import com.pt2vhf.aprs.data.followNewestAtEnd
+import com.pt2vhf.aprs.data.followNewestAtTop
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -71,6 +82,7 @@ import com.pt2vhf.aprs.data.matchesMessage
 import com.pt2vhf.aprs.data.searchCallsigns
 import com.pt2vhf.aprs.service.AprsService
 import java.util.UUID
+import kotlinx.coroutines.launch
 
 // ---------- Mensagens ----------
 
@@ -136,8 +148,9 @@ fun MessagesScreen(
         }
         deleteResult?.let { Text(it, color = Pal.muted, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 12.dp)) }
         TabRow(selectedTabIndex = tab, containerColor = Pal.bar, contentColor = Pal.accent) {
-            listOf(UiText.text(R.string.chats), UiText.text(R.string.general), UiText.text(R.string.bulletins)).forEachIndexed { i, label ->
-                Tab(selected = tab == i, onClick = { tab = i }, text = { Text(label) })
+            listOf(UiText.text(R.string.chats), UiText.text(R.string.general), UiText.text(R.string.bulletins),
+                UiText.text(R.string.community)).forEachIndexed { i, label ->
+                Tab(selected = tab == i, onClick = { tab = i }, text = { Text(label, maxLines = 1, fontSize = 13.sp) })
             }
         }
         when (tab) {
@@ -148,7 +161,23 @@ fun MessagesScreen(
                     Button(onClick = { newChatOpen = true }) { Text("✉ " + UiText.text(R.string.new_message)) }
                 }
                 if (byContact.isEmpty()) Empty(UiText.text(if (criteria.active) R.string.no_chats_filtered else R.string.no_chats))
-                LazyColumn {
+                // #64: mensagem nova aparece na hora; se a pessoa rolou para baixo, aviso "nova mensagem ↑".
+                val listState = rememberLazyListState()
+                val newestKey = byContact.firstOrNull()?.let { (c, l) -> c + "#" + l.maxOf { m -> m.id } }
+                var unseenTop by remember { mutableStateOf(false) }
+                LaunchedEffect(newestKey, newestFirst) {
+                    if (newestKey == null) return@LaunchedEffect
+                    if (!newestFirst) {
+                        if (byContact.isNotEmpty()) listState.scrollToItem(byContact.size - 1)
+                    } else if (followNewestAtTop(listState.firstVisibleItemIndex)) {
+                        listState.scrollToItem(0); unseenTop = false
+                    } else unseenTop = true
+                }
+                val atTop by remember { derivedStateOf { listState.firstVisibleItemIndex == 0 } }
+                LaunchedEffect(atTop) { if (atTop) unseenTop = false }
+                val pillScope = androidx.compose.runtime.rememberCoroutineScope()
+                Box(Modifier.fillMaxSize()) {
+                LazyColumn(state = listState) {
                     items(byContact, key = { it.first }) { (contact, list) ->
                         val last = list.maxBy { it.time }
                         Column(Modifier.fillMaxWidth().clickable { onOpenChat(contact, null) }.padding(16.dp, 12.dp)) {
@@ -161,7 +190,13 @@ fun MessagesScreen(
                         }
                     }
                 }
+                if (unseenTop) NewMessagePill("↑ " + UiText.text(R.string.new_message_arrived), Modifier.align(Alignment.TopCenter)) {
+                    unseenTop = false
+                    pillScope.launch { listState.animateScrollToItem(0) }
+                }
+                }
             }
+            3 -> CommunityScreen(settings, onStation)
             else -> {
                 val list = messages.filter {
                     if (tab == 1) it.kind == AprsMessage.Kind.MESSAGE && (it.to == "CQ" || it.to.startsWith("CQ"))
@@ -258,6 +293,9 @@ private fun NewMessageDialog(settings: Settings, onDismiss: () -> Unit, onOpen: 
                     label = { Text(UiText.text(R.string.search_callsign_part)) },
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
                     modifier = Modifier.fillMaxWidth())
+                // #59: destino que não parece indicativo é só avisado (CQ, BLN, objetos e serviços continuam válidos).
+                if (manual.isNotBlank() && CALLSIGN_RE.matches(manual) && !com.pt2vhf.aprs.core.plausibleAmateurCallsign(manual))
+                    Text(UiText.text(R.string.dest_not_callsign), color = Pal.muted, fontSize = 12.sp)
                 if (query.isNotBlank() && hits.isEmpty())
                     Text(UiText.text(R.string.search_no_results), color = Pal.muted, fontSize = 13.sp)
                 LazyColumn(Modifier.heightIn(max = 320.dp)) {
@@ -380,6 +418,7 @@ private fun Composer(
     destination: String,
     replyContext: ChatMessage?,
     onCancelReply: () -> Unit,
+    showDestination: Boolean = true,
     onSend: (String, String) -> Unit,
 ) {
     var text by rememberSaveable(placeholder) { mutableStateOf("") }
@@ -421,32 +460,37 @@ private fun Composer(
                 modifier = Modifier.weight(1f))
             TextButton(onClick = onCancelReply) { Text("✕") }
         }
-        Text(UiText.text(R.string.message_destination, destination), color = Pal.muted, fontSize = 11.sp,
-            modifier = Modifier.padding(horizontal = 12.dp))
-        error?.let { Text(it, color = Pal.orange, modifier = Modifier.padding(horizontal = 12.dp)) }
-        Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(text, { text = it; error = null }, placeholder = { Text(placeholder) },
-                modifier = Modifier.weight(1f).heightIn(min = 56.dp),
+        // #65: "Para:" só nos chats de grupo (na conversa o contato já está no cabeçalho), em linha pequena.
+        if (showDestination) Text(UiText.text(R.string.message_destination, destination), color = Pal.muted, fontSize = 10.sp,
+            maxLines = 1, modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 2.dp))
+        error?.let { Text(it, color = Pal.orange, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 12.dp)) }
+        if (text.length > 67) Text(UiText.text(R.string.message_split_notice, (text.length + 66) / 67), fontSize = 11.sp,
+            color = Pal.muted, modifier = Modifier.padding(horizontal = 12.dp))
+        Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 2.dp, top = 2.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            // #56: o campo fica com no mínimo uma linha inteira e cresce até 5; o histórico é que encolhe.
+            OutlinedTextField(text, { text = it; error = null }, placeholder = { Text(placeholder, maxLines = 1,
+                overflow = TextOverflow.Ellipsis) },
+                modifier = Modifier.weight(1f).heightIn(min = 52.dp),
                 textStyle = androidx.compose.ui.text.TextStyle(color = Pal.text, fontSize = 16.sp),
-                minLines = 1, maxLines = 4,
-                supportingText = if (text.length > 67) {
-                    { Text(UiText.text(R.string.message_split_notice, (text.length + 66) / 67), fontSize = 11.sp) }
-                } else null)
-            Button(onClick = {
+                minLines = 1, maxLines = 5)
+            val sending = pendingId != null
+            IconButton(onClick = {
                 if (text.isNotBlank() && pendingId == null) {
                     val id = UUID.randomUUID().toString()
                     pendingId = id
                     pendingText = text
                     onSend(text, id)
                 }
-            }, enabled = pendingId == null, modifier = Modifier.padding(start = 4.dp)) {
-                Text(UiText.text(R.string.send))
+            }, enabled = !sending && text.isNotBlank(), modifier = Modifier.size(48.dp)) {
+                if (sending) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp, color = Pal.accent)
+                else Icon(Icons.AutoMirrored.Filled.Send, contentDescription = UiText.text(R.string.send),
+                    tint = if (text.isNotBlank()) Pal.accent else Pal.muted)
             }
         }
     }
 }
 
-private fun dispatchMessage(context: android.content.Context, to: String, text: String, requestId: String, replyTo: Long?) {
+internal fun dispatchMessage(context: android.content.Context, to: String, text: String, requestId: String, replyTo: Long?) {
     val extras = mutableMapOf(AprsService.EXTRA_TO to to, AprsService.EXTRA_TEXT to text,
         AprsService.EXTRA_REQUEST_ID to requestId)
     if (replyTo != null) extras[AprsService.EXTRA_REPLY_TO] = replyTo.toString()
@@ -456,13 +500,14 @@ private fun dispatchMessage(context: android.content.Context, to: String, text: 
 }
 
 @Composable
-private fun Conversation(
+internal fun Conversation(
     settings: Settings,
     contact: String,
     replyToId: Long?,
     onReplyChange: (Long?) -> Unit,
     onBack: () -> Unit,
     onStation: (String) -> Unit,
+    showHeader: Boolean = true,
 ) {
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
@@ -481,16 +526,22 @@ private fun Conversation(
     }
     val clock = maxOf(minuteClock(), tick)
     val state = rememberLazyListState()
-    LaunchedEffect(list.size) { if (list.isNotEmpty()) state.animateScrollToItem(list.size - 1) }
+    val unseen = followNewest(state, list)
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     Column(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth().background(Pal.bar).padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onBack) { Text(UiText.text(R.string.back)) }
-            Column(Modifier.weight(1f).clickable { onStation(contact) }) {
-                Text(contact, fontWeight = FontWeight.Bold)
-                stations[contact]?.let { Text("${it.medium.label} · ${ago(it.lastHeard)}", color = Pal.green, fontSize = 12.sp) }
+        // #65: barra da conversa baixa, com Voltar em ícone na mesma linha do contato.
+        if (showHeader) Row(Modifier.fillMaxWidth().background(Pal.bar).padding(end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = UiText.text(R.string.back), tint = Pal.accent)
+            }
+            Row(Modifier.weight(1f).clickable { onStation(contact) }, verticalAlignment = Alignment.CenterVertically) {
+                Text(contact, fontWeight = FontWeight.Bold, maxLines = 1)
+                stations[contact]?.let { Text("  ${it.medium.label} · ${ago(it.lastHeard)}", color = Pal.green, fontSize = 12.sp,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis) }
             }
         }
-        LazyColumn(Modifier.weight(1f).padding(horizontal = 12.dp), state = state, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Box(Modifier.weight(1f)) {
+        LazyColumn(Modifier.fillMaxSize().padding(horizontal = 12.dp), state = state, verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(list, key = { it.id }) { m ->
                 val actions = if (m.outgoing) listOfNotNull(
                     BubbleAction.RESEND.takeIf { canResend(m) && !settings.rxOnly },
@@ -510,9 +561,15 @@ private fun Conversation(
                 }
             }
         }
+        if (unseen.value) NewMessagePill("↓ " + UiText.text(R.string.new_message_arrived), Modifier.align(Alignment.BottomCenter)) {
+            unseen.value = false
+            scope.launch { if (list.isNotEmpty()) state.animateScrollToItem(list.size - 1) }
+        }
+        }
         if (contact == settings.fullCall) Text(UiText.text(R.string.cannot_message_self), color = Pal.orange,
             modifier = Modifier.padding(12.dp))
-        else Composer(UiText.text(R.string.message_to, contact), contact, replyContext, { onReplyChange(null) }) { message, requestId ->
+        else Composer(UiText.text(R.string.message_to, contact), contact, replyContext, { onReplyChange(null) },
+            showDestination = false) { message, requestId ->
             dispatchMessage(context, contact, message, requestId, replyContext?.id)
         }
     }
@@ -533,10 +590,12 @@ private fun GroupChat(
     val publicReply = list.firstOrNull { it.id == publicReplyId }
     val isCq = defaultTo == "CQ"
     val clock = minuteClock()
-    LaunchedEffect(list.size) { if (list.isNotEmpty()) state.animateScrollToItem(list.size - 1) }
+    val unseen = followNewest(state, list, settings.fullCall)
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     Column(Modifier.fillMaxSize()) {
         if (list.isEmpty()) Empty(if (isCq) UiText.text(R.string.no_general) else UiText.text(R.string.no_bulletins))
-        LazyColumn(Modifier.weight(1f).padding(horizontal = 12.dp), state = state, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Box(Modifier.weight(1f)) {
+        LazyColumn(Modifier.fillMaxSize().padding(horizontal = 12.dp), state = state, verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(list, key = { it.id }) { m ->
                 val mine = m.outgoing || m.from == settings.fullCall
                 val actions = when {
@@ -556,6 +615,11 @@ private fun GroupChat(
                 }
             }
         }
+        if (unseen.value) NewMessagePill("↓ " + UiText.text(R.string.new_message_arrived), Modifier.align(Alignment.BottomCenter)) {
+            unseen.value = false
+            scope.launch { if (list.isNotEmpty()) state.animateScrollToItem(list.size - 1) }
+        }
+        }
         Composer(
             if (isCq) UiText.text(R.string.message_all) else UiText.text(R.string.bulletin_default),
             if (isCq) UiText.text(R.string.destination_public_cq) else UiText.text(R.string.destination_bulletin),
@@ -572,4 +636,34 @@ internal fun OutlinedChoice(label: String, selected: Boolean, onClick: () -> Uni
         if (selected) Pal.green else Pal.line)) {
         Text(label, color = if (selected) Pal.green else Pal.muted, fontSize = 12.sp)
     }
+}
+
+/** #64: aviso flutuante de mensagem nova fora da área visível. */
+@Composable
+internal fun NewMessagePill(label: String, modifier: Modifier, onClick: () -> Unit) {
+    Text(label, color = Pal.ground, fontSize = 13.sp, fontWeight = FontWeight.Bold,
+        modifier = modifier.padding(8.dp).background(Pal.accent, RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 6.dp))
+}
+
+/**
+ * #64: rola até a mensagem nova quando a pessoa já está no fim (ou quando ela mesma enviou);
+ * senão devolve true no estado para mostrar o aviso "nova mensagem ↓".
+ */
+@Composable
+private fun followNewest(state: LazyListState, list: List<ChatMessage>, ownCall: String? = null): androidx.compose.runtime.MutableState<Boolean> {
+    val unseen = remember { mutableStateOf(false) }
+    val lastId = list.lastOrNull()?.id
+    val lastMine = list.lastOrNull()?.let { it.outgoing || (ownCall != null && it.from == ownCall) } ?: false
+    LaunchedEffect(lastId) {
+        if (lastId == null) return@LaunchedEffect
+        val info = state.layoutInfo
+        val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: -1
+        if (followNewestAtEnd(lastVisible, info.totalItemsCount, lastMine)) {
+            state.scrollToItem(list.size - 1); unseen.value = false
+        } else unseen.value = true
+    }
+    val atEnd by remember { derivedStateOf { !state.canScrollForward } }
+    LaunchedEffect(atEnd) { if (atEnd) unseen.value = false }
+    return unseen
 }

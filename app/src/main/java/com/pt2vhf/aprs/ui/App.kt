@@ -19,6 +19,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -180,7 +185,8 @@ fun App(onExit: () -> Unit) {
                 }
             },
         ) { padding ->
-            Box(Modifier.padding(padding).fillMaxSize()) {
+            // #56: o teclado empurra só o conteúdo (imePadding), uma vez, depois das barras do sistema.
+            Box(Modifier.padding(padding).consumeWindowInsets(padding).imePadding().fillMaxSize()) {
                 when (tab) {
                     Tab.MAP -> MapScreen(settings, onStation = { selectedStation = it }, onSettingsChanged = { settings = it })
                     Tab.MESSAGES -> MessagesScreen(settings, chatWith, replyToId,
@@ -256,7 +262,7 @@ fun App(onExit: () -> Unit) {
             )
         }
         if (carMode) {
-            Box(Modifier.fillMaxSize().background(Pal.ground)) { CarModeScreen(settings, onExit = { carMode = false }) }
+            Box(Modifier.fillMaxSize().background(Pal.ground).systemBarsPadding()) { CarModeScreen(settings, onExit = { carMode = false }) }
         }
     }
 }
@@ -287,17 +293,19 @@ private fun TopBar(settings: Settings, onSettings: () -> Unit, onRadio: () -> Un
             }
         }
     }
+    // #65: cabeçalho compacto (só o indicativo, sem o nome do app) em duas linhas baixas.
     Column(
-        Modifier.fillMaxWidth().background(Pal.bar).statusBarsPadding().padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        Modifier.fillMaxWidth().background(Pal.bar).statusBarsPadding().padding(start = 12.dp, end = 4.dp, top = 2.dp, bottom = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
+            Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                 Text(if (settings.configured) settings.fullCall else UiText.text(R.string.configure_callsign),
-                    fontWeight = FontWeight.Bold, fontSize = 17.sp, color = Pal.text)
-                Text(if (settings.rxOnly) "PT2VHF APRS Client for Android · " + UiText.text(R.string.profile_rx)
-                    else "PT2VHF APRS Client for Android", fontSize = 12.sp,
-                    color = if (settings.rxOnly) Pal.orange else Pal.muted)
+                    fontWeight = FontWeight.Bold, fontSize = 17.sp, color = Pal.text, maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                if (settings.rxOnly) Text(UiText.text(R.string.profile_rx), color = Pal.orange, fontSize = 11.sp, maxLines = 1,
+                    modifier = Modifier.padding(start = 6.dp).border(1.dp, Pal.orange, RoundedCornerShape(6.dp))
+                        .padding(horizontal = 4.dp, vertical = 1.dp))
             }
             val beaconColor = when {
                 pendingBeaconId != null -> Pal.blue
@@ -318,14 +326,16 @@ private fun TopBar(settings: Settings, onSettings: () -> Unit, onRadio: () -> Un
                     }
                 },
                 enabled = settings.configured && !settings.rxOnly && status.lat != null && pendingBeaconId == null,
-                border = androidx.compose.foundation.BorderStroke(2.dp, beaconColor),
+                border = androidx.compose.foundation.BorderStroke(1.5.dp, beaconColor),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = beaconColor),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                modifier = Modifier.heightIn(min = 36.dp).height(36.dp),
             ) {
                 Text(UiText.text(when {
                     pendingBeaconId != null -> R.string.beacon_sending
                     beaconFailed -> R.string.beacon_failed
                     else -> R.string.send_beacon
-                }), fontWeight = FontWeight.SemiBold)
+                }), fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1)
             }
             if (updateAvailable) TextButton(onClick = onUpdate) {
                 Text("⬆", color = Pal.yellow, fontSize = 18.sp, fontWeight = FontWeight.Bold,
@@ -333,7 +343,7 @@ private fun TopBar(settings: Settings, onSettings: () -> Unit, onRadio: () -> Un
             }
             IconButton(onClick = onSettings) { Icon(Icons.Filled.Settings, contentDescription = UiText.text(R.string.settings), tint = Pal.text) }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Chip("APRS-IS", status.aprsIsVerified, onClick = {
                 AprsService.send(context, if (status.aprsIsConnected)
                     AprsService.ACTION_APRS_DISCONNECT else AprsService.ACTION_APRS_CONNECT)
@@ -357,7 +367,7 @@ fun Chip(text: String, ok: Boolean, onClick: (() -> Unit)? = null) {
         Modifier.background(if (ok) Pal.greenBg else Color(0xFF3A1A23), RoundedCornerShape(14.dp))
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .semantics { contentDescription = "$text: ${if (ok) "connected" else "disconnected"}" }
-            .padding(horizontal = 10.dp, vertical = 9.dp),
+            .padding(horizontal = 10.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(8.dp).background(if (ok) Color(0xFF3CCF7C) else Color(0xFFF26F70), CircleShape))

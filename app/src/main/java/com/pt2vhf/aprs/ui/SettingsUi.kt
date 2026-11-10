@@ -258,7 +258,10 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
         val portN = port.toIntOrNull() ?: -1
         val full = if (ssidN in 1..15) "$base-$ssidN" else base
         if (!force) when {
-            !plausibleAmateurCallsign(full) || ssidN !in 0..15 -> { error = UiText.text(R.string.invalid_call); return null }
+            !plausibleAmateurCallsign(full) || ssidN !in 0..15 -> {
+                error = UiText.text(R.string.invalid_call) + "\n" + callsignHint(com.pt2vhf.aprs.core.checkAmateurCallsign(full))
+                return null
+            }
             !validHostPort(server, portN) -> { error = UiText.text(R.string.invalid_server); return null }
             symbol.length != 2 -> { error = UiText.text(R.string.invalid_symbol); return null }
             voiceFreq.isNotBlank() && formatVoiceFrequency(voiceFreq) == null -> {
@@ -350,6 +353,12 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
                     OutlinedTextField(ssid, { ssid = it.filter(Char::isDigit).take(2) }, label = { Text("SSID") }, singleLine = true,
                         modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
                 }
+                // #59: país pelo prefixo ITU ou motivo da recusa, enquanto digita; aviso se o salvo é inválido.
+                val callCheck = remember(call) { com.pt2vhf.aprs.core.checkAmateurCallsign(call) }
+                if (call.isNotBlank()) Text(callsignHint(callCheck), fontSize = 12.sp,
+                    color = if (callCheck.ok) Pal.green else Pal.orange)
+                if (current.callsign.isNotBlank() && !current.configured)
+                    Text(UiText.text(R.string.saved_call_invalid, current.callsign), color = Pal.orange, fontSize = 12.sp)
                 Text(UiText.text(R.string.passcode, passcode), color = Pal.muted, fontSize = 12.sp)
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     val drawable = remember(symbol) {
@@ -590,8 +599,13 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
             title = { Text(UiText.text(R.string.backup_confirm_title)) },
             text = {
                 Column {
-                    Text(UiText.text(R.string.backup_confirm_body, preview.callsign.ifBlank { "—" }, preview.keys,
+                    if (preview.fromAprsDroid)
+                        Text(UiText.text(R.string.aprsdroid_import_body, preview.callsign.ifBlank { "—" }, preview.keys, preview.ignored))
+                    else Text(UiText.text(R.string.backup_confirm_body, preview.callsign.ifBlank { "—" }, preview.keys,
                         preview.appVersion.ifBlank { "?" }, preview.messages))
+                    // #59/#50: indicativo do arquivo também passa pela validação; inválido não conecta.
+                    if (preview.callsign.isNotBlank() && !plausibleAmateurCallsign(preview.callsign))
+                        Text(UiText.text(R.string.saved_call_invalid, preview.callsign), color = Pal.orange, fontSize = 12.sp)
                     if (preview.messages > 0) CheckRow(UiText.text(R.string.backup_import_messages), importMessages) { importMessages = it }
                 }
             },
@@ -645,4 +659,13 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
             },
         )
     }
+}
+
+/** #59: texto curto do resultado da validação do indicativo. */
+private fun callsignHint(c: com.pt2vhf.aprs.core.CallsignCheck): String = when {
+    c.ok -> UiText.text(R.string.call_country, (com.pt2vhf.aprs.core.flagEmoji(c.country) + " " +
+        (com.pt2vhf.aprs.core.countryName(c.country, UiText.locale()) ?: "?")).trim())
+    c.problem == com.pt2vhf.aprs.core.CallsignProblem.PREFIX -> UiText.text(R.string.call_bad_prefix, c.prefix ?: "?")
+    c.problem == com.pt2vhf.aprs.core.CallsignProblem.SSID -> UiText.text(R.string.call_bad_ssid)
+    else -> UiText.text(R.string.call_bad_format)
 }
