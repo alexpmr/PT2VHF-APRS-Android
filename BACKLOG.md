@@ -4,6 +4,9 @@ Itens registrados para as próximas versões. Não implementar até o pedido de 
 
 ## Onde estamos (10/11/2026)
 
+- **v0.1.14** (10/11/2026, autorizada pelo mantenedor: "Implemente os 4 itens e gere uma nova versão"): pacote de
+  Mensagens (#56/#64/#65/#28), #59 com tabela ITU, #58.3/#58.4/#58.5, #66/#67/#69/#70 (PR #21). **#68 Android Auto ficou
+  de fora.** Itens aguardam teste físico e OK do mantenedor.
 - Última versão **publicada**: **v0.1.13** (10/11/2026, beta, autorizada pelo mantenedor como "versão completa para
   todos"): reúne as QA 0.1.10 a 0.1.12 (#54/#56/#57/#59 parcial/#60/#61/#62, WX) e #58.6 + #63 (PRs #15, #16, #17, #19).
   #60 e #62 ainda dependem de teste em aparelho. Anterior: v0.1.9 (05/11/2026).
@@ -1122,6 +1125,8 @@ possível afirmar a causa exata somente pela captura**.
 - **Status:** backlog registrado; correção e homologação pendentes.
 
 ### 28. Mensagens: otimizar o espaço da tela com teclado aberto
+**Status 0.1.14:** implementado na 0.1.14 junto com #56/#65 (teclado repassado à tela, cabeçalho/barra somem com o teclado). Aguarda teste T28 em aparelho.
+
 _Solicitado em 31/10/2026; relato com captura de interface comprimida ao enviar mensagens._
 
 **Diagnóstico do layout atual:** `App.kt` mantém `TopBar()`
@@ -1876,6 +1881,8 @@ não toca por padrão; reenvio do mesmo ID não toca de novo.
 - **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
 
 ### 56. Mensagens: texto digitado não aparece no campo de escrever
+**Status 0.1.14:** corrigido na 0.1.14: a causa era a janela não repassar a altura do teclado ao Compose (WindowInsets.ime = 0); agora cabeçalho e barra inferior somem e o campo tem sempre uma linha inteira. Aguarda teste em aparelho.
+
 _Solicitado em 06/11/2026: "Backlog: Quando escrevo msg, não consigo ler o que estou escrevendo"_ — print:
 [item56-campo-mensagem-ilegivel.png](docs/inspiracao/item56-campo-mensagem-ilegivel.png)
 (conversa com PT2ATC-1, teclado aberto; o teclado sugere "Tes/Teste", mas no campo só aparece o cursor).
@@ -1946,6 +1953,8 @@ _Solicitado em 06/11/2026: "Backlog: formato das mensagens estilo whatsapp, com 
 - **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
 
 ### 58. Estações, ficha da estação e comunidade inspiradas no app APRS World
+**Status 0.1.14:** abas Trilha e Mensagens da ficha (58.4), painel de filtros (58.3) e Comunidade (58.5) implementados; chips de tipo com contagem sobre o mapa e busca por lugar (58.1) ainda não. Aguarda teste em aparelho.
+
 _Solicitado em 06/11/2026: "Backlog: Aproveite os recursos do aprs world para colocar neste aplicativo. Algumas telas de exemplo"_ —
 12 prints de referência em `docs/inspiracao/item58-*.png`:
 [mapa](docs/inspiracao/item58-mapa.png), [lista](docs/inspiracao/item58-lista-estacoes.png),
@@ -2102,6 +2111,8 @@ participantes e países de uma rodada. Nenhum elemento visual copiado do app de 
   Aguarda CI, teste físico e OK do mantenedor; nenhuma versão publicada.
 
 ### 59. Indicativo: aceitar só indicativos de radioamador válidos no mundo
+**Status 0.1.14:** implementado na 0.1.14: tabela de blocos de prefixos da ITU embarcada, motivo da recusa, país do prefixo, aviso de indicativo salvo/backup inválido e aviso (sem bloqueio) para destinos táticos. Estado (c), cadastro oficial, não implementado.
+
 _Solicitado em 07/11/2026: "Backlog: Permitir apenas indicativos válidos no mundo, para evitar de qualquer pessoa escrever uma palavra e o app aceitar."_
 
 **Como está hoje (v0.1.9):** Configurações valida o indicativo só com `CALLSIGN_RE`
@@ -2329,6 +2340,8 @@ com overlay; capturas anexadas; toque correto em estações próximas; rolagem f
 - Numeração: o **#62** está reservado ao P0 registrado na PR #16 (v0.1.10/0.1.12 QA), por isso este item é o #63.
 
 ### 64. Mensagens: tela não atualiza sozinha com mensagens novas
+**Status 0.1.14:** implementado na 0.1.14: listas acompanham a mensagem nova ou mostram "Nova mensagem ↑/↓". Aguarda teste em aparelho (inclusive com tela desligada).
+
 _Relatado em 10/11/2026 (v0.1.13): "tela de mensagens não está atualizando em background. Só atualiza quando eu
 mudo para outra aba como mapa e volto."_
 
@@ -2370,6 +2383,8 @@ chegada de mensagem com a lista rolada.
 - **Status:** registrado em 10/11/2026; não implementado.
 
 ### 65. Mensagens: tela mais compacta (cabeçalho menor e ícone de enviar)
+**Status 0.1.14:** implementado na 0.1.14: cabeçalho em duas linhas baixas só com o indicativo, Voltar e Enviar em ícone. Aguarda captura antes/depois em aparelho.
+
 _Solicitado em 10/11/2026 (v0.1.13), com [captura](docs/relatos/item65-mensagens.png) de uma conversa aberta:
 "otimize essa tela para caber mais coisas. A parte superior está ocupando 1/4 de toda a tela. Não precisa da
 descrição da estação, só do indicativo dela. 'enviar' pode ser substituído por um ícone pequeno, de enviar,
@@ -2407,6 +2422,8 @@ funcionando.
 - **Status:** registrado em 10/11/2026; não implementado.
 
 ### 66. Mapa: agrupar estações em áreas cheias
+**Status 0.1.14:** implementado na 0.1.14 (camada "Agrupar estações próximas", ligada por padrão). Aguarda teste em aparelho.
+
 _Registrado em 10/11/2026 a partir das ideias do APRS World aprovadas pelo mantenedor ("Implemente os 4 itens")._
 
 - Com muitas estações próximas, juntar os ícones que se sobrepõem num **círculo com a contagem** conforme o zoom;
@@ -2416,6 +2433,8 @@ _Registrado em 10/11/2026 a partir das ideias do APRS World aprovadas pelo mante
 - **Teste:** unidade do agrupamento (grade em pixels por zoom, estações isoladas continuam soltas).
 
 ### 67. Mapa: camada de clima com as estações meteorológicas
+**Status 0.1.14:** implementado na 0.1.14 (camada "Clima", desligada por padrão). Aguarda teste em aparelho.
+
 _Registrado em 10/11/2026 (ideia do APRS World aprovada)._
 
 - Camada opcional que mostra, sobre cada estação WX recebida, a **temperatura** e o **vento** do último relatório
@@ -2424,6 +2443,8 @@ _Registrado em 10/11/2026 (ideia do APRS World aprovada)._
 - **Teste:** unidade da formatação do rótulo (temperatura em °C, vento em km/h e rumo, dado ausente).
 
 ### 68. Android Auto
+**Status 0.1.14:** **não implementado na 0.1.14** (exige biblioteca Car App, aprovação de categoria pelo Google e teste em carro/DHU).
+
 _Registrado em 10/11/2026 (ideia do APRS World aprovada)._
 
 - Tela própria no painel do carro (mapa/lista das estações próximas, última mensagem, beacon agora).
@@ -2432,6 +2453,8 @@ _Registrado em 10/11/2026 (ideia do APRS World aprovada)._
   desenvolvimento (DHU). O "modo carro" atual do app continua valendo enquanto isso.
 
 ### 69. Ferramentas: decodificador de pacote APRS e tabela de frequências
+**Status 0.1.14:** implementado na 0.1.14 (botão 🛠 na aba Logs e "Decodificar" nos detalhes do pacote). Mic-E e posição comprimida ainda só são identificados, não decodificados.
+
 _Registrado em 10/11/2026 (ideia do APRS World aprovada)._
 
 - **Decodificador:** colar ou digitar um pacote bruto (`ORIGEM>DESTINO,PATH:info`) e ver campo a campo: origem,
@@ -2443,6 +2466,8 @@ _Registrado em 10/11/2026 (ideia do APRS World aprovada)._
 - **Teste:** unidade do decodificador com pacotes de posição, Mic-E/sem posição, clima, telemetria e mensagem.
 
 ### 70. Importar configurações do APRSdroid
+**Status 0.1.14:** implementado na 0.1.14 (Configurações → Backup → Importar). Precisa de teste com um arquivo real exportado do APRSdroid.
+
 _Registrado em 10/11/2026 (ideia do APRS World aprovada)._
 
 - Em Configurações → Backup, aceitar também o arquivo de perfil/preferências do APRSdroid e aproveitar o que
