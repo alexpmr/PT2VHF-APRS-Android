@@ -2795,3 +2795,38 @@ não transmitir por RF/APRS-IS sem permissão, otimizar bateria/armazenamento,
 testar com rádio/TNC reais, preservar a separação entre RF comprovado e
 dados APRS-IS e, em cada release, publicar APK assinado + atualização
 coordenada de www.pt2vhf.com/android (incluindo OTA/changelog/contadores).
+
+### 80. SSID alterado "não salva" e volta para -9/-7 (perfis)
+_Relato de usuário (PY2ARS, Mairiporã-SP) repassado pelo mantenedor em 11/11/2026. Bug de usabilidade, P1._
+
+**Relato:** "ele usa -9 ou -7, mas se eu precisar mudar consigo, porém não consigo salvar minha opção. Só fica 7 ou 9".
+
+**Análise do código (0.1.15):** a gravação em si funciona: `Settings.save()` grava a chave `ssid` e também o
+retrato do perfil ativo (`profile_snapshot_<perfil>`, #10). O SSID volta para -9/-7 por três caminhos:
+1. **Cada perfil tem o seu SSID.** Tocar em um perfil (Configurações → Estação, ou a troca rápida no Rastreador)
+   chama `Settings.forProfile()`, que carrega o retrato salvo daquele perfil ou, na primeira vez, o padrão de
+   `presetFor()`: Móvel = -9, Portátil = -7, Base = sem SSID. Quem digita o SSID e depois toca no perfil
+   (o seletor fica acima do campo) perde o que digitou; quem troca de perfil no Rastreador recebe o SSID do outro.
+2. **Tocar no perfil que já está marcado** também recarrega o retrato e apaga o que foi digitado
+   (`loadProfile()` em `ui/SettingsUi.kt` não ignora o perfil atual).
+3. **Voltar (botão/gesto do Android) ou "Cancelar" descarta tudo sem aviso** (`onDismissRequest = onDismiss`
+   no `Dialog` de Configurações). Só o botão **Salvar** no rodapé grava.
+
+**Como contornar hoje (orientação ao usuário):** Configurações → aba Estação → escolher **primeiro** o perfil,
+**depois** digitar o SSID e tocar em **Salvar** no rodapé (não usar Voltar). O SSID fica gravado naquele perfil.
+Não trocar de perfil pelo Rastreador; se trocar, repetir o ajuste uma vez no novo perfil, que passa a lembrar.
+
+**Proposta de correção:**
+1. Tocar no perfil já selecionado não faz nada.
+2. Ao trocar de perfil nas Configurações, preservar o SSID que o usuário digitou nesta edição (só aplicar o
+   SSID do perfil se o campo não foi mexido).
+3. Ao sair das Configurações com alterações não salvas (Voltar/Cancelar), perguntar "Salvar / Descartar / Continuar
+   editando".
+4. Abaixo do campo SSID, dica curta: "Salvo no perfil <nome>". Na confirmação de troca rápida do Rastreador,
+   mostrar o SSID que vai entrar (ex.: "PY2ARS-9 → PY2ARS-7").
+5. Avaliar com o mantenedor: SSID comum a todos os perfis (como o indicativo) em vez de um por perfil.
+6. Textos novos nos 5 idiomas (T66) e teste de unidade de `forProfile()`/retrato preservando SSID personalizado.
+
+**Critérios de aceite:** escolher perfil Móvel, mudar o SSID para -5, salvar, fechar e reabrir o app: continua -5;
+trocar para Portátil e voltar para Móvel: volta -5; tocar de novo em Móvel não altera o campo; Voltar com
+alteração pendente pergunta antes de descartar.
