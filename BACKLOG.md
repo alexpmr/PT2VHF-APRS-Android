@@ -2725,6 +2725,32 @@ rádio usado), para orientar outros usuários; anotar em `HOMOLOGACAO.md` quem t
 **Critérios de aceite:** ICOM ID-5200 citado no README, no site `/android` e em qualquer lista de rádios do app,
 com a forma de conexão correta; sem mudança de código de comunicação.
 
+### 79. Guia "Sobre" com versão, site e radioamadores colaboradores
+_Pedido do mantenedor em 11/11/2026 ("Backlog")._
+
+**Pedido:** ter uma guia **Sobre** que mostre a versão do app, o site oficial e a lista dos radioamadores que
+contribuíram para o melhoramento do app: **PU2PYC, PP5AU, PU2MUS**.
+
+**O que já existe:** não há guia própria. Há só uma **seção "Sobre"** no fim da aba **Sistema** das Configurações
+(`ui/SettingsUi.kt` ~linha 604, criada no #38 e movida no #74), com a versão instalada e a verificação de atualização
+(`UpdateStatusSection()` em `ui/Features019.kt`), o botão "Enviar log" e o link "www.PT2VHF.com"
+(`UpdateCheck.SITE` = https://www.pt2vhf.com/aprs-android). Não existe lista de colaboradores.
+
+**Proposta:**
+1. Criar a 8ª aba **Sobre** nas Configurações (ao lado das 7 do #74) e mover para ela a seção "Sobre" atual:
+   nome do app, versão (`BuildConfig.VERSION_NAME`), verificação de atualização e "Enviar log".
+2. Link clicável para o site **pt2vhf.com/aprs-android** (usar `UpdateCheck.SITE`, sem duplicar a URL).
+3. Seção **Colaboradores** com os indicativos PU2PYC, PP5AU e PU2MUS (lista fácil de ampliar, num único lugar
+   no código). Os indicativos não são traduzidos; o título e a frase de agradecimento, sim.
+4. A aba Sobre não tem campos: o "Salvar" do rodapé não precisa mudar de comportamento ao abri-la.
+5. Textos novos nos 5 idiomas (regra T66).
+
+**Critérios de aceite:** a aba Sobre aparece nas Configurações e mostra a versão instalada correta, o link abre
+o site oficial, os três indicativos aparecem; a aba Sistema deixa de ter a seção Sobre duplicada; nada muda nas
+configurações salvas nem no backup (#50).
+
+**Dependências/relacionados:** itens 38 (Sobre/atualização), 39 (verificação), 74 (abas das Configurações).
+
 ## Consolidação das sugestões aprovadas com itens já existentes
 
 A comparação com o APRSdroid também aprovou os recursos abaixo, que **já estavam
