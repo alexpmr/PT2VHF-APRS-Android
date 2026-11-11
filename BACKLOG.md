@@ -2705,6 +2705,26 @@ ACK/IDs continuam corretos; teste de unidade cobrindo a conversão.
 
 **Dependências/relacionados:** itens 27 (exibição de texto), 50 (backup), 74 (abas das Configurações).
 
+### 78. Rádios compatíveis: incluir o ICOM ID-5200 na lista de rádios que funcionam
+_Pedido do mantenedor em 11/11/2026 ("Backlog")._
+
+**Pedido:** acrescentar o **ICOM ID-5200** à lista de rádios homologados/que funcionam com o app.
+
+**Onde a lista aparece hoje** (Mobilinkd, BTECH UV-Pro, Radtel RT-950 Pro e similares):
+- `README.md`, seção de recursos: "TNC KISS por Bluetooth (Mobilinkd, BTECH UV-Pro, Radtel RT-950 Pro e similares)".
+- `app/src/main/java/com/pt2vhf/aprs/service/Connections.kt`, comentário da classe `BluetoothTnc` (só documentação
+  interna, não aparece para o usuário).
+- Site oficial `alexpmr/PT2VHF-Site`, página `/android` (requisitos/recursos): conferir se repete a lista e
+  atualizar junto, conforme a regra de versão.
+- Não há hoje lista de rádios dentro do app (a dica de USB, `usb_hint` nos 5 idiomas, cita só tipos de chip).
+  Se for criada uma lista visível no app, traduzir nos 5 idiomas (regra T66).
+
+**Observações:** registrar no texto o tipo de conexão usado com o ID-5200 (Bluetooth ou cabo USB, e modo/menu do
+rádio usado), para orientar outros usuários; anotar em `HOMOLOGACAO.md` quem testou e quando.
+
+**Critérios de aceite:** ICOM ID-5200 citado no README, no site `/android` e em qualquer lista de rádios do app,
+com a forma de conexão correta; sem mudança de código de comunicação.
+
 ## Consolidação das sugestões aprovadas com itens já existentes
 
 A comparação com o APRSdroid também aprovou os recursos abaixo, que **já estavam
