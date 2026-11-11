@@ -2820,13 +2820,18 @@ Não trocar de perfil pelo Rastreador; se trocar, repetir o ajuste uma vez no no
 1. Tocar no perfil já selecionado não faz nada.
 2. Ao trocar de perfil nas Configurações, preservar o SSID que o usuário digitou nesta edição (só aplicar o
    SSID do perfil se o campo não foi mexido).
-3. Ao sair das Configurações com alterações não salvas (Voltar/Cancelar), perguntar "Salvar / Descartar / Continuar
-   editando".
+3. **Decisão do mantenedor (11/11/2026):** "Acho que não precisaria pedir para salvar. Todas as alterações começariam
+   a valer ao mudar algum parâmetro, ou ao mudar de aba, perguntar se quer salvar as alterações ou não, algo assim".
+   Ou seja, acabar com a dependência do botão Salvar: cada alteração válida passa a valer ao ser feita (salvamento
+   automático do campo/opção, com validação na hora); para o que exigir confirmação (ex.: retenção que apaga
+   mensagens, filtro vazio, mudança que afeta TX), perguntar "Salvar / Descartar" ao trocar de aba ou sair.
+   Voltar/gesto nunca descarta alteração em silêncio. Definir na implementação qual das duas formas usar
+   (salvar na hora ou perguntar ao mudar de aba/sair), sem transmitir nada por causa do salvamento.
 4. Abaixo do campo SSID, dica curta: "Salvo no perfil <nome>". Na confirmação de troca rápida do Rastreador,
    mostrar o SSID que vai entrar (ex.: "PY2ARS-9 → PY2ARS-7").
 5. Avaliar com o mantenedor: SSID comum a todos os perfis (como o indicativo) em vez de um por perfil.
 6. Textos novos nos 5 idiomas (T66) e teste de unidade de `forProfile()`/retrato preservando SSID personalizado.
 
 **Critérios de aceite:** escolher perfil Móvel, mudar o SSID para -5, salvar, fechar e reabrir o app: continua -5;
-trocar para Portátil e voltar para Móvel: volta -5; tocar de novo em Móvel não altera o campo; Voltar com
-alteração pendente pergunta antes de descartar.
+trocar para Portátil e voltar para Móvel: volta -5; tocar de novo em Móvel não altera o campo; alterar o SSID e
+sair por Voltar ou trocar de aba não perde a alteração (fica salva ou o app pergunta antes).
