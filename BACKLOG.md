@@ -2678,6 +2678,33 @@ corretamente; testes de unidade passam.
 
 **Dependências/relacionados:** regra T66 (textos novos nos 5 idiomas).
 
+### 77. Mensagens: remover acentos antes de enviar (configurável, ligado por padrão)
+_Pedido do mantenedor em 11/11/2026 ("Backlog")._
+
+**Problema:** mensagens com acentos (ç, ã, é etc.) chegam com caracteres estranhos em clientes/rádios do outro lado
+que não decodificam UTF-8 (muitos rádios e clientes antigos só exibem ASCII).
+
+**Pedido:** nova opção nas Configurações (aba de Mensagens, #74) para tirar todos os acentos do texto **antes de
+enviar**, convertendo para o equivalente sem acento (ex.: "ação" → "acao", "Ç" → "C", "º"/"ª" → "o"/"a").
+**Padrão: ligada.** Desligada, o texto vai como hoje.
+
+**Observações técnicas:**
+- Aplicar no ponto único de montagem do pacote (`core/Aprs.kt`: `messageInfo`, que corta em 67 caracteres, e
+  `splitMessage`, que divide texto longo), para valer em mensagens diretas, respostas, boletins, check-in de rede
+  (`ui/CommunityUi.kt`) e partes de mensagens longas. Remover acento **antes** de contar os 67 caracteres.
+- Caminho provável: `java.text.Normalizer` (NFD) removendo marcas combinantes, mais um mapa para casos que a
+  normalização não cobre (ex.: "ß", "æ", "ø", aspas tipográficas, "–"); o que sobrar fora de ASCII imprimível vira
+  equivalente ou "?".
+- O balão no histórico pode mostrar o texto como foi realmente enviado (sem acento), para não enganar o usuário.
+- Só afeta o envio; a exibição de mensagens recebidas (`core/AprsText.kt`, #27) continua igual.
+- Textos novos nos 5 idiomas (regra T66) e incluir a chave no backup/restauração das configurações (#50).
+
+**Critérios de aceite:** com a opção ligada (padrão em instalação nova e em atualização), "Olá, tudo bem? Câmbio!"
+sai no ar/APRS-IS como "Ola, tudo bem? Cambio!"; com a opção desligada, sai com acentos; limite de 67 caracteres e
+ACK/IDs continuam corretos; teste de unidade cobrindo a conversão.
+
+**Dependências/relacionados:** itens 27 (exibição de texto), 50 (backup), 74 (abas das Configurações).
+
 ## Consolidação das sugestões aprovadas com itens já existentes
 
 A comparação com o APRSdroid também aprovou os recursos abaixo, que **já estavam
