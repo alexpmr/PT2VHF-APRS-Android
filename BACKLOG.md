@@ -2900,3 +2900,51 @@ cartões por recurso) e data da última revisão ("conferido em dd/mm/aaaa").
 
 **Critérios de aceite:** seção visível em `/aprs-android` nos 7 idiomas, legível no celular, cada linha com
 descrição curta, legenda ✓/⊙/✗ e data de revisão; nenhum ✓ do PT2VHF sem base no código da versão publicada.
+
+### 82. Indicativo/SSID: janela com as recomendações de SSID conforme o uso
+_Pedido do mantenedor em 12/11/2026. Relacionado ao #80 (SSID por perfil) e ao #59 (validação do indicativo)._
+
+**Pedido:** "popup quando a pessoa for alterar o indicativo/ssid com as recomendações de SSID dependendo do uso".
+
+**Fonte:** *APRS SSID Recommendations*, WB4APR (Bob Bruninga), revisão de 6/2/2012 (aprs.org/aprs11/SSIDs.txt).
+O próprio texto diz que são **recomendações**, não norma: servem para os outros operadores reconhecerem o tipo de
+estação só pelo indicativo que aparece na tela. O SSID tem 4 bits no AX.25 (0 a 15); SSID 0 = sem sufixo.
+
+| SSID | Uso recomendado |
+|---|---|
+| (sem) / -0 | Estação principal, geralmente fixa e capaz de mensagens |
+| -1, -2, -3, -4 | Estação adicional genérica (digi, móvel, WX etc.) |
+| -5 | Outras redes (D-STAR, iPhone, Android, Blackberry etc.) |
+| -6 | Atividade especial: operação via satélite/ISS, acampamento, 6 metros etc. |
+| -7 | Portátil (HT, walkie-talkie) |
+| -8 | Barco, veleiro, motorhome ou segundo móvel principal |
+| -9 | Móvel principal (geralmente capaz de mensagens) |
+| -10 | Internet, iGate, EchoLink, Winlink, AVRS, APRN etc. |
+| -11 | Balão, aeronave, espaçonave |
+| -12 | APRStt, DTMF, RFID, dispositivos, rastreador só de ida (one-way) |
+| -13 | Estação meteorológica |
+| -14 | Caminhoneiro ou motorista em tempo integral |
+| -15 | Estação adicional genérica (digi, móvel, WX etc.) |
+
+Observações da fonte para incluir na janela, em texto curto: rastreador sem mensagem/voz deve usar -12, não -9
+(-9 sugere alguém que responde mensagem e voz); para atividade especial (satélite, evento, teste em 6 m) usar -6,
+assim o histórico fica separado do -9 do dia a dia; -1 a -4 e -15 ficam genéricos para quem tem várias estações.
+Objetos/estações de internet podem ter sufixos fora de 0–15 (-63, -tt, -ID, -A…-Z do D-STAR), mas o campo do app
+continua limitado a 0–15.
+
+**Proposta:**
+1. Ao tocar no campo SSID (ou no indicativo) em Configurações → Estação (`ui/SettingsUi.kt`, campo "SSID"),
+   abrir uma janela/folha "Qual SSID usar?" com a tabela acima e o uso de cada número. Também acessível por um
+   ícone ⓘ ao lado do campo, para quem quer só consultar.
+2. Tocar numa linha preenche o SSID e fecha a janela; "Fechar" mantém o valor atual. Nada é transmitido.
+3. Destacar a sugestão do perfil ativo (Móvel → -9, Portátil → -7, Base → sem SSID, como em `presetFor()`), e
+   mostrar o resultado completo (ex.: "PY2ARS-7").
+4. Não mostrar a janela toda vez: abrir automaticamente só na primeira edição (ou enquanto não houver "Não mostrar
+   de novo"); depois só pelo ⓘ. Não bloquear SSID fora da recomendação, é só orientação.
+5. Coerência com o #80: escolher o SSID pela janela grava no perfil ativo do mesmo jeito que digitar.
+6. Textos nos 5 idiomas do app (T66), citando a fonte (WB4APR) no rodapé da janela; tabela num só lugar no
+   código (ex.: lista em `core/`) com teste de unidade cobrindo os 16 valores.
+
+**Critérios de aceite:** ao editar o SSID a janela aparece com os 16 usos; escolher "-13 Estação meteorológica"
+preenche 13 e mostra "INDICATIVO-13"; fechar sem escolher não altera nada; "Não mostrar de novo" é respeitado e o
+ⓘ continua abrindo a janela; textos traduzidos nos 5 idiomas.
