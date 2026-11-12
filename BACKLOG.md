@@ -2948,3 +2948,20 @@ continua limitado a 0–15.
 **Critérios de aceite:** ao editar o SSID a janela aparece com os 16 usos; escolher "-13 Estação meteorológica"
 preenche 13 e mostra "INDICATIVO-13"; fechar sem escolher não altera nada; "Não mostrar de novo" é respeitado e o
 ⓘ continua abrindo a janela; textos traduzidos nos 5 idiomas.
+
+### 83. Próxima versão será a 1.0
+_Pedido do mantenedor em 12/11/2026._
+
+**Pedido:** "próxima versão deverá ser 1.0".
+
+**O que significa:** a versão seguinte à 0.1.15 sai como **1.0** (`versionName` "1.0", `versionCode` segue a
+sequência, 16), em vez de 0.1.16. Vale para o título do commit (`release: v1.0`), tag/GitHub Release, nome do APK,
+`CHANGELOG.md`, `README.md` e o site (`/aprs-android`, `updates.json` produto `aprs-android`, changelog).
+
+**Cuidados:**
+1. Conferir que a comparação de versões do OTA (`update.php?product=aprs-android` / `updates.json`) trata 1.0 como
+   maior que 0.1.15 e que o `versionCode` sobe, para quem já tem a 0.1.x receber a atualização.
+2. Manter a chave de contador `android-apk` no site, sem zerar o acumulado.
+3. Só registrar: não mudar `versionCode`/`versionName` nem lançar até pedido explícito de versão nova.
+
+**Critérios de aceite:** a próxima release publicada é a 1.0, instalável por cima da 0.1.15 e oferecida via OTA.
