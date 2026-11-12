@@ -2835,3 +2835,68 @@ Não trocar de perfil pelo Rastreador; se trocar, repetir o ajuste uma vez no no
 **Critérios de aceite:** escolher perfil Móvel, mudar o SSID para -5, salvar, fechar e reabrir o app: continua -5;
 trocar para Portátil e voltar para Móvel: volta -5; tocar de novo em Móvel não altera o campo; alterar o SSID e
 sair por Voltar ou trocar de aba não perde a alteração (fica salva ou o app pergunta antes).
+
+### 81. Site: tabela comparativa de recursos (APRSdroid × APRS World × PT2VHF APRS Client)
+_Pedido do mantenedor em 12/11/2026. Só site (`alexpmr/pt2vhf-site`, página `/aprs-android`); não exige versão nova do app._
+
+**Referência:** `docs/inspiracao/item81-tabela-comparativa-1.png` e `-2.png` (tabela "Comparação de recursos" do
+site do APRS World). Aproveitar só a ideia (linhas por recurso, uma coluna por app, legenda ✓ Disponível ·
+⊙ Parcial · ✗ Indisponível, descrição curta em cada linha). Não copiar visual, textos nem ícones.
+
+**Proposta:** seção "Comparação de recursos" na página `/aprs-android`, com três colunas: **APRSdroid**,
+**APRS World** e **PT2VHF APRS Client**. Nos 7 idiomas do site, tabela responsiva (no celular, rolar ou virar
+cartões por recurso) e data da última revisão ("conferido em dd/mm/aaaa").
+
+**Linhas da referência com a avaliação do nosso app (código da 0.1.15):**
+
+| Recurso | APRSdroid | APRS World | PT2VHF | Base no código / observação |
+|---|---|---|---|---|
+| Interface moderna (Material Design) | ✗ | ✓ | ✓ | Jetpack Compose + Material 3, tema claro/escuro |
+| Distribuição na Play Store / App Store | ✗ | ✓ | ✗ | Só APK assinado no site + atualização dentro do app (OTA). Ser honesto: hoje não está na Play Store |
+| Roda no navegador | ✗ | ✓ | ✗ | App só Android |
+| Indicadores de entrega de mensagens | ⊙ | ✓ | ✓ | Estados Enviando → Aguardando ACK (n.ª tentativa) → ACK recebido / Rejeitada / Sem ACK / Cancelada (`InternalText.MSG_*`, `MessagesUi`) |
+| Cancelar mensagens pendentes | ⊙ | ✓ | ✓ | Ação "Cancelar" no balão da mensagem pendente (`canCancel`) |
+| Visualização de pacotes ao vivo | ✗ | ✓ | ⊙ | Temos log de pacotes, decodificador, rastro da estação seguida e linhas dos meus enlaces RF no mapa; não há animação de pulso/saltos a cada beacon |
+| Check-in em rede semanal (APRSThursday) com um clique | ✗ | ✓ | ✓ | Aba Comunidade (#58.5): rodadas de check-in por mensagem, com confirmação antes de transmitir; participantes/países do que o app ouviu. Confirmar se há rede APRSThursday pré-configurada antes de marcar ✓ nesse nome |
+| Página pública de saúde e status | ✗ | ✓ | ✗ | Não temos. No app há indicadores de conexão e monitor de diagnóstico, mas não página pública |
+| KISS TNC (Bluetooth Classic) | ✓ | ✓ | ✓ | `BluetoothTnc` (SPP); rádios testados no README (incluir ICOM ID-5200, #78) |
+| TX AFSK 1200 baud pelo áudio do celular | ✓ | ✗ | ✓ | `AudioTnc` + `core/Afsk.kt` (modem AFSK RX/TX, VOX, TX delay, tom de teste). Observação: avaliação em hardware real ainda pendente (#37/#54); marcar ✓ só após teste, senão ⊙ |
+| PTT via CAT/RTS | ✗ | ✗ | ✗ | Não há PTT por CAT/RTS; só VOX no modo áudio |
+| Suporte a TNC BLE | ✗ | ✗ | ✗ | Sem `BluetoothGatt`; só Bluetooth Classic |
+| Vários indicativos por conta | ✗ | ⊙ | ✗ | Não há conta. Temos perfis Móvel/Portátil/Base com SSID próprio (ver linha "Perfis" abaixo) |
+
+**Recursos extras sugeridos (diferenciais que o código já tem):**
+
+| Recurso | PT2VHF | Base no código | Preencher APRSdroid/APRS World |
+|---|---|---|---|
+| KISS TNC por USB-OTG (cabo) | ✓ | `UsbSerialTnc` | conferir |
+| KISS sobre TCP/IP (Direwolf, TNC de rede) | ✓ | `KissTcpTnc` | APRSdroid ✓; APRS World ✓ (KISS-over-TCP no iOS, segundo a própria tabela) |
+| Separação entre o que veio por RF e por APRS-IS | ✓ | estatísticas RF, "meus pacotes digipetidos", mapa de calor só do TNC | conferir |
+| Mapa de calor da cobertura RF / recordes de alcance | ✓ | #14 heat map, `RfStats` | conferir |
+| Agrupamento de estações no mapa e camada de meteorologia | ✓ | `MapClusters`, camada "Tempo" | conferir |
+| Telemetria e meteorologia com gráficos | ✓ | `AprsTelemetry`, `AprsWeather`, `TimeSeriesChart` | conferir |
+| Objetos APRS (criar/editar) | ✓ | `ObjectDialog` | conferir |
+| Perfis de operação com SmartBeaconing | ✓ | perfis Móvel/Portátil/Base, modos smart/periódico/manual | APRSdroid ⊙ (SmartBeaconing sem perfis) |
+| Importar configurações do APRSdroid | ✓ | `AprsDroidImport` | — |
+| Rotas GPX e tracklog | ✓ | importação GPX no mapa | conferir |
+| Widget na tela inicial | ✓ | `StatusWidget` | conferir |
+| API local para outros apps (Intents) | ✓ | `ApiContract`/`ApiReceiver` | APRSdroid ✓ (tem API por Intents) |
+| Backup e restauração de configurações | ✓ | `SettingsBackup` | conferir |
+| Atualização automática dentro do app (OTA) | ✓ | `UpdateManager` | ✗ / loja |
+| Gratuito, sem anúncios e sem recurso pago | ✓ | conferir com o mantenedor | APRSdroid ✓ (pago só na Play, quando existia); APRS World ⊙ (KISS BT é Premium, segundo a referência) |
+| Idiomas | 5 no app (PT, EN, ES, FR, IT) | `res/values-*` | conferir |
+| Android Auto | ✗ | #68 não feito; não incluir até existir | — |
+
+**Regras para publicar:**
+1. Marcar ✓ só com evidência no código **e** em uso; o que depende de teste em rádio/servidor real fica ⊙ até
+   validado (#25/#37/#54). Não exagerar: perder uma linha honesta vale mais que um ✓ contestável.
+2. As colunas APRSdroid e APRS World precisam ser conferidas nas fontes de cada um (site, loja, repositório do
+   APRSdroid) antes de publicar, com data da conferência; os ✓/✗ das imagens são afirmações do site do APRS World,
+   não verdade conferida. Linhas "conferir" ficam sem marca até confirmar, ou saem da tabela.
+3. Texto neutro e respeitoso com os outros apps (o APRSdroid é a referência histórica da comunidade); usar os
+   nomes dos apps só como texto, sem logos de terceiros.
+4. Manter a tabela num só arquivo de dados do site (ex.: junto do `changelog-data.js` ou um `compare-data.js`),
+   para atualizar a coluna PT2VHF a cada versão (regra permanente de release).
+
+**Critérios de aceite:** seção visível em `/aprs-android` nos 7 idiomas, legível no celular, cada linha com
+descrição curta, legenda ✓/⊙/✗ e data de revisão; nenhum ✓ do PT2VHF sem base no código da versão publicada.
