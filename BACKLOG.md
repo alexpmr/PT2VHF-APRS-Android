@@ -3085,6 +3085,24 @@ não. Essa listagem nunca deve expirar e deverá mostrar usuários de qualquer v
   `max-age=300`) ou de outra página. **Pendente com o mantenedor:** o endereço exato e, se possível, captura da lista de
   ontem e de hoje, e o indicativo que sumiu e o que apareceu, para fechar a causa.
 
+**Atualização (13/11/2026, ~11h50 UTC):** a lista voltou a aparecer na página `/aprs-android` com **PU2TRO e
+PY2LGR** (captura do mantenedor), ou seja, o código novo do registro está no ar e gravando. Mas o mantenedor abriu o app
+no celular e o indicativo dele **continua fora**. Motivos possíveis, pela leitura do código do app (1.0) e do site:
+1. **A consulta não aconteceu de novo:** ao abrir/retomar, o app só consulta se a última consulta tiver mais de 1 h
+   (`UpdateManager.RESUME_MS`); em segundo plano, a cada 12 h (`PERIODIC_MS`). Se a última consulta foi feita enquanto o
+   site rodava o código antigo (que descartava o `&call=` do Android), abrir o app logo depois não envia de novo. O botão
+   **Configurações → Sobre → "Verificar agora"** força a consulta na hora.
+2. **Indicativo tratado como exemplo:** `UpdateCheck.reportedCallsign` não envia `PT2VHF`.
+3. **Opção desligada** ("Informar meu indicativo ao consultar versão nova", Configurações → Sistema) ou **posição manual
+   sem latitude/longitude**: não envia nada.
+4. **App ainda na 0.1.x:** não envia indicativo.
+5. **Site:** o cadastro novo é recusado sem aviso se o prefixo não estiver na tabela DXCC (não deve ser o caso de
+   PY/PU/PP/PT) ou se o mesmo IP já cadastrou 10 indicativos novos no dia (300 no total); improvável aqui.
+**Pendente com o mantenedor:** indicativo e versão instalada; tocar em "Verificar agora" e recarregar a página
+(o `stations.php` tem cache de 5 min).
+**Melhoria sugerida no app:** consultar (e enviar o indicativo) logo após instalar/atualizar e logo após salvar um
+indicativo novo nas Configurações, sem esperar 1 h/12 h; mostrar em Sobre se o indicativo foi informado ao site.
+
 **O que fazer (quando for implementado):**
 1. **Site:** garantir que produção rode o código da `main` (Deploy manual no hPanel → GIT e limpar cache/OPcache);
    confirmar que `stations.php?product=aprs-android` responde 200 e que `stations.php?product=sat` não traz mais
