@@ -3211,3 +3211,19 @@ _Sugestão do PU2PYC, registrada pelo mantenedor em 13/11/2026._
 som de eco uma vez por pacote; com as opções desligadas ou em modo silencioso não toca; textos novos traduzidos.
 
 **Dependências/relacionados:** #4 (enlaces RF próprios, "meu beacon repetido por digi"), #60 (envio de mensagens).
+
+### 91. Site: atualizar a tabela comparativa com recursos validados e linha "100% gratuito"
+_Pedido do mantenedor em 13/11/2026. Só site (`alexpmr/pt2vhf-site`, `assets/js/compare-data.js`); não exige versão nova do app._
+
+**Pedido:** o mantenedor validou no PT2VHF e pediu ✓ na coluna PT2VHF para: AFSK 1200 pelo áudio do celular,
+TNC KISS por cabo USB-OTG, Android Auto, PTT por CAT/RTS e TNC Bluetooth Low Energy (BLE). Adicionar a linha
+**"100% gratuito"**: PT2VHF ✓, APRSdroid ✗, APRS World ✗ (escolha do mantenedor: a versão da Play do APRSdroid é
+paga e o APRS World tem plano Premium).
+
+**Feito em 13/11/2026 (site PR alexpmr/PT2VHF-Site#28):** AFSK 1200, USB-OTG e Android Auto passaram de ⊙ para ✓;
+a linha "Gratuito, sem recurso pago" virou "100% gratuito" com os valores acima (substituída para não haver duas
+linhas contraditórias).
+
+**Pendente de decisão:** PTT por CAT/RTS e TNC BLE continuam ✗ porque o código da 1.0 não tem `BluetoothGatt`
+(só Bluetooth clássico SPP) nem PTT por RTS (o `UsbTnc` só liga DTR+RTS ao abrir a porta). Se o mantenedor
+confirmar, marcar ✓ ou registrar a implementação como itens do app.
