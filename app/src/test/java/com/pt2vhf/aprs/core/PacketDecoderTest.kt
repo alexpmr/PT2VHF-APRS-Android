@@ -44,7 +44,11 @@ class PacketDecoderTest {
         assertEquals("QRV", decodePacket("PT2VHF>APRS:>QRV")!!.v(DecodedKey.STATUS))
         val mic = decodePacket("PT2VHF-9>T4QR5U:`c5Il!Ok/`\"4V}_%")!!
         assertEquals("mice", mic.type)
-        assertTrue(mic.fields.any { it.key == DecodedKey.NOT_DECODED })
+        // #89: Mic-E agora é decodificado (posição, altitude e aparelho).
+        assertEquals("44.20917", mic.v(DecodedKey.LATITUDE))
+        assertEquals("-71.42417", mic.v(DecodedKey.LONGITUDE))
+        assertTrue(mic.fields.none { it.key == DecodedKey.NOT_DECODED })
+        assertEquals("Yaesu FTM-400DR", mic.v(DecodedKey.DEVICE))
         assertNull(decodePacket("isto não é pacote"))
     }
 

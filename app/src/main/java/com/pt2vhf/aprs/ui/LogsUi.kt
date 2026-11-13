@@ -50,7 +50,7 @@ import com.pt2vhf.aprs.core.PACKET_TYPES
 import com.pt2vhf.aprs.core.decodeAprsText
 import com.pt2vhf.aprs.core.parseMessage
 import com.pt2vhf.aprs.core.parseObject
-import com.pt2vhf.aprs.core.parsePosition
+import com.pt2vhf.aprs.core.parsePacketPosition
 import com.pt2vhf.aprs.data.AprsRepository
 import com.pt2vhf.aprs.data.Medium
 import com.pt2vhf.aprs.data.PacketLogEntry
@@ -271,7 +271,7 @@ private fun PacketDetailsDialog(e: PacketLogEntry, onDismiss: () -> Unit, onStat
                     if (packet.path.isNotEmpty()) Text(UiText.text(R.string.logs_path) + ": " + packet.path.joinToString(","),
                         fontSize = 13.sp, color = Pal.muted)
                     val obj = parseObject(packet.info)
-                    val pos = obj?.position ?: parsePosition(packet.info)
+                    val pos = obj?.position ?: parsePacketPosition(packet)
                     if (obj != null) KeyValue(UiText.text(R.string.type_object), obj.name + if (obj.alive) "" else " ✗")
                     if (pos != null) {
                         KeyValue(UiText.text(R.string.position), "%.5f, %.5f".format(pos.lat, pos.lon))

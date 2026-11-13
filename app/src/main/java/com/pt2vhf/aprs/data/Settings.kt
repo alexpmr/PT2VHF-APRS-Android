@@ -56,6 +56,10 @@ data class Settings(
     val alertFavPosition: Boolean = false,
     val alertFavRf: Boolean = true,
     val alertMyDigi: Boolean = false,
+    /** #90: som ao receber ack de mensagem enviada. */
+    val soundAck: Boolean = true,
+    /** #90: som ao ouvir (pelo TNC) meu pacote repetido por um digipeater. */
+    val soundDigiEcho: Boolean = false,
     val alertReturnMinutes: Int = 60,
     val quietHours: Boolean = false,
     val quietStart: Int = 22,
@@ -183,6 +187,8 @@ data class Settings(
                 alertFavPosition = b("alert_fav_position", d.alertFavPosition),
                 alertFavRf = b("alert_fav_rf", d.alertFavRf),
                 alertMyDigi = b("alert_my_digi", d.alertMyDigi),
+                soundAck = b("sound_ack", d.soundAck),
+                soundDigiEcho = b("sound_digi_echo", d.soundDigiEcho),
                 alertReturnMinutes = i("alert_return_min", d.alertReturnMinutes).coerceIn(5, 1440),
                 quietHours = b("quiet_hours", d.quietHours),
                 quietStart = i("quiet_start", d.quietStart).coerceIn(0, 23),
@@ -267,6 +273,8 @@ data class Settings(
                 .putBoolean("alert_fav_position", s.alertFavPosition)
                 .putBoolean("alert_fav_rf", s.alertFavRf)
                 .putBoolean("alert_my_digi", s.alertMyDigi)
+                .putBoolean("sound_ack", s.soundAck)
+                .putBoolean("sound_digi_echo", s.soundDigiEcho)
                 .putInt("alert_return_min", s.alertReturnMinutes.coerceIn(5, 1440))
                 .putBoolean("quiet_hours", s.quietHours)
                 .putInt("quiet_start", s.quietStart.coerceIn(0, 23))

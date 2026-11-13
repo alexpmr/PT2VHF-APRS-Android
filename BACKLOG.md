@@ -4,6 +4,13 @@ Itens registrados para as próximas versões. Não implementar até o pedido de 
 
 ## Onde estamos (13/11/2026)
 
+- **v1.1** (13/11/2026, versionCode 17, autorizada pelo mantenedor: "Gere nova versão completa com todo o backlog
+  implementado"): #92 TNC KISS por Bluetooth LE e #93 PTT por RTS/DTR ou CAT (PR #25; **não testados em hardware
+  real**), #89 (rádio/aplicativo pela tabela aprs-deviceid, Mic-E completo, PHG, frequência, status e caminho),
+  #88 (e-mail/site no comentário como link), #90 (sons de ack e de eco do digi; eco só pelo TNC, **não testado em
+  RF**), #87 (PP5PK) e a parte do app do #86 (indicativo informado logo após instalar/atualizar ou salvar indicativo
+  novo; PT2VHF deixa de ser "exemplo"). Site: #91 com BLE e PTT CAT/RTS em ✓ na tabela.
+  **Sem mudança de código (dependem de teste real):** #68 Android Auto em carro/DHU, P0 #60 e #62, #25, #37, #54.
 - **v1.0** (13/11/2026, versionCode 16, autorizada pelo mantenedor: "Implemente todos e suba no site"): #85 (Salvar
   visível no Android 15/16 e ✓ no cabeçalho), #80 (SSID não volta para -9/-7; pergunta ao sair com alterações),
   #82 ("Qual SSID usar?"), #79 (aba Sobre com colaboradores), #77 (sem acentos, padrão ligado), #78 (ICOM ID-5200),

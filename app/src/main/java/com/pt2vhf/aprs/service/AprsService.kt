@@ -213,6 +213,7 @@ class AprsService : Service(), LocationListener {
         createChannels()
         startForegroundCompat()
         running = true
+        AprsRepository.soundListener = { event, call -> playSoundEvent(event, call) }
         applyManualPosition()
         connectAprsIs()
         startLocation()
@@ -364,6 +365,7 @@ class AprsService : Service(), LocationListener {
     }
 
     override fun onDestroy() {
+        AprsRepository.soundListener = null
         handler.removeCallbacksAndMessages(null)
         txWorker.shutdownNow()
         AprsRepository.interruptPendingMessages()
@@ -977,6 +979,30 @@ class AprsService : Service(), LocationListener {
         nm.createNotificationChannel(NotificationChannel(CH_SERVICE, UiText.text(R.string.connection_channel), NotificationManager.IMPORTANCE_LOW))
         nm.createNotificationChannel(NotificationChannel(CH_MESSAGES, UiText.text(R.string.messages_channel), NotificationManager.IMPORTANCE_HIGH))
         nm.createNotificationChannel(NotificationChannel(CH_ALERTS, UiText.text(R.string.alerts_channel), NotificationManager.IMPORTANCE_DEFAULT))
+        // #90: um canal por som, para o usuário trocar ou silenciar cada um nas configurações do Android.
+        nm.createNotificationChannel(NotificationChannel(CH_SOUND_ACK, UiText.text(R.string.sound_ack_channel), NotificationManager.IMPORTANCE_DEFAULT))
+        nm.createNotificationChannel(NotificationChannel(CH_SOUND_DIGI, UiText.text(R.string.sound_digi_channel), NotificationManager.IMPORTANCE_DEFAULT))
+    }
+
+    /**
+     * #90: som curto de ack/eco do digi. Usa uma notificação breve no canal próprio: o Android toca o som do canal,
+     * respeita modo silencioso/Não perturbe e funciona com a tela apagada (serviço em primeiro plano).
+     */
+    private fun playSoundEvent(event: AprsRepository.SoundEvent, call: String) {
+        val (enabled, channel, text) = when (event) {
+            AprsRepository.SoundEvent.ACK -> Triple(settings.soundAck, CH_SOUND_ACK, UiText.text(R.string.sound_ack_body, call))
+            AprsRepository.SoundEvent.DIGI_ECHO -> Triple(settings.soundDigiEcho, CH_SOUND_DIGI, UiText.text(R.string.sound_digi_body, call))
+        }
+        if (!enabled || !canNotify()) return
+        val n = NotificationCompat.Builder(this, channel)
+            .setSmallIcon(R.drawable.ic_stat_aprs)
+            .setContentTitle(text)
+            .setOnlyAlertOnce(false)
+            .setAutoCancel(true)
+            .setTimeoutAfter(8_000L)
+            .setContentIntent(openAppIntent())
+            .build()
+        runCatching { getSystemService(NotificationManager::class.java).notify(channel.hashCode(), n) }
     }
 
     private fun openAppIntent(): PendingIntent = PendingIntent.getActivity(this, 0,
@@ -1053,6 +1079,8 @@ class AprsService : Service(), LocationListener {
         private const val CH_SERVICE = "service"
         private const val CH_MESSAGES = "messages"
         private const val CH_ALERTS = "alerts"
+        private const val CH_SOUND_ACK = "sound_ack"
+        private const val CH_SOUND_DIGI = "sound_digi"
         /** true while the foreground service is alive; the API receiver only forwards then. */
         @Volatile var running = false
         private const val NOTIF_SERVICE = 1
