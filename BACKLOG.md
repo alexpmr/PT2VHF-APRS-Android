@@ -3122,3 +3122,22 @@ indicativo novo nas Configurações, sem esperar 1 h/12 h; mostrar em Sobre se o
 **Critérios de aceite:** `stations.php?product=aprs-android` responde 200 em produção; o indicativo do mantenedor
 aparece na página `/aprs-android` e continua lá dias depois sem nova consulta; nenhum registro some com o tempo;
 qualquer versão 1.0+ registra; a regra das versões antigas fica explicada na página.
+
+### 87. Incluir PP5PK na lista de colaboradores
+_Pedido do mantenedor em 13/11/2026 ("Backlog: adicione PP5PK como colaboradores")._
+
+**Pedido:** acrescentar o indicativo **PP5PK** aos radioamadores colaboradores do app. PP5PK relatou o botão
+Salvar sumido nas Configurações no POCO X7 Pro e no POCO Pad com Android 16 (#85).
+
+**Onde os colaboradores aparecem hoje (PU2PYC, PP5AU, PU2MUS, do #79):**
+1. App: `CONTRIBUTORS` em `app/src/main/java/com/pt2vhf/aprs/ui/SettingsUi.kt` (~linha 797), mostrada na aba
+   **Sobre** das Configurações. É o único lugar no código; o indicativo não se traduz.
+2. `README.md` (linha "Nova aba **Sobre** com versão, site e colaboradores").
+3. Site `alexpmr/PT2VHF-Site`, página `/android`/`/aprs-android`: conferir se lista colaboradores e, se listar,
+   incluir PP5PK (não foi possível conferir daqui).
+4. `CHANGELOG.md`: não reescrever a entrada da 1.0; registrar a inclusão na entrada da versão que a trouxer.
+
+**Critérios de aceite:** a aba Sobre mostra PU2PYC, PP5AU, PU2MUS e PP5PK; README (e site, se tiver a lista)
+coerentes com o app; nenhum texto traduzível novo.
+
+**Dependências/relacionados:** itens 79 (aba Sobre e colaboradores) e 85 (relato do PP5PK).
