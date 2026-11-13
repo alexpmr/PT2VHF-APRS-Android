@@ -2994,12 +2994,19 @@ _Relato de PP5PK, repassado pelo mantenedor em 13/11/2026._
 **Relato:** "PP5PK está com dificuldade na parte de configuração, não aparece a opção para salvar. Tentou em um tablet
 também. No meu Poco X5 está aparecendo normalmente."
 
+**Aparelhos afetados (detalhe enviado pelo mantenedor em 13/11/2026):** POCO X7 Pro (celular) e POCO Pad (tablet),
+ambos com **Android 16**. No tablet aparece só a parte de cima dos botões; no celular, nem isso.
+
 **Provável causa (leitura do código, ainda não reproduzida):** desde o #74/#79 a tela de Configurações é um `Dialog`
 de tela cheia (`SettingsUi.kt`, `DialogProperties(usePlatformDefaultWidth = false)` + `Surface(Modifier.fillMaxSize())`)
 com o "Salvar" num rodapé fixo no fim da coluna. Esse diálogo não aplica nenhum recuo das barras do sistema
 (`navigationBarsPadding`/`systemBarsPadding`/`imePadding`), ao contrário da tela principal (`App.kt` usa
 `systemBarsPadding()`), e o app roda em modo borda a borda (`WindowCompat.setDecorFitsSystemWindows(window, false)`,
-`targetSdk = 35`). Suspeitas, em ordem:
+`targetSdk = 35`). O relato confirma o padrão: os dois aparelhos afetados estão no Android 16, em que o modo borda a
+borda é obrigatório e não há mais como desligá-lo, e o botão aparece **cortado pela borda de baixo** (meio visível no
+tablet, invisível no celular). Isso aponta para o rodapé desenhado embaixo da barra de navegação/barra de tarefas, não
+para falta de espaço ou erro de layout. A altura escondida varia com a barra de cada aparelho (no POCO Pad a barra de
+tarefas cobre parte do rodapé; no X7 Pro cobre tudo). Suspeitas, em ordem:
 1. **Barra de navegação com 3 botões** (comum em tablets e em quem não usa gestos): no Android 15 a janela do diálogo
    vai até a borda e o rodapé fica embaixo da barra de navegação, escondendo "Cancelar"/"Salvar". No Poco X5 com
    navegação por gestos a barra é fina e o botão continua visível.
@@ -3015,8 +3022,10 @@ com o "Salvar" num rodapé fixo no fim da coluna. Esse diálogo não aplica nenh
 2. Opcional: repetir o "Salvar" no cabeçalho (ícone ✓ ao lado do título), visível mesmo se o rodapé falhar.
 3. Testar em navegação por 3 botões e por gestos, Android 15 e anterior, fonte/exibição no máximo, tablet em pé e
    deitado, com e sem teclado aberto.
-4. Pedir a PP5PK modelo do aparelho, versão do Android e tipo de navegação (gestos ou 3 botões), se possível com
-   captura da tela de Configurações.
+4. Validar de preferência num aparelho com Android 16 (ou emulador Android 16 com navegação por 3 botões e um de
+   tablet com barra de tarefas), já que o Poco X5 do mantenedor não reproduz. Se possível, pedir a PP5PK o tipo de
+   navegação (gestos ou 3 botões) e uma captura da tela, e que teste a versão corrigida.
+5. Revisar os outros diálogos de tela cheia do app (`usePlatformDefaultWidth = false`) atrás do mesmo problema.
 
 **Critérios de aceite:** "Salvar" e "Cancelar" visíveis e tocáveis em todas as abas de Configurações, em celular e
 tablet, com navegação por 3 botões ou gestos, fonte/exibição ampliadas e teclado aberto.
