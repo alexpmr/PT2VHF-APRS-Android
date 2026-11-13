@@ -2965,3 +2965,25 @@ sequência, 16), em vez de 0.1.16. Vale para o título do commit (`release: v1.0
 3. Só registrar: não mudar `versionCode`/`versionName` nem lançar até pedido explícito de versão nova.
 
 **Critérios de aceite:** a próxima release publicada é a 1.0, instalável por cima da 0.1.15 e oferecida via OTA.
+
+### 84. Registro de usuários por indicativo (lista de estações no site)
+_Pedido do mantenedor em 13/11/2026, com implementação solicitada no mesmo pedido. Igual ao PT2VHF SAT Tool 1.8.0
+(site: PRs alexpmr/PT2VHF-Site#21, #22 e #23)._
+
+**App (PT2VHF APRS Client for Android, produto OTA `aprs-android`):**
+1. A consulta de versão nova envia só o indicativo da estação no parâmetro `call`
+   (`update.php?product=aprs-android&call=PY2XYZ`), sem SSID. Nunca envia localização nem locator.
+2. Ligado por padrão; caixa em Configurações → Sistema para desligar: "Informar meu indicativo ao consultar versão nova".
+3. Não envia nada se a estação não estiver configurada: indicativo vazio, o de exemplo `PT2VHF` ou inválido, ou
+   posição manual escolhida sem latitude/longitude.
+4. Testes de unidade da montagem da URL e das regras de envio.
+
+**Site (alexpmr/PT2VHF-Site):** reaproveitar o registro de estações do SAT Tool acrescentando o produto `aprs-android`.
+`update.php` responde exatamente igual; indicativo validado, país pela tabela DXCC de prefixos, primeira e última
+consulta, sem guardar IP, no máximo 10 indicativos novos por IP por dia, registro permanente (nunca expira). No fim da
+página `/aprs-android`: ranking de países e, abaixo de cada país, todos os indicativos, com a bandeira em imagem do
+tamanho do texto no lugar da sigla, em todos os idiomas do site.
+
+**Critérios de aceite:** com a opção ligada e estação configurada, a consulta leva `&call=`; desligada ou sem
+estação configurada, a URL é a mesma de antes; a resposta do site não muda; a estação aparece no país certo na
+página do app. Site só é publicado após aprovação do mantenedor.
