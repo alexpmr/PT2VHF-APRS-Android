@@ -2987,3 +2987,36 @@ tamanho do texto no lugar da sigla, em todos os idiomas do site.
 **Critérios de aceite:** com a opção ligada e estação configurada, a consulta leva `&call=`; desligada ou sem
 estação configurada, a URL é a mesma de antes; a resposta do site não muda; a estação aparece no país certo na
 página do app. Site só é publicado após aprovação do mantenedor.
+
+### 85. Configurações: botão "Salvar" não aparece em alguns aparelhos (celular e tablet)
+_Relato de PP5PK, repassado pelo mantenedor em 13/11/2026._
+
+**Relato:** "PP5PK está com dificuldade na parte de configuração, não aparece a opção para salvar. Tentou em um tablet
+também. No meu Poco X5 está aparecendo normalmente."
+
+**Provável causa (leitura do código, ainda não reproduzida):** desde o #74/#79 a tela de Configurações é um `Dialog`
+de tela cheia (`SettingsUi.kt`, `DialogProperties(usePlatformDefaultWidth = false)` + `Surface(Modifier.fillMaxSize())`)
+com o "Salvar" num rodapé fixo no fim da coluna. Esse diálogo não aplica nenhum recuo das barras do sistema
+(`navigationBarsPadding`/`systemBarsPadding`/`imePadding`), ao contrário da tela principal (`App.kt` usa
+`systemBarsPadding()`), e o app roda em modo borda a borda (`WindowCompat.setDecorFitsSystemWindows(window, false)`,
+`targetSdk = 35`). Suspeitas, em ordem:
+1. **Barra de navegação com 3 botões** (comum em tablets e em quem não usa gestos): no Android 15 a janela do diálogo
+   vai até a borda e o rodapé fica embaixo da barra de navegação, escondendo "Cancelar"/"Salvar". No Poco X5 com
+   navegação por gestos a barra é fina e o botão continua visível.
+2. **Teclado aberto:** o `adjustResize` do manifesto vale para a Activity, não para a janela do diálogo; com o teclado
+   aberto o rodapé pode ficar coberto.
+3. **Tamanho da fonte/exibição aumentados** ou tablet na horizontal: menos altura útil; o rodapé é fixo, mas, se a
+   janela do diálogo não ocupar a tela toda em algum fabricante, ele sai da área visível.
+
+**O que fazer (quando for implementado):**
+1. Aplicar `Modifier.safeDrawingPadding()` (ou `systemBarsPadding()` + `imePadding()`) no conteúdo do diálogo e
+   conferir `DialogProperties(decorFitsSystemWindows = …)` para o rodapé ficar sempre acima da barra de navegação e
+   do teclado.
+2. Opcional: repetir o "Salvar" no cabeçalho (ícone ✓ ao lado do título), visível mesmo se o rodapé falhar.
+3. Testar em navegação por 3 botões e por gestos, Android 15 e anterior, fonte/exibição no máximo, tablet em pé e
+   deitado, com e sem teclado aberto.
+4. Pedir a PP5PK modelo do aparelho, versão do Android e tipo de navegação (gestos ou 3 botões), se possível com
+   captura da tela de Configurações.
+
+**Critérios de aceite:** "Salvar" e "Cancelar" visíveis e tocáveis em todas as abas de Configurações, em celular e
+tablet, com navegação por 3 botões ou gestos, fonte/exibição ampliadas e teclado aberto.
