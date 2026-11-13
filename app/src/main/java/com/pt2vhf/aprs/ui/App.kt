@@ -215,6 +215,8 @@ fun App(onExit: () -> Unit) {
             SettingsDialog(settings, onDismiss = { if (settings.configured) showSettings = false }, onSave = {
                 Settings.save(context, it); settings = Settings.load(context); showSettings = false
                 AprsService.send(context, AprsService.ACTION_RELOAD)
+                // #86: indicativo novo vai para a lista do site na hora (só consulta se ainda não foi informado).
+                UpdateManager.maybeCheck(context, UpdateManager.RESUME_MS)
             })
         }
         if (exitDialog) {

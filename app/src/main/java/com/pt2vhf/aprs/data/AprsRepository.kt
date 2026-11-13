@@ -8,7 +8,7 @@ import com.pt2vhf.aprs.core.haversineKm
 import com.pt2vhf.aprs.core.localRfEvidenceLinks
 import com.pt2vhf.aprs.core.parseMessage
 import com.pt2vhf.aprs.core.parseObject
-import com.pt2vhf.aprs.core.parsePosition
+import com.pt2vhf.aprs.core.parsePacketPosition
 import com.pt2vhf.aprs.core.parseAprsWeather
 import com.pt2vhf.aprs.core.AprsWeather
 import com.pt2vhf.aprs.core.packetType
@@ -496,7 +496,11 @@ object AprsRepository {
                 (old.filter { l -> newLinks.none { it.from == l.from && it.to == l.to } } + newLinks).takeLast(2000)
             }
             diskWorker.execute { runCatching { stationStore?.saveLinks(newLinks) } }
-            if (packet.source == ownCall) _status.update { it.copy(beaconsDigipeated = it.beaconsDigipeated + 1) }
+            if (packet.source == ownCall) {
+                _status.update { it.copy(beaconsDigipeated = it.beaconsDigipeated + 1) }
+                // #90: um aviso por pacote, mesmo que vários digis o repitam.
+                if (isNewDigiEcho(packet.info, now)) soundListener?.invoke(SoundEvent.DIGI_ECHO, digis.first())
+            }
         }
         // #48: objetos e itens aparecem pelo nome; objeto encerrado sai do mapa.
         parseObject(packet.info)?.let { obj ->
@@ -522,7 +526,7 @@ object AprsRepository {
                 history + (packet.source to (previous + observation).takeLast(1000))
             }
         }
-        val position = parsePosition(packet.info)
+        val position = parsePacketPosition(packet)
         if (medium == Medium.RF && packet.thirdPartyGateway == null) {
             val own = _status.value
             val known = _stations.value
@@ -628,17 +632,32 @@ object AprsRepository {
         changed?.let { m -> diskWorker.execute { runCatching { messageStore?.upsert(listOf(m)) } } }
     }
 
+    /** #90: avisos sonoros (ack de mensagem enviada e eco do digi), tocados pelo serviço. */
+    enum class SoundEvent { ACK, DIGI_ECHO }
+    @Volatile var soundListener: ((SoundEvent, String) -> Unit)? = null
+    private val digiEchoes = HashMap<String, Long>()
+
+    private fun isNewDigiEcho(info: String, now: Long): Boolean = synchronized(digiEchoes) {
+        digiEchoes.entries.removeAll { now - it.value > 60_000L }
+        if (digiEchoes.containsKey(info)) false else { digiEchoes[info] = now; true }
+    }
+
     private fun markAck(from: String, msgId: String?, ack: Boolean) {
         if (msgId == null) return
         val changed = ArrayList<ChatMessage>()
+        var firstAck = false
         _messages.update { list ->
             changed.clear()
+            firstAck = false
             list.map {
-                if (it.outgoing && it.to == from && it.msgId == msgId)
+                if (it.outgoing && it.to == from && it.msgId == msgId) {
+                    if (ack && it.status != InternalText.MSG_ACKED) firstAck = true
                     it.copy(status = if (ack) InternalText.MSG_ACKED else InternalText.MSG_REJECTED).also { c -> changed += c }
-                else it
+                } else it
             }
         }
+        // #90: toca uma vez por mensagem; acks repetidos não tocam de novo.
+        if (firstAck) soundListener?.invoke(SoundEvent.ACK, from)
         val snapshot = changed.toList()
         snapshot.forEach { setRetry(it.id, 0, null) }
         diskWorker.execute { runCatching { messageStore?.upsert(snapshot) } }

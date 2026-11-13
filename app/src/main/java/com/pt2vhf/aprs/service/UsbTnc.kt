@@ -15,18 +15,24 @@ import android.os.Build
 import androidx.core.content.ContextCompat
 import com.pt2vhf.aprs.core.Ax25
 import com.pt2vhf.aprs.core.Kiss
+import com.pt2vhf.aprs.core.UsbChip
 import com.pt2vhf.aprs.core.ftdiBaudDivisor
+import com.pt2vhf.aprs.core.usbControlLines
 import java.util.concurrent.atomic.AtomicLong
 
 /**
  * TNC KISS por USB-OTG (herdado da 0.1.0). Driver serial próprio, sem bibliotecas externas:
  * CDC-ACM (Mobilinkd, NinoTNC, rádios com USB nativo), FTDI (FT232R/FT231X) e Silicon Labs CP210x.
  * CH340/CH341 e PL2303 ainda não são suportados (o app avisa).
+ *
+ * Com [kissMode] = false a mesma porta serve de PTT do modem AFSK (#93): abre com DTR e RTS desligados, não lê
+ * nada e só aciona as linhas ([setLines]) ou escreve comandos CAT ([writeRaw]).
  */
 class UsbSerialTnc(
     context: Context,
     private val onFrame: (String) -> Unit,
     private val onState: (connected: Boolean, name: String, error: String) -> Unit,
+    private val kissMode: Boolean = true,
 ) {
     private val app = context.applicationContext
     private val usb = app.getSystemService(UsbManager::class.java)
@@ -37,16 +43,19 @@ class UsbSerialTnc(
     private val epoch = AtomicLong(0L)
     @Volatile private var baud = 9600
     @Volatile private var receiverRegistered = false
-
-    private enum class Chip { CDC, FTDI, CP210X }
+    @Volatile private var chip: UsbChip? = null
+    @Volatile private var controlIfaceId = 0
+    @Volatile private var dataIfaceId = 0
+    private val permissionAction = if (kissMode) ACTION_PERMISSION else "$ACTION_PERMISSION.PTT"
 
     val connected: Boolean get() = running && connection != null
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(c: Context, intent: Intent) {
             when (intent.action) {
-                ACTION_PERMISSION -> {
+                permissionAction -> {
                     val device = deviceExtra(intent)
+                    if (!wanted) return
                     if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false) && device != null) open(device)
                     else onState(false, "USB", ERR_PERMISSION)
                 }
@@ -67,7 +76,7 @@ class UsbSerialTnc(
 
     private fun register() {
         if (receiverRegistered) return
-        val filter = IntentFilter(ACTION_PERMISSION).apply {
+        val filter = IntentFilter(permissionAction).apply {
             addAction(UsbManager.ACTION_USB_DEVICE_DETACHED)
             addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED)
         }
@@ -83,10 +92,10 @@ class UsbSerialTnc(
         (it.productName ?: "USB %04X:%04X".format(it.vendorId, it.productId)) + if (chipOf(it) == null) " ($ERR_UNSUPPORTED)" else ""
     }
 
-    private fun chipOf(d: UsbDevice): Chip? = when {
-        d.vendorId == 0x0403 -> Chip.FTDI
-        d.vendorId == 0x10C4 -> Chip.CP210X
-        (0 until d.interfaceCount).any { d.getInterface(it).interfaceClass == UsbConstants.USB_CLASS_CDC_DATA } -> Chip.CDC
+    private fun chipOf(d: UsbDevice): UsbChip? = when {
+        d.vendorId == 0x0403 -> UsbChip.FTDI
+        d.vendorId == 0x10C4 -> UsbChip.CP210X
+        (0 until d.interfaceCount).any { d.getInterface(it).interfaceClass == UsbConstants.USB_CLASS_CDC_DATA } -> UsbChip.CDC
         else -> null
     }
 
@@ -103,7 +112,7 @@ class UsbSerialTnc(
         if (usb?.hasPermission(device) == true) open(device)
         else {
             val flags = if (Build.VERSION.SDK_INT >= 31) PendingIntent.FLAG_MUTABLE else 0
-            val pi = PendingIntent.getBroadcast(app, 0, Intent(ACTION_PERMISSION).setPackage(app.packageName), flags)
+            val pi = PendingIntent.getBroadcast(app, if (kissMode) 0 else 1, Intent(permissionAction).setPackage(app.packageName), flags)
             runCatching { usb?.requestPermission(device, pi) }
         }
     }
@@ -115,28 +124,31 @@ class UsbSerialTnc(
         try {
             val (dataIface, inEp, out) = endpoints(device, chip) ?: throw IllegalStateException(ERR_OPEN)
             val ifaces = mutableListOf(dataIface)
-            if (chip == Chip.CDC) {
+            if (chip == UsbChip.CDC) {
                 (0 until device.interfaceCount).map { device.getInterface(it) }
                     .firstOrNull { it.interfaceClass == UsbConstants.USB_CLASS_COMM }?.let { ifaces.add(0, it) }
             }
             for (i in ifaces) check(conn.claimInterface(i, true)) { ERR_OPEN }
             configure(conn, chip, ifaces.first().id, dataIface.id, device.interfaceCount > 1)
+            this.chip = chip
+            controlIfaceId = ifaces.first().id
+            dataIfaceId = dataIface.id
             connection = conn
             outEp = out
             claimed = ifaces
             running = true
             val session = epoch.incrementAndGet()
             onState(true, name, "")
-            Thread({ readLoop(session, conn, inEp, chip, name) }, "usb-tnc").apply { isDaemon = true; start() }
+            if (kissMode) Thread({ readLoop(session, conn, inEp, chip, name) }, "usb-tnc").apply { isDaemon = true; start() }
         } catch (e: Exception) {
             runCatching { conn.close() }
             onState(false, name, e.message ?: ERR_OPEN)
         }
     }
 
-    private fun endpoints(device: UsbDevice, chip: Chip): Triple<UsbInterface, UsbEndpoint, UsbEndpoint>? {
+    private fun endpoints(device: UsbDevice, chip: UsbChip): Triple<UsbInterface, UsbEndpoint, UsbEndpoint>? {
         val candidates = (0 until device.interfaceCount).map { device.getInterface(it) }
-            .filter { chip != Chip.CDC || it.interfaceClass == UsbConstants.USB_CLASS_CDC_DATA }
+            .filter { chip != UsbChip.CDC || it.interfaceClass == UsbConstants.USB_CLASS_CDC_DATA }
         for (iface in candidates) {
             var input: UsbEndpoint? = null
             var output: UsbEndpoint? = null
@@ -150,35 +162,61 @@ class UsbSerialTnc(
         return null
     }
 
-    private fun configure(conn: UsbDeviceConnection, chip: Chip, controlIface: Int, dataIface: Int, multiPort: Boolean) {
+    private fun configure(conn: UsbDeviceConnection, chip: UsbChip, controlIface: Int, dataIface: Int, multiPort: Boolean) {
+        // TNC KISS: DTR+RTS ligados como sempre. PTT (#93): tudo desligado para o rádio não entrar em TX ao abrir.
+        val lines = usbControlLines(chip, kissMode, kissMode, controlIface, dataIface)
         when (chip) {
-            Chip.CDC -> {
+            UsbChip.CDC -> {
                 val coding = byteArrayOf((baud and 0xFF).toByte(), (baud shr 8 and 0xFF).toByte(),
                     (baud shr 16 and 0xFF).toByte(), (baud shr 24 and 0xFF).toByte(), 0, 0, 8)
                 conn.controlTransfer(0x21, 0x20, 0, controlIface, coding, coding.size, 1000) // SET_LINE_CODING
-                conn.controlTransfer(0x21, 0x22, 0x03, controlIface, null, 0, 1000) // DTR + RTS
             }
-            Chip.FTDI -> {
+            UsbChip.FTDI -> {
                 val index = dataIface + 1
                 conn.controlTransfer(0x40, 0, 0, index, null, 0, 1000) // reset
                 val (value, high) = ftdiBaudDivisor(baud)
                 conn.controlTransfer(0x40, 3, value, if (multiPort) (high shl 8) or index else high, null, 0, 1000) // baud
                 conn.controlTransfer(0x40, 4, 0x0008, index, null, 0, 1000) // 8N1
                 conn.controlTransfer(0x40, 2, 0, index, null, 0, 1000) // sem controle de fluxo
-                conn.controlTransfer(0x40, 1, 0x0303, index, null, 0, 1000) // DTR + RTS
             }
-            Chip.CP210X -> {
+            UsbChip.CP210X -> {
                 conn.controlTransfer(0x41, 0x00, 0x0001, dataIface, null, 0, 1000) // IFC_ENABLE
                 val b = byteArrayOf((baud and 0xFF).toByte(), (baud shr 8 and 0xFF).toByte(),
                     (baud shr 16 and 0xFF).toByte(), (baud shr 24 and 0xFF).toByte())
                 conn.controlTransfer(0x41, 0x1E, 0, dataIface, b, 4, 1000) // SET_BAUDRATE
                 conn.controlTransfer(0x41, 0x03, 0x0800, dataIface, null, 0, 1000) // 8N1
-                conn.controlTransfer(0x41, 0x07, 0x0303, dataIface, null, 0, 1000) // DTR + RTS
             }
         }
+        conn.controlTransfer(lines.requestType, lines.request, lines.value, lines.index, null, 0, 1000) // DTR/RTS
     }
 
-    private fun readLoop(session: Long, conn: UsbDeviceConnection, inEp: UsbEndpoint, chip: Chip, name: String) {
+    /** #93: liga/desliga DTR e RTS (PTT). false se a porta não estiver aberta ou o pedido falhar. */
+    fun setLines(dtr: Boolean, rts: Boolean): Boolean {
+        val conn = connection ?: return false
+        val c = chip ?: return false
+        val req = usbControlLines(c, dtr, rts, controlIfaceId, dataIfaceId)
+        return synchronized(this) { conn.controlTransfer(req.requestType, req.request, req.value, req.index, null, 0, 1000) >= 0 }
+    }
+
+    /** #93: escreve bytes crus (comando CAT). */
+    fun writeRaw(data: ByteArray): Boolean {
+        val conn = connection ?: return false
+        val ep = outEp ?: return false
+        return synchronized(this) { writeAll(conn, ep, data) }
+    }
+
+    private fun writeAll(conn: UsbDeviceConnection, ep: UsbEndpoint, data: ByteArray): Boolean {
+        var off = 0
+        while (off < data.size) {
+            val chunk = data.copyOfRange(off, minOf(data.size, off + ep.maxPacketSize.coerceAtLeast(16)))
+            val n = conn.bulkTransfer(ep, chunk, chunk.size, 2000)
+            if (n <= 0) return false
+            off += n
+        }
+        return true
+    }
+
+    private fun readLoop(session: Long, conn: UsbDeviceConnection, inEp: UsbEndpoint, chip: UsbChip, name: String) {
         val decoder = Kiss.Decoder()
         val buf = ByteArray(maxOf(inEp.maxPacketSize, 64) * 4)
         val packet = maxOf(inEp.maxPacketSize, 64)
@@ -186,7 +224,7 @@ class UsbSerialTnc(
             while (running && epoch.get() == session) {
                 val n = conn.bulkTransfer(inEp, buf, buf.size, 250)
                 if (n <= 0) continue
-                val data = if (chip == Chip.FTDI) {
+                val data = if (chip == UsbChip.FTDI) {
                     // Cada pacote FTDI começa com 2 bytes de estado do modem.
                     val out = java.io.ByteArrayOutputStream(n)
                     var off = 0
@@ -209,19 +247,11 @@ class UsbSerialTnc(
         val conn = connection ?: return false
         val ep = outEp ?: return false
         val data = runCatching { Kiss.encode(Ax25.fromTnc2(tnc2)) }.getOrNull() ?: return false
-        return synchronized(this) {
-            var off = 0
-            while (off < data.size) {
-                val chunk = data.copyOfRange(off, minOf(data.size, off + ep.maxPacketSize.coerceAtLeast(16)))
-                val n = conn.bulkTransfer(ep, chunk, chunk.size, 2000)
-                if (n <= 0) return@synchronized false
-                off += n
-            }
-            true
-        }
+        return synchronized(this) { writeAll(conn, ep, data) }
     }
 
     private fun close() {
+        if (!kissMode) runCatching { setLines(false, false) } // nunca deixar o rádio preso em TX
         running = false
         epoch.incrementAndGet()
         val conn = connection
@@ -229,6 +259,7 @@ class UsbSerialTnc(
         outEp = null
         claimed.forEach { runCatching { conn?.releaseInterface(it) } }
         claimed = emptyList()
+        chip = null
         runCatching { conn?.close() }
     }
 

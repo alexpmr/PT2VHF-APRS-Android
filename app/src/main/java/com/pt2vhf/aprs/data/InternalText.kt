@@ -43,6 +43,9 @@ object InternalText {
     const val ERR_BT_CLOSED = "Conexão Bluetooth encerrada"
     const val ERR_KISS_CLOSED = "Conexão KISS TCP encerrada"
     const val ERR_CONNECT_FAILED = "Falha ao conectar"
+    const val ERR_BLE_CLOSED = "Conexão Bluetooth LE encerrada"
+    const val ERR_BLE_NO_KISS = "Aparelho sem serviço KISS BLE"
+    const val ERR_PTT_FAILED = "Falha ao acionar o PTT"
     const val ERR_WRITE_PREFIX = "Erro na escrita APRS-IS: "
     fun writeError(cause: String) = ERR_WRITE_PREFIX + cause
 

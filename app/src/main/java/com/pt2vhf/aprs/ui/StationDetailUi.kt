@@ -53,6 +53,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -66,7 +69,11 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import com.pt2vhf.aprs.R
 import com.pt2vhf.aprs.UiText
+import com.pt2vhf.aprs.core.AprsPacket
 import com.pt2vhf.aprs.core.AprsWeather
+import com.pt2vhf.aprs.core.MicEStatus
+import com.pt2vhf.aprs.core.decodePhg
+import com.pt2vhf.aprs.core.findCommentLinks
 import com.pt2vhf.aprs.core.PathHop
 import com.pt2vhf.aprs.core.QMeaning
 import com.pt2vhf.aprs.core.bearingDeg
@@ -239,6 +246,52 @@ private fun Tag(text: String) {
         modifier = Modifier.background(Pal.accent, RoundedCornerShape(4.dp)).padding(horizontal = 6.dp, vertical = 1.dp))
 }
 
+/** #88: comentário com e-mails e sites tocáveis; o resto do texto expande/recolhe como antes. */
+@Composable
+private fun LinkedComment(text: String, expanded: Boolean, onToggle: () -> Unit) {
+    val context = LocalContext.current
+    val links = remember(text) { findCommentLinks(text) }
+    val annotated = remember(text, links) {
+        buildAnnotatedString {
+            append(text)
+            links.forEach { link ->
+                addLink(LinkAnnotation.Clickable(link.target,
+                    TextLinkStyles(SpanStyle(color = Pal.accent, textDecoration = TextDecoration.Underline))) {
+                    val intent = if (link.email) Intent(Intent.ACTION_SENDTO, Uri.parse(link.target))
+                        else Intent(Intent.ACTION_VIEW, Uri.parse(link.target))
+                    runCatching { context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.onFailure {
+                        android.widget.Toast.makeText(context,
+                            UiText.text(if (link.email) R.string.link_no_email_app else R.string.link_no_app),
+                            android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                }, link.start, link.end)
+            }
+        }
+    }
+    Text(annotated, color = Pal.text, fontSize = 14.sp, maxLines = if (expanded) Int.MAX_VALUE else 3,
+        modifier = Modifier.clickable(onClick = onToggle))
+}
+
+/** #89: PHG decodificado (potência, altura, ganho, direção), com o código original. */
+private fun phgText(code: String): String {
+    val p = decodePhg(code) ?: return code
+    val dir = if (p.directionDeg == 0) UiText.text(R.string.dev_phg_omni) else "${p.directionDeg}°"
+    return "${p.powerW} W · ${p.heightM} m · ${p.gainDb} dB · $dir"
+}
+
+private fun micEStatusText(status: MicEStatus, custom: Int?): String = when (status) {
+    MicEStatus.OFF_DUTY -> UiText.text(R.string.mice_off_duty)
+    MicEStatus.EN_ROUTE -> UiText.text(R.string.mice_en_route)
+    MicEStatus.IN_SERVICE -> UiText.text(R.string.mice_in_service)
+    MicEStatus.RETURNING -> UiText.text(R.string.mice_returning)
+    MicEStatus.COMMITTED -> UiText.text(R.string.mice_committed)
+    MicEStatus.SPECIAL -> UiText.text(R.string.mice_special)
+    MicEStatus.PRIORITY -> UiText.text(R.string.mice_priority)
+    MicEStatus.EMERGENCY -> UiText.text(R.string.mice_emergency)
+    MicEStatus.CUSTOM -> UiText.text(R.string.mice_custom, custom ?: 0)
+    MicEStatus.UNKNOWN -> UiText.text(R.string.mice_unknown)
+}
+
 @Composable
 private fun SectionHeader(text: String) {
     Text(text, color = Pal.accent, fontWeight = FontWeight.Bold, fontSize = 14.sp,
@@ -306,13 +359,26 @@ private fun OverviewTab(
             UiText.text(R.string.sheet_first_seen) to s?.firstSeen?.let { fullTime(it) },
             UiText.text(R.string.sheet_transport) to s?.medium?.label,
             UiText.text(R.string.symbol) to s?.let { "${it.symbolTable}${it.symbol}" },
-            "PHG" to data.phg,
+            "PHG" to data.phg?.let { code -> phgText(code) },
         ))
+        // #89: rádio/aplicativo e dados extras do pacote; cada um só aparece quando existe.
+        val extras = listOfNotNull(
+            (data.device ?: data.tocall?.let { UiText.text(R.string.dev_unknown, it) })
+                ?.let { UiText.text(R.string.dev_device) to it },
+            data.micE?.let { m -> UiText.text(R.string.dev_mice_status) to micEStatusText(m.status, m.customIndex) },
+            data.frequency?.let { UiText.text(R.string.dev_frequency) to it },
+            data.statusText?.let { UiText.text(R.string.dec_status) to decodeAprsText(it) },
+            data.lastPacket?.raw?.let { AprsPacket.parse(it) }?.path?.takeIf { it.isNotEmpty() }
+                ?.let { UiText.text(R.string.logs_path) to it.joinToString(",") },
+        )
+        if (extras.isNotEmpty()) {
+            Spacer(Modifier.height(6.dp))
+            CardGrid(extras)
+        }
         if (s != null && s.comment.isNotBlank()) {
             SectionHeader(UiText.text(R.string.sheet_comment))
             var expanded by remember { mutableStateOf(false) }
-            Text(s.comment, color = Pal.text, fontSize = 14.sp, maxLines = if (expanded) Int.MAX_VALUE else 3,
-                modifier = Modifier.clickable { expanded = !expanded })
+            LinkedComment(s.comment, expanded) { expanded = !expanded }
         }
 
         val r = data.reception

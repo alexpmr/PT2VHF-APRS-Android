@@ -4,6 +4,13 @@ Itens registrados para as próximas versões. Não implementar até o pedido de 
 
 ## Onde estamos (13/11/2026)
 
+- **v1.1** (13/11/2026, versionCode 17, autorizada pelo mantenedor: "Gere nova versão completa com todo o backlog
+  implementado"): #92 TNC KISS por Bluetooth LE e #93 PTT por RTS/DTR ou CAT (PR #25; **não testados em hardware
+  real**), #89 (rádio/aplicativo pela tabela aprs-deviceid, Mic-E completo, PHG, frequência, status e caminho),
+  #88 (e-mail/site no comentário como link), #90 (sons de ack e de eco do digi; eco só pelo TNC, **não testado em
+  RF**), #87 (PP5PK) e a parte do app do #86 (indicativo informado logo após instalar/atualizar ou salvar indicativo
+  novo; PT2VHF deixa de ser "exemplo"). Site: #91 com BLE e PTT CAT/RTS em ✓ na tabela.
+  **Sem mudança de código (dependem de teste real):** #68 Android Auto em carro/DHU, P0 #60 e #62, #25, #37, #54.
 - **v1.0** (13/11/2026, versionCode 16, autorizada pelo mantenedor: "Implemente todos e suba no site"): #85 (Salvar
   visível no Android 15/16 e ✓ no cabeçalho), #80 (SSID não volta para -9/-7; pergunta ao sair com alterações),
   #82 ("Qual SSID usar?"), #79 (aba Sobre com colaboradores), #77 (sem acentos, padrão ligado), #78 (ICOM ID-5200),
@@ -3244,6 +3251,9 @@ _Pedido do mantenedor em 13/11/2026 ("implemente o ble e ptt por cat/rts"), a pa
 3. Mesmo enquadramento KISS dos outros TNCs; quadros grandes divididos no tamanho do MTU negociado, uma escrita por vez.
 4. Reconexão automática ao perder o enlace enquanto o TNC estiver selecionado.
 
+**Implementado em 13/11/2026 (PR na branch `claude/project-thread-cwzexr`, ainda não lançado):** `BleTnc` (GATT) e
+cartão "TNC Bluetooth LE" com busca na tela Rádio; permissão `BLUETOOTH_SCAN` (neverForLocation). Falta teste real.
+
 **Critérios de aceite:** aparelho BLE com um dos serviços acima conecta, recebe e transmite pacotes; aparelho sem
 serviço KISS mostra erro claro; testes de unidade da fragmentação e da escolha de serviço.
 **Exige teste em hardware real** (não há TNC BLE no ambiente de desenvolvimento).
@@ -3262,6 +3272,10 @@ Hoje o `UsbSerialTnc` só liga DTR+RTS ao abrir a porta do TNC KISS; não existe
    (FT-817/818/857/897) e Icom CI-V (`1C 00`, endereço configurável), com velocidade da porta configurável.
 3. Liga o PTT, espera um instante, toca o pacote (com TX delay), espera a cauda e solta o PTT; solta sempre, mesmo
    em erro. O tom de teste também aciona o PTT.
+
+**Implementado em 13/11/2026 (PR na branch `claude/project-thread-cwzexr`, ainda não lançado):** cartão "PTT do
+rádio" no modo AFSK; porta USB-serial própria (`UsbSerialTnc` com `kissMode = false`); comandos em
+`core/RadioControl.kt`. Falta teste real com rádio + adaptador.
 
 **Critérios de aceite:** com RTS/DTR o sinal sobe só durante a transmissão; com CAT o rádio entra e sai de TX; VOX
 continua igual; testes de unidade dos comandos CAT e dos pedidos de linha de controle por chip.

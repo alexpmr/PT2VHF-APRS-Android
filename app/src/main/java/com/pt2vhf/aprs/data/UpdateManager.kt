@@ -69,12 +69,18 @@ object UpdateManager {
         val now = System.currentTimeMillis()
         val st = _state.value
         val interval = if (st.lastResult == "fail") minOf(minIntervalMs, RETRY_MS) else minIntervalMs
-        if (!force && now - st.lastCheck < interval) return
+        // #86: indicativo ainda não informado nesta versão (app novo/atualizado ou indicativo trocado) → consulta já.
+        val key = UpdateCheck.reportKey(UpdateCheck.reportedCallsign(Settings.load(app)), BuildConfig.VERSION_NAME)
+        val pendingReport = key.isNotEmpty() && key != Settings.readOption(app, "update_reported_key", "")
+        if (!force && !pendingReport && now - st.lastCheck < interval) return
         if (!running.compareAndSet(false, true)) return
         _state.value = st.copy(checking = true)
         Thread({
             try {
-                val outcome = runCatching { UpdateCheck.fetchResult(UpdateCheck.reportedCallsign(Settings.load(app))) }.getOrElse { UpdateCheck.Result.Failure }
+                val call = UpdateCheck.reportedCallsign(Settings.load(app))
+                val outcome = runCatching { UpdateCheck.fetchResult(call) }.getOrElse { UpdateCheck.Result.Failure }
+                if (outcome != UpdateCheck.Result.Failure)
+                    Settings.saveOption(app, "update_reported_key", UpdateCheck.reportKey(call, BuildConfig.VERSION_NAME))
                 val time = System.currentTimeMillis()
                 val next = when (outcome) {
                     is UpdateCheck.Result.Available -> State(outcome.info, time, "new")

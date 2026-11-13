@@ -6,7 +6,7 @@ ou pelo próprio áudio do celular (modem AFSK 1200).
 
 **Download oficial:** https://www.pt2vhf.com/android
 
-## Recursos da versão 1.0
+## Recursos da versão 1.1
 
 - APRS-IS com servidor à escolha (padrão `soam.aprs2.net:14580`, lista de servidores ou "Outro…"),
   passcode calculado automaticamente a partir do indicativo e filtro editável (padrão `r/4000`).
@@ -16,7 +16,25 @@ ou pelo próprio áudio do celular (modem AFSK 1200).
 - Mensagens: conversas, canal geral (CQ) e boletins; ACK, novas tentativas e notificações.
 - Botão **Enviar beacon** e **modo tracker** (SmartBeaconing) com notificação fixa.
 - TNC KISS por Bluetooth (Mobilinkd, BTECH UV-Pro, Radtel RT-950 Pro, ICOM ID-5200 e similares) com monitor ao vivo.
+- TNC KISS por **Bluetooth LE** (serviço KISS BLE ou Nordic UART) e, no modo AFSK, **PTT por RTS/DTR ou CAT** por
+  adaptador USB-serial.
 - Aviso de nova versão pelo site www.pt2vhf.com (o aviso de "Downloads no site oficial" na abertura saiu na 0.1.8).
+
+## Novidades da 1.1
+
+- **TNC KISS por Bluetooth LE**: Mobilinkd TNC4, PicoAPRS, trackers LoRa APRS e outros com serviço KISS BLE ou
+  Nordic UART, sem parear (não testado em TNC BLE real).
+- **PTT por RTS/DTR ou CAT** no modo AFSK, por adaptador USB-serial (Digirig, FTDI, CP210x): Kenwood/Elecraft,
+  Yaesu e Icom CI-V (não testado com rádio real).
+- Ficha da estação mostra o **rádio/aplicativo** usado (tabela aprs-deviceid), status Mic-E, PHG decodificado,
+  frequência anunciada, status e caminho do último pacote. Estações **Mic-E** (Kenwood, Yaesu…) aparecem no mapa.
+- E-mails e sites no comentário da estação viram **links**.
+- **Sons** ao receber confirmação (ack) de mensagem e, pelo TNC, ao ouvir meu pacote repetido por um digipeater.
+- Indicativo vai para a lista do site logo após instalar/atualizar ou trocar o indicativo; PT2VHF também entra.
+- PP5PK entra nos colaboradores (PU2PYC, PP5AU, PU2MUS, PP5PK).
+
+Fonte da identificação de aparelhos: [aprs-deviceid](https://github.com/aprsorg/aprs-deviceid) (Hessu OH7LZB,
+CC BY-SA 2.0).
 
 ## Novidades da 1.0
 

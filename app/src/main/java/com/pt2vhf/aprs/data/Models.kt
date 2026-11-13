@@ -98,6 +98,10 @@ data class LinkStatus(
     /** #44: nível RMS da entrada de áudio (0..1) e transmissão AFSK em andamento. */
     val audioLevel: Double = 0.0,
     val audioTransmitting: Boolean = false,
+    /** #93: adaptador de PTT (RTS/DTR/CAT) aberto, nome e último erro. */
+    val pttReady: Boolean = false,
+    val pttName: String = "",
+    val pttError: String = "",
     /** Hora do último beacon próprio aceito por algum transporte (widget #46). */
     val lastBeaconAt: Long = 0L,
     /** #6: posição atual vem da posição fixa configurada, não do GPS. */

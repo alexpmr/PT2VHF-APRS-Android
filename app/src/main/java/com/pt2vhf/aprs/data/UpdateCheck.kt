@@ -15,21 +15,25 @@ object UpdateCheck {
 
     /** Mesmo formato aceito pelo site (stations_lib.php): letras e dígitos, até dois "/" (ex.: CT/PY2XYZ/P). */
     private val CALLSIGN = Regex("^(?=.*[0-9])(?=.*[A-Z])[A-Z0-9]{1,8}(/[A-Z0-9]{1,8}){0,2}$")
-    /** Indicativo de exemplo: quem nunca configurou a estação não entra na lista. */
-    private const val EXAMPLE_CALL = "PT2VHF"
 
     /**
      * #84: indicativo informado na consulta de versão (lista de estações em www.pt2vhf.com), ou null.
      * Só o indicativo, sem SSID; nunca localização nem locator. Null se a opção estiver desligada ou a
-     * estação não estiver configurada (indicativo vazio, de exemplo ou inválido; posição manual sem lat/lon).
+     * estação não estiver configurada (indicativo vazio ou inválido; posição manual sem lat/lon).
      */
     fun reportedCallsign(settings: Settings): String? {
         if (!settings.shareCallsign) return null
         if (settings.positionSource == "manual" && (settings.manualLat == null || settings.manualLon == null)) return null
         val call = settings.callsign.trim().uppercase().substringBefore('-')
-        if (call.isEmpty() || call == EXAMPLE_CALL || call.length > 16 || !CALLSIGN.matches(call)) return null
+        if (call.isEmpty() || call.length > 16 || !CALLSIGN.matches(call)) return null
         return call
     }
+
+    /**
+     * #86: chave do último indicativo informado com sucesso ao site. Quando muda (instalação/atualização do app
+     * ou indicativo novo), a consulta é feita na hora, sem esperar o intervalo de 1 h/12 h.
+     */
+    fun reportKey(call: String?, version: String): String = if (call.isNullOrEmpty()) "" else "$call|$version"
 
     /** URL da consulta: igual à de antes quando não há indicativo a informar. */
     fun endpoint(call: String?): String =

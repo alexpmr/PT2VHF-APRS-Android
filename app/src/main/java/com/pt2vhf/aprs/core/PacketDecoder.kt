@@ -12,6 +12,7 @@ enum class DecodedKey {
     COMMENT, STATUS, OBJECT_NAME, OBJECT_STATE, ADDRESSEE, MESSAGE_TEXT, MESSAGE_ID, ACK_ID, REPLY_ACK,
     TEMPERATURE, HUMIDITY, PRESSURE, WIND, GUST, RAIN_1H, RAIN_24H, RAIN_MIDNIGHT,
     TELEMETRY_SEQUENCE, TELEMETRY_ANALOG, TELEMETRY_BITS, NOT_DECODED,
+    /** #89 */ DEVICE, FREQUENCY,
 }
 
 data class DecodedField(val key: DecodedKey, val value: String)
@@ -34,6 +35,7 @@ fun decodePacket(raw: String): DecodedPacket? {
     add(DecodedKey.DESTINATION, packet.destination)
     add(DecodedKey.THIRD_PARTY, packet.thirdPartyGateway)
     add(DecodedKey.TYPE, type)
+    add(DecodedKey.DEVICE, identifyDevice(packet))
 
     fun position(pos: Position) {
         add(DecodedKey.LATITUDE, f5(pos.lat))
@@ -46,6 +48,7 @@ fun decodePacket(raw: String): DecodedPacket? {
     fun extras(text: String) {
         ALT.find(text)?.groupValues?.get(1)?.toIntOrNull()?.let { add(DecodedKey.ALTITUDE, "%.0f m".format(Locale.ROOT, it * 0.3048)) }
         PHG_RE.find(text)?.groupValues?.get(1)?.let { add(DecodedKey.PHG, it) }
+        add(DecodedKey.FREQUENCY, announcedFrequency(text))
     }
     fun weather(w: AprsWeather) {
         w.temperatureC?.let { add(DecodedKey.TEMPERATURE, "${f1(it)} °C") }
@@ -95,6 +98,17 @@ fun decodePacket(raw: String): DecodedPacket? {
                 if (t.bits.isNotEmpty()) add(DecodedKey.TELEMETRY_BITS, t.bits.joinToString("") { if (it) "1" else "0" })
                 add(DecodedKey.COMMENT, t.comment)
             } ?: add(DecodedKey.NOT_DECODED, info)
+        }
+        "mice" -> {
+            val m = parseMicE(packet.destination, info)
+            if (m != null) {
+                position(m.position)
+                m.altitudeM?.let { add(DecodedKey.ALTITUDE, "%.0f m".format(Locale.ROOT, it)) }
+                add(DecodedKey.STATUS, m.status.name.lowercase(Locale.ROOT).replace('_', ' ') +
+                    (m.customIndex?.let { " $it" } ?: ""))
+                add(DecodedKey.COMMENT, decodeAprsText(m.position.comment))
+                extras(m.position.comment)
+            } else add(DecodedKey.NOT_DECODED, info)
         }
         "status" -> add(DecodedKey.STATUS, decodeAprsText(info.substring(1)))
         else -> add(DecodedKey.NOT_DECODED, info)

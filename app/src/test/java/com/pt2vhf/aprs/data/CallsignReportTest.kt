@@ -30,11 +30,16 @@ class CallsignReportTest {
         assertEquals(base, UpdateCheck.endpoint(UpdateCheck.reportedCallsign(s)))
     }
 
+    @Test fun maintainerCallsignIsReported() {
+        // #86: PT2VHF é um indicativo real (do mantenedor), não mais tratado como exemplo.
+        assertEquals("PT2VHF", UpdateCheck.reportedCallsign(Settings(callsign = "pt2vhf-9")))
+        assertEquals("PT2VHF|1.1", UpdateCheck.reportKey("PT2VHF", "1.1"))
+        assertEquals("", UpdateCheck.reportKey(null, "1.1"))
+    }
+
     @Test fun unconfiguredStationSendsNothing() {
         assertNull("vazio", UpdateCheck.reportedCallsign(Settings(callsign = "")))
         assertNull("espaços", UpdateCheck.reportedCallsign(Settings(callsign = "   ")))
-        assertNull("exemplo", UpdateCheck.reportedCallsign(Settings(callsign = "PT2VHF")))
-        assertNull("exemplo com SSID", UpdateCheck.reportedCallsign(Settings(callsign = "pt2vhf-9")))
         assertNull("manual sem lat/lon", UpdateCheck.reportedCallsign(Settings(callsign = "PY2XYZ", positionSource = "manual")))
         assertNull("manual sem lon", UpdateCheck.reportedCallsign(Settings(callsign = "PY2XYZ", positionSource = "manual", manualLat = -23.5)))
         assertEquals(base, UpdateCheck.endpoint(null))

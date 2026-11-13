@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 1.1: #88 links no comentário, #89 rádio/aplicativo e Mic-E, #90 sons de ack e eco do digi. -->
+<resources>
+    <string name="dev_device">Radio/aplicación</string>
+    <string name="dev_unknown">Desconocido (%1$s)</string>
+    <string name="dev_mice_status">Estado Mic-E</string>
+    <string name="dev_frequency">Frecuencia anunciada</string>
+    <string name="dev_phg_omni">omni</string>
+    <string name="mice_off_duty">Fuera de servicio</string>
+    <string name="mice_en_route">En ruta</string>
+    <string name="mice_in_service">En servicio</string>
+    <string name="mice_returning">Regresando</string>
+    <string name="mice_committed">Comprometido</string>
+    <string name="mice_special">Especial</string>
+    <string name="mice_priority">Prioridad</string>
+    <string name="mice_emergency">EMERGENCIA</string>
+    <string name="mice_custom">Personalizado %1$d</string>
+    <string name="mice_unknown">Desconocido</string>
+    <string name="link_no_email_app">No hay aplicación de correo instalada</string>
+    <string name="link_no_app">Ninguna aplicación abre este enlace</string>
+    <string name="sound_ack">Sonido al recibir confirmación (ack) de un mensaje enviado</string>
+    <string name="sound_digi_echo">Sonido cuando un digipeater repite mi paquete (RF por el TNC)</string>
+    <string name="sound_ack_channel">Mensaje confirmado (sonido)</string>
+    <string name="sound_digi_channel">Mi paquete repetido (sonido)</string>
+    <string name="sound_ack_body">%1$s confirmó tu mensaje</string>
+    <string name="sound_digi_body">Tu paquete fue repetido por %1$s</string>
+</resources>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 1.1: #88 links no comentário, #89 rádio/aplicativo e Mic-E, #90 sons de ack e eco do digi. -->
+<resources>
+    <string name="dev_device">Radio/app</string>
+    <string name="dev_unknown">Unknown (%1$s)</string>
+    <string name="dev_mice_status">Mic-E status</string>
+    <string name="dev_frequency">Announced frequency</string>
+    <string name="dev_phg_omni">omni</string>
+    <string name="mice_off_duty">Off duty</string>
+    <string name="mice_en_route">En route</string>
+    <string name="mice_in_service">In service</string>
+    <string name="mice_returning">Returning</string>
+    <string name="mice_committed">Committed</string>
+    <string name="mice_special">Special</string>
+    <string name="mice_priority">Priority</string>
+    <string name="mice_emergency">EMERGENCY</string>
+    <string name="mice_custom">Custom %1$d</string>
+    <string name="mice_unknown">Unknown</string>
+    <string name="link_no_email_app">No e-mail app installed</string>
+    <string name="link_no_app">No app can open this link</string>
+    <string name="sound_ack">Sound when a sent message is acknowledged (ack)</string>
+    <string name="sound_digi_echo">Sound when a digipeater repeats my packet (RF via TNC)</string>
+    <string name="sound_ack_channel">Message acknowledged (sound)</string>
+    <string name="sound_digi_channel">My packet digipeated (sound)</string>
+    <string name="sound_ack_body">%1$s acknowledged your message</string>
+    <string name="sound_digi_body">Your packet was repeated by %1$s</string>
+</resources>

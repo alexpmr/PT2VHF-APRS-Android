@@ -71,6 +71,8 @@ private fun decodedLabel(key: DecodedKey): String = UiText.text(when (key) {
     DecodedKey.TELEMETRY_ANALOG -> R.string.dec_telemetry_analog
     DecodedKey.TELEMETRY_BITS -> R.string.dec_telemetry_bits
     DecodedKey.NOT_DECODED -> R.string.dec_not_decoded
+    DecodedKey.DEVICE -> R.string.dev_device
+    DecodedKey.FREQUENCY -> R.string.dev_frequency
 })
 
 /** #69: ferramentas — decodificador de pacote (nada é transmitido) e tabela de frequências APRS. */

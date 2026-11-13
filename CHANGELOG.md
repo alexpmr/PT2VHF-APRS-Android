@@ -1,5 +1,35 @@
 # Changelog
 
+## 1.1 — Publicada (13/11/2026; testes item a item pendentes)
+
+Versão 1.1 (versionCode 17), autorizada pelo mantenedor ("Gere nova versão completa com todo o backlog
+implementado"). Instala por cima da 1.0 sem perder dados e é oferecida pelo aviso de atualização (OTA).
+
+- **Rádio/aplicativo da estação e mais dados do pacote (#89):** a ficha da estação mostra o aparelho ou programa
+  (pelo destino/tocall ou pelos caracteres de fabricante do Mic-E, tabela pública
+  [aprs-deviceid](https://github.com/aprsorg/aprs-deviceid), Hessu OH7LZB, CC BY-SA 2.0), "Desconhecido (APxxxx)"
+  quando não está na tabela, status Mic-E (Em rota, Em serviço, Emergência…), PHG decodificado (W, m, dB, direção),
+  frequência/tom/offset anunciados no comentário, último status (`>`) e o caminho do último pacote. **Mic-E agora
+  é decodificado por completo** (posição, velocidade, rumo, altitude): estações Kenwood/Yaesu em Mic-E passam a
+  aparecer no mapa, na lista e no decodificador de pacotes.
+- **E-mail e site no comentário viram link (#88):** na ficha da estação, `nome@dominio` abre o aplicativo de e-mail
+  com o destinatário e `www.`/`http(s)://` abre o navegador; sem aplicativo, aparece um aviso.
+- **Sons de ack e de eco do digi (#90):** em Configurações → Mensagens, "Som ao receber confirmação (ack)" (ligado)
+  e "Som quando um digipeater repete meu pacote" (desligado). Toca uma vez por mensagem/pacote, pelo canal de
+  notificação próprio (troca o som nas configurações do Android, respeita silencioso/Não perturbe e funciona com a
+  tela apagada). O eco só existe pelo TNC (RF), não pelo APRS-IS.
+- **Lista de estações do site (#86):** o app informa o indicativo logo após instalar/atualizar e logo após salvar
+  um indicativo novo, sem esperar 1 h/12 h; **PT2VHF** deixou de ser tratado como indicativo de exemplo.
+- **Colaboradores (#87):** PP5PK entra na aba Sobre (PU2PYC, PP5AU, PU2MUS, PP5PK).
+- **TNC KISS por Bluetooth LE (#92):** nova opção "Bluetooth LE" na tela Rádio, com busca de aparelhos próximos
+  (sem parear). Aceita o serviço KISS BLE padrão (Mobilinkd TNC4, PicoAPRS, trackers LoRa APRS e outros) e o
+  Nordic UART; quadros maiores que o MTU vão em pedaços; reconecta sozinho. **Não testado em TNC BLE real.**
+- **PTT por RTS/DTR ou CAT no modo AFSK (#93):** em Rádio → AFSK, novo cartão "PTT do rádio" com VOX (padrão, como
+  antes), RTS, DTR ou CAT por um adaptador USB-serial na porta OTG (Digirig, cabo FTDI/CP210x ou a USB do rádio).
+  CAT: Kenwood/Elecraft (`TX;`/`RX;`), Yaesu FT-991/891/DX (`TX1;`/`TX0;`), Yaesu FT-817/857/897 (5 bytes) e
+  Icom CI-V (`1C 00`, endereço configurável). O PTT é solto sempre, mesmo em erro; sem o adaptador, o pacote não
+  sai. A porta do PTT abre com DTR/RTS desligados. **Não testado com rádio real.**
+
 ## 1.0 — Publicada (13/11/2026; testes item a item pendentes)
 
 Primeira versão 1.0 (versionCode 16), autorizada pelo mantenedor ("Implemente todos e suba no site"). Instala por

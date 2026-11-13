@@ -197,6 +197,8 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
     var favPos by remember { mutableStateOf(current.alertFavPosition) }
     var favRf by remember { mutableStateOf(current.alertFavRf) }
     var myDigi by remember { mutableStateOf(current.alertMyDigi) }
+    var soundAck by remember { mutableStateOf(current.soundAck) }
+    var soundDigi by remember { mutableStateOf(current.soundDigiEcho) }
     var returnMin by remember { mutableStateOf(current.alertReturnMinutes.toString()) }
     var quiet by remember { mutableStateOf(current.quietHours) }
     var quietStart by remember { mutableStateOf(current.quietStart.toString()) }
@@ -307,7 +309,7 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
             voiceFrequency = voiceFreq.trim(), keepScreenOn = keepScreen, stationMaxAgeHours = maxAge,
             notifyMessages = notifyMsg, monitorEnabled = monitorOn,
             alertFavFirst = favFirst, alertFavReturn = favReturn, alertFavPosition = favPos, alertFavRf = favRf,
-            alertMyDigi = myDigi, alertReturnMinutes = (returnMin.toIntOrNull() ?: 60).coerceIn(5, 1440),
+            alertMyDigi = myDigi, soundAck = soundAck, soundDigiEcho = soundDigi, alertReturnMinutes = (returnMin.toIntOrNull() ?: 60).coerceIn(5, 1440),
             quietHours = quiet, quietStart = (quietStart.toIntOrNull() ?: 22).coerceIn(0, 23),
             quietEnd = (quietEnd.toIntOrNull() ?: 7).coerceIn(0, 23),
             apiEnabled = apiOn, apiAllowControl = apiControl, apiAllowBeacon = apiBeacon,
@@ -575,6 +577,9 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
                 // ----- Notificações e alertas (#6, #12) -----
                 SectionTitle(UiText.text(R.string.notifications_section))
                 CheckRow(UiText.text(R.string.notify_messages), notifyMsg) { notifyMsg = it }
+                // #90: sons pelo canal de notificação (respeita silencioso/Não perturbe; som trocável no Android).
+                CheckRow(UiText.text(R.string.sound_ack), soundAck) { soundAck = it }
+                CheckRow(UiText.text(R.string.sound_digi_echo), soundDigi) { soundDigi = it }
                 Text(UiText.text(R.string.alerts_favorites), fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 CheckRow(UiText.text(R.string.alert_opt_first), favFirst) { favFirst = it }
                 CheckRow(UiText.text(R.string.alert_opt_return), favReturn) { favReturn = it }
@@ -794,7 +799,7 @@ internal enum class SettingsTab {
 }
 
 /** #79: radioamadores que ajudaram a melhorar o app (indicativos não se traduzem). Ampliar só aqui. */
-internal val CONTRIBUTORS = listOf("PU2PYC", "PP5AU", "PU2MUS")
+internal val CONTRIBUTORS = listOf("PU2PYC", "PP5AU", "PU2MUS", "PP5PK")
 
 private const val SSID_HELP_SEEN = "ssid_help_seen"
 

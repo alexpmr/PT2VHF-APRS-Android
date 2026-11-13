@@ -9,7 +9,11 @@ import com.pt2vhf.aprs.core.applyTelemetryDefinition
 import com.pt2vhf.aprs.core.describePath
 import com.pt2vhf.aprs.core.haversineKm
 import com.pt2vhf.aprs.core.parseAprsWeather
-import com.pt2vhf.aprs.core.parsePosition
+import com.pt2vhf.aprs.core.MicE
+import com.pt2vhf.aprs.core.announcedFrequency
+import com.pt2vhf.aprs.core.identifyDevice
+import com.pt2vhf.aprs.core.parseMicE
+import com.pt2vhf.aprs.core.parsePacketPosition
 import com.pt2vhf.aprs.core.parseTelemetryFrame
 import com.pt2vhf.aprs.core.qIsRfGate
 import com.pt2vhf.aprs.core.telemetryDefinitionTarget
@@ -54,6 +58,16 @@ data class StationInsights(
     val packets: List<PacketLogEntry>,
     /** Posições transmitidas pela estação, mais antigas primeiro (aba Trilha, #58.4). */
     val positions: List<TrackPoint> = emptyList(),
+    /** #89: rádio/aplicativo (tocall ou Mic-E), null se desconhecido. */
+    val device: String? = null,
+    /** #89: destino (tocall) do último pacote, mostrado quando o aparelho é desconhecido. */
+    val tocall: String? = null,
+    /** #89: último pacote Mic-E (status e altitude). */
+    val micE: MicE? = null,
+    /** #89: frequência/tom/offset anunciados no comentário. */
+    val frequency: String? = null,
+    /** #89: última mensagem de status (>). */
+    val statusText: String? = null,
 )
 
 /** Pontos da trilha dentro do período (#58.4: 1 h, 6 h, 1 d, 3 d, 7 d), em ordem de tempo. */
@@ -120,7 +134,7 @@ fun buildStationInsights(
 
     val stationPos = stations[target]?.let { it.lat to it.lon }
     fun positionOf(p: AprsPacket): Pair<Double, Double>? =
-        parsePosition(p.info)?.let { it.lat to it.lon } ?: stationPos
+        parsePacketPosition(p)?.let { it.lat to it.lon } ?: stationPos
     fun km(from: Pair<Double, Double>?, call: String?): Double? {
         val other = call?.let { stations[it] } ?: return null
         from ?: return null
@@ -145,10 +159,16 @@ fun buildStationInsights(
     val lastHop = lastPath?.lastDigipeater ?: lastIgate
     val localRf = recent.filter { (e, p) -> e.medium == Medium.RF && p.thirdPartyGateway == null }
 
-    val positionComment = own.lastOrNull { (_, p) -> parsePosition(p.info) != null }?.second?.let { parsePosition(it.info)?.comment }
+    val positionComment = own.lastOrNull { (_, p) -> parsePacketPosition(p) != null }?.second?.let { parsePacketPosition(it)?.comment }
+    val lastOwn = own.lastOrNull()?.second
+    val micE = own.lastOrNull { (_, p) -> parseMicE(p.destination, p.info) != null }?.second?.let { parseMicE(it.destination, it.info) }
+    val device = own.asReversed().firstNotNullOfOrNull { (_, p) -> identifyDevice(p) }
+    val statusText = own.lastOrNull { (_, p) -> p.info.startsWith(">") }?.second?.info?.substring(1)?.trim()?.ifEmpty { null }
+    val frequency = (listOfNotNull(positionComment, statusText) + own.asReversed().map { it.second.info })
+        .firstNotNullOfOrNull { announcedFrequency(it) }
     val anyText = own.asReversed().map { it.second.info }
     val altitude = (listOfNotNull(positionComment) + anyText).firstNotNullOfOrNull { ALTITUDE.find(it) }
-        ?.groupValues?.get(1)?.toIntOrNull()?.let { it * 0.3048 }
+        ?.groupValues?.get(1)?.toIntOrNull()?.let { it * 0.3048 } ?: micE?.altitudeM
     val phg = anyText.firstNotNullOfOrNull { PHG.find(it) }?.groupValues?.get(1)
 
     return StationInsights(
@@ -177,7 +197,12 @@ fun buildStationInsights(
         altitudeM = altitude,
         phg = phg,
         packets = mine.asReversed(),
-        positions = unique.mapNotNull { (e, p) -> parsePosition(p.info)?.let { TrackPoint(it.lat, it.lon, e.time) } }
+        positions = unique.mapNotNull { (e, p) -> parsePacketPosition(p)?.let { TrackPoint(it.lat, it.lon, e.time) } }
             .filterNot { it.lat == 0.0 && it.lon == 0.0 },
+        device = device,
+        tocall = lastOwn?.takeIf { parseMicE(it.destination, it.info) == null }?.destination?.substringBefore('-'),
+        micE = micE,
+        frequency = frequency,
+        statusText = statusText,
     )
 }
