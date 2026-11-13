@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- v1.0: #77 #79 #80 #82 #85 e Android Auto (#68). -->
+<resources>
+    <string name="about_contributors">Contributors</string>
+    <string name="about_contributors_thanks">Thanks to the radio amateurs who helped improve this app:</string>
+    <string name="about_site">Official site, downloads and updates:</string>
+    <string name="about_version">Version %1$s</string>
+    <string name="car_beacon_now">Beacon now</string>
+    <string name="car_beacon_sent">Beacon requested</string>
+    <string name="car_last_message">Last message</string>
+    <string name="car_nearby">Nearby stations</string>
+    <string name="car_no_message">No message yet</string>
+    <string name="car_no_stations">No station received yet</string>
+    <string name="car_off">off</string>
+    <string name="car_on">on</string>
+    <string name="car_status">APRS-IS: %1$s · TNC: %2$s · GPS: %3$s</string>
+    <string name="settings_discard">Discard</string>
+    <string name="settings_unsaved_body">You changed settings that were not saved yet. Nothing is transmitted by saving.</string>
+    <string name="settings_unsaved_title">Save changes?</string>
+    <string name="ssid_help_dont_show">Don\'t open this automatically again (the ⓘ still opens it)</string>
+    <string name="ssid_help_intro">Recommendations, not rules: they let other operators recognize the station type from the callsign. Tap a line to use it.</string>
+    <string name="ssid_help_notes">A tracker without messages or voice should use -12, not -9 (-9 suggests someone who answers). For special activity (satellite, event, 6 m tests) use -6 to keep it apart from the everyday -9. -1 to -4 and -15 are generic for operators with several stations.</string>
+    <string name="ssid_help_profile">suggested for %1$s</string>
+    <string name="ssid_help_source">Source: APRS SSID Recommendations, WB4APR (Bob Bruninga), 2012.</string>
+    <string name="ssid_help_title">Which SSID to use?</string>
+    <string name="ssid_saved_in_profile">Saved in the %1$s profile</string>
+    <string name="ssid_use_0">No suffix: main station, usually fixed and able to message</string>
+    <string name="ssid_use_1">Additional generic station (digi, mobile, WX etc.)</string>
+    <string name="ssid_use_2">Additional generic station (digi, mobile, WX etc.)</string>
+    <string name="ssid_use_3">Additional generic station (digi, mobile, WX etc.)</string>
+    <string name="ssid_use_4">Additional generic station (digi, mobile, WX etc.)</string>
+    <string name="ssid_use_5">Other networks (D-STAR, iPhone, Android, Blackberry etc.)</string>
+    <string name="ssid_use_6">Special activity: satellite/ISS, camping, 6 meters etc.</string>
+    <string name="ssid_use_7">Handheld (HT, walkie-talkie)</string>
+    <string name="ssid_use_8">Boat, sailboat, RV or second main mobile</string>
+    <string name="ssid_use_9">Primary mobile (usually able to message)</string>
+    <string name="ssid_use_10">Internet, iGate, EchoLink, Winlink, AVRS, APRN etc.</string>
+    <string name="ssid_use_11">Balloon, aircraft, spacecraft</string>
+    <string name="ssid_use_12">APRStt, DTMF, RFID, devices, one-way tracker</string>
+    <string name="ssid_use_13">Weather station</string>
+    <string name="ssid_use_14">Trucker or full-time driver</string>
+    <string name="ssid_use_15">Additional generic station (digi, mobile, WX etc.)</string>
+    <string name="strip_accents">Remove accents before sending messages</string>
+    <string name="strip_accents_hint">\"Ação\" goes out as \"Acao\": many radios and older clients only show plain ASCII. The bubble shows the text as it was sent.</string>
+</resources>

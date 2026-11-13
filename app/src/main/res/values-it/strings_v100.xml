@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- v1.0: #77 #79 #80 #82 #85 e Android Auto (#68). -->
+<resources>
+    <string name="about_contributors">Collaboratori</string>
+    <string name="about_contributors_thanks">Grazie ai radioamatori che hanno aiutato a migliorare questa app:</string>
+    <string name="about_site">Sito ufficiale, download e aggiornamenti:</string>
+    <string name="about_version">Versione %1$s</string>
+    <string name="car_beacon_now">Beacon ora</string>
+    <string name="car_beacon_sent">Beacon richiesto</string>
+    <string name="car_last_message">Ultimo messaggio</string>
+    <string name="car_nearby">Stazioni vicine</string>
+    <string name="car_no_message">Nessun messaggio finora</string>
+    <string name="car_no_stations">Nessuna stazione ricevuta finora</string>
+    <string name="car_off">spento</string>
+    <string name="car_on">attivo</string>
+    <string name="car_status">APRS-IS: %1$s · TNC: %2$s · GPS: %3$s</string>
+    <string name="settings_discard">Scarta</string>
+    <string name="settings_unsaved_body">Hai modificato impostazioni non ancora salvate. Salvare non trasmette nulla.</string>
+    <string name="settings_unsaved_title">Salvare le modifiche?</string>
+    <string name="ssid_help_dont_show">Non aprirla più da sola (la ⓘ la apre comunque)</string>
+    <string name="ssid_help_intro">Sono raccomandazioni, non regole: servono agli altri operatori per riconoscere il tipo di stazione dal nominativo. Tocca una riga per usarla.</string>
+    <string name="ssid_help_notes">Un tracker senza messaggi né voce dovrebbe usare -12, non -9 (il -9 indica qualcuno che risponde). Per attività speciali (satellite, evento, prove in 6 m) usa -6, così lo storico resta separato dal -9 di tutti i giorni. Da -1 a -4 e -15 sono generici per chi ha più stazioni.</string>
+    <string name="ssid_help_profile">suggerito per %1$s</string>
+    <string name="ssid_help_source">Fonte: APRS SSID Recommendations, WB4APR (Bob Bruninga), 2012.</string>
+    <string name="ssid_help_title">Quale SSID usare?</string>
+    <string name="ssid_saved_in_profile">Salvato nel profilo %1$s</string>
+    <string name="ssid_use_0">Senza suffisso: stazione principale, di solito fissa e con messaggi</string>
+    <string name="ssid_use_1">Stazione aggiuntiva generica (digi, mobile, WX ecc.)</string>
+    <string name="ssid_use_2">Stazione aggiuntiva generica (digi, mobile, WX ecc.)</string>
+    <string name="ssid_use_3">Stazione aggiuntiva generica (digi, mobile, WX ecc.)</string>
+    <string name="ssid_use_4">Stazione aggiuntiva generica (digi, mobile, WX ecc.)</string>
+    <string name="ssid_use_5">Altre reti (D-STAR, iPhone, Android, Blackberry ecc.)</string>
+    <string name="ssid_use_6">Attività speciale: satellite/ISS, campeggio, 6 metri ecc.</string>
+    <string name="ssid_use_7">Portatile (palmare, walkie-talkie)</string>
+    <string name="ssid_use_8">Barca, barca a vela, camper o secondo mobile principale</string>
+    <string name="ssid_use_9">Mobile principale (di solito con messaggi)</string>
+    <string name="ssid_use_10">Internet, iGate, EchoLink, Winlink, AVRS, APRN ecc.</string>
+    <string name="ssid_use_11">Pallone, aereo, veicolo spaziale</string>
+    <string name="ssid_use_12">APRStt, DTMF, RFID, dispositivi, tracker solo andata</string>
+    <string name="ssid_use_13">Stazione meteo</string>
+    <string name="ssid_use_14">Camionista o autista a tempo pieno</string>
+    <string name="ssid_use_15">Stazione aggiuntiva generica (digi, mobile, WX ecc.)</string>
+    <string name="strip_accents">Rimuovi gli accenti prima di inviare i messaggi</string>
+    <string name="strip_accents_hint">\"Città\" parte come \"Citta\": molte radio e client vecchi mostrano solo ASCII semplice. Il fumetto mostra il testo come è stato inviato.</string>
+</resources>

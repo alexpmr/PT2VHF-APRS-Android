@@ -6,8 +6,8 @@ plugins {
 
 // Versão única do app; o site (updates.json) e o aviso de atualização usam este valor.
 // Release solicitada pelo mantenedor. versionCode > v0.1.0 para atualização sem perda de dados.
-val appVersionName = "0.1.15"
-val appVersionCode = 15
+val appVersionName = "1.0"
+val appVersionCode = 16
 
 android {
     namespace = "com.pt2vhf.aprs"
@@ -64,5 +64,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-core")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("org.osmdroid:osmdroid-android:6.1.20")
+    // #68 Android Auto (modelos da biblioteca Car App)
+    implementation("androidx.car.app:app:1.4.0")
     testImplementation("junit:junit:4.13.2")
 }

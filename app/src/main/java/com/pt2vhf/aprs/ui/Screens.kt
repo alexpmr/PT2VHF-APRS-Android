@@ -1007,7 +1007,15 @@ fun TrackerScreen(settings: Settings, onSettingsChanged: (Settings) -> Unit, onC
             onDismissRequest = { pendingProfile = null },
             containerColor = Pal.bar,
             title = { Text(UiText.text(R.string.profile_switch_title, profileLabel(target))) },
-            text = { Text(UiText.text(if (target == Settings.PROFILE_RX) R.string.profile_rx_notice else R.string.profile_switch_body)) },
+            text = {
+                Column {
+                    Text(UiText.text(if (target == Settings.PROFILE_RX) R.string.profile_rx_notice else R.string.profile_switch_body))
+                    // #80: mostra o indicativo que vai entrar, ex.: PY2ARS-9 → PY2ARS-7.
+                    val nextCall = remember(target) { Settings.forProfile(context, settings, target).fullCall }
+                    if (nextCall != settings.fullCall) Text("${settings.fullCall} → $nextCall",
+                        fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
+                }
+            },
             confirmButton = {
                 TextButton(onClick = {
                     val trackerWasOn = AprsRepository.status.value.trackerOn

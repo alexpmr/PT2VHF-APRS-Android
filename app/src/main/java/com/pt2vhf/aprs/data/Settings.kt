@@ -98,6 +98,8 @@ data class Settings(
     val updateNotify: Boolean = true,
     // #84 informar o indicativo na consulta de versão (lista de estações no site)
     val shareCallsign: Boolean = true,
+    // #77 remover acentos das mensagens enviadas (padrão ligado)
+    val stripAccents: Boolean = true,
 ) {
     val fullCall: String get() = fullCallsign(callsign, ssid)
     val passcode: Int get() = aprsPasscode(callsign)
@@ -207,6 +209,7 @@ data class Settings(
                 batteryAutoPercent = i("battery_auto_percent", d.batteryAutoPercent).coerceIn(5, 80),
                 updateNotify = b("update_notify", d.updateNotify),
                 shareCallsign = b("share_callsign", d.shareCallsign),
+                stripAccents = b("strip_accents", d.stripAccents),
             )
         }
 
@@ -285,6 +288,7 @@ data class Settings(
                 .putInt("battery_auto_percent", s.batteryAutoPercent.coerceIn(5, 80))
                 .putBoolean("update_notify", s.updateNotify)
                 .putBoolean("share_callsign", s.shareCallsign)
+                .putBoolean("strip_accents", s.stripAccents)
                 .apply()
             // Each profile keeps its own transmission-related choices (#10).
             saveProfileSnapshot(context, s.profile, s)

@@ -6,7 +6,7 @@ ou pelo próprio áudio do celular (modem AFSK 1200).
 
 **Download oficial:** https://www.pt2vhf.com/android
 
-## Recursos da versão 0.1
+## Recursos da versão 1.0
 
 - APRS-IS com servidor à escolha (padrão `soam.aprs2.net:14580`, lista de servidores ou "Outro…"),
   passcode calculado automaticamente a partir do indicativo e filtro editável (padrão `r/4000`).
@@ -15,8 +15,20 @@ ou pelo próprio áudio do celular (modem AFSK 1200).
   não contam como RF.
 - Mensagens: conversas, canal geral (CQ) e boletins; ACK, novas tentativas e notificações.
 - Botão **Enviar beacon** e **modo tracker** (SmartBeaconing) com notificação fixa.
-- TNC KISS por Bluetooth (Mobilinkd, BTECH UV-Pro, Radtel RT-950 Pro e similares) com monitor ao vivo.
+- TNC KISS por Bluetooth (Mobilinkd, BTECH UV-Pro, Radtel RT-950 Pro, ICOM ID-5200 e similares) com monitor ao vivo.
 - Aviso de nova versão pelo site www.pt2vhf.com (o aviso de "Downloads no site oficial" na abertura saiu na 0.1.8).
+
+## Novidades da 1.0
+
+- Configurações com **Salvar sempre visível** (também no cabeçalho) no Android 15/16, tablets e navegação por 3 botões.
+- SSID não volta mais sozinho para -9/-7; ao sair com alterações o app pergunta se quer salvar.
+- Janela **"Qual SSID usar?"** com as recomendações de WB4APR (ⓘ ao lado do campo SSID).
+- Nova aba **Sobre** com versão, site e colaboradores (PU2PYC, PP5AU, PU2MUS).
+- Mensagens saem **sem acentos** por padrão (opção em Configurações → Mensagens).
+- **Android Auto**: estações próximas, Beacon agora e última mensagem no painel do carro (modo desenvolvedor do
+  Android Auto para APK fora da Play Store).
+- Indicativo informado na consulta de versão nova (lista de estações no site; pode desligar).
+- ICOM ID-5200 na lista de rádios que funcionam.
 
 ## Novidades da 0.1.15
 

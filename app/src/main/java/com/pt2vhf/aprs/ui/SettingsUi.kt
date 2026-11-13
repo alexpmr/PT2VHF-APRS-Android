@@ -13,6 +13,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -43,6 +46,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.platform.LocalContext
@@ -223,6 +227,11 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
     var retryBase by remember { mutableStateOf(current.msgRetryBaseSec.toString()) }
     var updateNotify by remember { mutableStateOf(current.updateNotify) }
     var shareCallsign by remember { mutableStateOf(current.shareCallsign) }
+    var stripAccents by remember { mutableStateOf(current.stripAccents) }
+    // #80: SSID digitado nesta edição não é trocado pelo do perfil; #82: janela "Qual SSID usar?".
+    var ssidTouched by remember { mutableStateOf(false) }
+    var ssidHelp by remember { mutableStateOf(false) }
+    var confirmClose by remember { mutableStateOf(false) }
     var deleteMessagesOpen by remember { mutableStateOf(false) }
     var backupIncludeMessages by remember { mutableStateOf(false) }
     var backupMessage by remember { mutableStateOf<String?>(null) }
@@ -255,6 +264,8 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
     val clearScope = rememberCoroutineScope()
 
     val base = call.trim().uppercase().substringBefore('-')
+    val initialLat = remember { manualLat }
+    val initialLon = remember { manualLon }
     val passcode = if (base.isNotEmpty()) com.pt2vhf.aprs.core.aprsPasscode(base).toString() else "—"
 
     fun build(force: Boolean = false): Settings? {
@@ -305,21 +316,26 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
             retPrivateMax = retPrivMax, retGeneralMax = if (retSame) retPrivMax else retGenMax,
             retBulletinMax = if (retSame) retPrivMax else retBlnMax,
             positionSource = positionSource,
-            manualLat = manualLat.replace(',', '.').toDoubleOrNull()?.takeIf { it in -90.0..90.0 },
-            manualLon = manualLon.replace(',', '.').toDoubleOrNull()?.takeIf { it in -180.0..180.0 },
+            manualLat = if (manualLat == initialLat) current.manualLat
+                else manualLat.replace(',', '.').toDoubleOrNull()?.takeIf { it in -90.0..90.0 },
+            manualLon = if (manualLon == initialLon) current.manualLon
+                else manualLon.replace(',', '.').toDoubleOrNull()?.takeIf { it in -180.0..180.0 },
             gpsPrecision = gpsPrecision, useNetworkLocation = useNetwork,
             batterySaver = batterySaver, batteryAutoPercent = (batteryAuto.toIntOrNull() ?: 20).coerceIn(5, 80),
             announceVersion = announce,
             msgRetries = (retries.toIntOrNull() ?: 5).coerceIn(1, 10),
             msgRetryBaseSec = (retryBase.toIntOrNull() ?: 30).coerceIn(10, 300),
-            updateNotify = updateNotify, shareCallsign = shareCallsign)
+            updateNotify = updateNotify, shareCallsign = shareCallsign, stripAccents = stripAccents)
     }
 
     /** Loads the chosen profile into the form; nothing is saved or transmitted until Save. */
     fun loadProfile(name: String) {
+        // #80: tocar no perfil já marcado não recarrega nada (antes apagava o que foi digitado).
+        if (name == profile) return
         val p = Settings.forProfile(context, build(force = true) ?: current, name)
         profile = name
-        ssid = p.ssid.toString(); symbol = "${p.symbolTable}${p.symbol}"; comment = p.comment
+        if (!ssidTouched) ssid = p.ssid.toString()
+        symbol = "${p.symbolTable}${p.symbol}"; comment = p.comment
         voiceFreq = p.voiceFrequency; path = p.rfPath; beaconMode = p.beaconMode
         periodicSec = p.periodicIntervalSec.toString(); slowSpeed = p.smartSlowSpeedKmh.toString()
         fastSpeed = p.smartFastSpeedKmh.toString(); slowSec = p.smartSlowIntervalSec.toString()
@@ -328,6 +344,30 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
         stoppedMin = p.stoppedBeaconMinutes.toString(); txRf = p.txViaRf; txIs = p.txViaInternet
         autoAprsIs = p.connectAprsIs; filter = p.filter; ambiguity = p.ambiguity
         courseSpeed = p.sendCourseSpeed; altitude = p.sendAltitude; autoTracker = p.trackerAutoStart
+    }
+
+    /** Valida e grava; mesma regra no ✓ do cabeçalho, no "Salvar" do rodapé e na pergunta ao sair. */
+    fun trySave() {
+        val s = build() ?: return
+        if (s.filter.isBlank() && !confirmEmptyFilter) {
+            confirmEmptyFilter = true; error = UiText.text(R.string.filter_empty); tab = SettingsTab.APRS_IS
+            return
+        }
+        // A retention change that deletes messages right away needs a second, explicit tap.
+        val victims = AprsRepository.retentionPreview(s.retention)
+        if (victims > 0 && retentionConfirmedFor != victims) {
+            retentionConfirmedFor = victims
+            error = UiText.text(R.string.retention_confirm, victims)
+            tab = SettingsTab.MESSAGES
+            return
+        }
+        onSave(s)
+        AprsRepository.applyRetention(s.retention)
+    }
+
+    /** #80: Voltar/Cancelar nunca descarta alterações em silêncio. */
+    fun requestClose() {
+        if (build(force = true) != current) confirmClose = true else onDismiss()
     }
 
     // #42: "24 h" = 1 dia corrido, contado do horário de cada mensagem.
@@ -339,15 +379,20 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
     val maxOptions = listOf(500, 1000, 5000, 0).map { it to (if (it == 0) UiText.text(R.string.retention_no_limit) else "%,d".format(it)) }
 
     // #74: tela cheia com abas por assunto; cada aba rola sozinha e o "Salvar" grava todas de uma vez.
+    // #85: janela borda a borda em todas as versões, com recuo das barras do sistema e do teclado
+    // (Android 15/16 com navegação por 3 botões ou barra de tarefas cobria o rodapé com o "Salvar").
     androidx.compose.ui.window.Dialog(
-        onDismissRequest = onDismiss,
-        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false),
+        onDismissRequest = { requestClose() },
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false,
+            dismissOnClickOutside = false, decorFitsSystemWindows = false),
     ) {
-        androidx.compose.material3.Surface(Modifier.fillMaxSize(), color = Pal.ground, contentColor = Pal.text) {
-        Column(Modifier.fillMaxSize()) {
+        androidx.compose.material3.Surface(Modifier.fillMaxSize(), color = Pal.bar, contentColor = Pal.text) {
+        Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).background(Pal.ground)) {
             Row(Modifier.fillMaxWidth().background(Pal.bar).padding(start = 16.dp, end = 4.dp, top = 12.dp, bottom = 6.dp),
                 verticalAlignment = Alignment.CenterVertically) {
                 Text(UiText.text(R.string.settings), fontSize = 19.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                // #85: "Salvar" também no cabeçalho, visível mesmo se o rodapé ficar escondido.
+                TextButton(onClick = { trySave() }) { Text("✓ " + UiText.text(R.string.save), fontWeight = FontWeight.Bold) }
             }
             androidx.compose.material3.ScrollableTabRow(selectedTabIndex = tab.ordinal, containerColor = Pal.bar,
                 contentColor = Pal.accent, edgePadding = 8.dp) {
@@ -376,9 +421,20 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(call, { call = it.uppercase().take(6) }, label = { Text(UiText.text(R.string.callsign) + " *") }, singleLine = true,
                         modifier = Modifier.weight(2f), keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters))
-                    OutlinedTextField(ssid, { ssid = it.filter(Char::isDigit).take(2) }, label = { Text("SSID") }, singleLine = true,
-                        modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                    OutlinedTextField(ssid, { ssid = it.filter(Char::isDigit).take(2); ssidTouched = true },
+                        label = { Text("SSID") }, singleLine = true,
+                        trailingIcon = {
+                            Text("ⓘ", fontSize = 20.sp, color = Pal.accent,
+                                modifier = Modifier.clickable { ssidHelp = true }.padding(8.dp))
+                        },
+                        modifier = Modifier.weight(1.3f).onFocusChanged {
+                            // #82: abre sozinha na primeira edição, até marcar "Não mostrar de novo".
+                            if (it.isFocused && !Settings.flag(context, SSID_HELP_SEEN)) ssidHelp = true
+                        },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
                 }
+                // #80: o SSID fica guardado no perfil ativo.
+                Text(UiText.text(R.string.ssid_saved_in_profile, profileLabel(profile)), color = Pal.muted, fontSize = 12.sp)
                 // #59: país pelo prefixo ITU ou motivo da recusa, enquanto digita; aviso se o salvo é inválido.
                 val callCheck = remember(call) { com.pt2vhf.aprs.core.checkAmateurCallsign(call) }
                 if (call.isNotBlank()) Text(callsignHint(callCheck), fontSize = 12.sp,
@@ -540,6 +596,9 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
                     NumberField(UiText.text(R.string.msg_retry_base), retryBase, { retryBase = it.take(3) }, Modifier.weight(1f))
                 }
                 CheckRow(UiText.text(R.string.announce_version), announce) { announce = it }
+                // #77: tirar acentos antes de enviar (padrão ligado).
+                CheckRow(UiText.text(R.string.strip_accents), stripAccents) { stripAccents = it }
+                Text(UiText.text(R.string.strip_accents_hint), color = Pal.muted, fontSize = 12.sp)
 
                 // ----- Mensagens: retenção (#26) -----
                 SectionTitle(UiText.text(R.string.retention_section))
@@ -603,14 +662,22 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
                 }
                 Text(UiText.text(R.string.backup_passcode_note), color = Pal.muted, fontSize = 12.sp)
                 backupMessage?.let { Text(it, color = Pal.green, fontSize = 13.sp) }
+                }
 
-                // ----- Sobre (substitui o aviso de abertura, #38) -----
+                SettingsTab.ABOUT -> {
+                // ----- Sobre (#79; antes no fim da aba Sistema, #38) -----
                 SectionTitle(UiText.text(R.string.about_section))
+                Text(UiText.text(R.string.app_name), fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                Text(UiText.text(R.string.about_version, BuildConfig.VERSION_NAME), fontSize = 14.sp)
                 UpdateStatusSection()
                 OutlinedButton(onClick = { sendLog(context, build(force = true) ?: current) }) { Text(UiText.text(R.string.send_log)) }
-                Text("www.PT2VHF.com", color = Pal.accent, fontWeight = FontWeight.Bold,
+                Text(UiText.text(R.string.about_site), color = Pal.muted, fontSize = 12.sp)
+                Text(UpdateCheck.SITE.removePrefix("https://").removePrefix("www."), color = Pal.accent, fontWeight = FontWeight.Bold,
                     textDecoration = TextDecoration.Underline,
                     modifier = Modifier.clickable { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(UpdateCheck.SITE))) })
+                SectionTitle(UiText.text(R.string.about_contributors))
+                Text(UiText.text(R.string.about_contributors_thanks), color = Pal.muted, fontSize = 12.sp)
+                CONTRIBUTORS.forEach { Text("• $it", fontSize = 15.sp, fontWeight = FontWeight.Bold) }
                 }
                 }
             }
@@ -619,29 +686,26 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
             Column(Modifier.fillMaxWidth().background(Pal.bar).padding(horizontal = 16.dp, vertical = 4.dp)) {
                 if (error.isNotEmpty()) Text(error, color = Pal.orange, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    if (current.configured) TextButton(onClick = onDismiss) { Text(UiText.text(R.string.cancel)) }
-                    TextButton(onClick = {
-                        val s = build() ?: return@TextButton
-                        if (s.filter.isBlank() && !confirmEmptyFilter) {
-                            confirmEmptyFilter = true; error = UiText.text(R.string.filter_empty); tab = SettingsTab.APRS_IS
-                            return@TextButton
-                        }
-                        // A retention change that deletes messages right away needs a second, explicit tap.
-                        val victims = AprsRepository.retentionPreview(s.retention)
-                        if (victims > 0 && retentionConfirmedFor != victims) {
-                            retentionConfirmedFor = victims
-                            error = UiText.text(R.string.retention_confirm, victims)
-                            tab = SettingsTab.MESSAGES
-                            return@TextButton
-                        }
-                        onSave(s)
-                        AprsRepository.applyRetention(s.retention)
-                    }) { Text(UiText.text(R.string.save), fontWeight = FontWeight.Bold) }
+                    if (current.configured) TextButton(onClick = { requestClose() }) { Text(UiText.text(R.string.cancel)) }
+                    TextButton(onClick = { trySave() }) { Text(UiText.text(R.string.save), fontWeight = FontWeight.Bold) }
                 }
             }
         }
         }
     }
+    if (ssidHelp) SsidHelpDialog(callsign = base, profile = profile, current = ssid.toIntOrNull(),
+        onPick = { ssid = it.toString(); ssidTouched = true; ssidHelp = false },
+        onDismiss = { ssidHelp = false })
+    if (confirmClose) AlertDialog(
+        onDismissRequest = { confirmClose = false },
+        containerColor = Pal.bar,
+        title = { Text(UiText.text(R.string.settings_unsaved_title)) },
+        text = { Text(UiText.text(R.string.settings_unsaved_body)) },
+        confirmButton = { TextButton(onClick = { confirmClose = false; trySave() }) {
+            Text(UiText.text(R.string.save), fontWeight = FontWeight.Bold) } },
+        dismissButton = { TextButton(onClick = { confirmClose = false; onDismiss() }) {
+            Text(UiText.text(R.string.settings_discard), color = Pal.orange) } },
+    )
     if (symbolPicker) SymbolPicker(symbol, onPick = { symbol = it; symbolPicker = false }, onDismiss = { symbolPicker = false })
     if (deleteMessagesOpen) DeleteMessagesDialog(onDismiss = { deleteMessagesOpen = false }, onResult = { clearResult = it })
     importPreview?.let { preview ->
@@ -715,7 +779,7 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
 
 /** #74: abas da tela de configurações, na ordem exibida. */
 internal enum class SettingsTab {
-    STATION, APRS_IS, BEACON, POSITION, MAP, MESSAGES, SYSTEM;
+    STATION, APRS_IS, BEACON, POSITION, MAP, MESSAGES, SYSTEM, ABOUT;
 
     fun label(): String = when (this) {
         STATION -> UiText.text(R.string.station_section)
@@ -725,8 +789,62 @@ internal enum class SettingsTab {
         MAP -> UiText.text(R.string.nav_map)
         MESSAGES -> UiText.text(R.string.nav_messages)
         SYSTEM -> UiText.text(R.string.settings_tab_system)
+        ABOUT -> UiText.text(R.string.about_section)
     }
 }
+
+/** #79: radioamadores que ajudaram a melhorar o app (indicativos não se traduzem). Ampliar só aqui. */
+internal val CONTRIBUTORS = listOf("PU2PYC", "PP5AU", "PU2MUS")
+
+private const val SSID_HELP_SEEN = "ssid_help_seen"
+
+/** #82: "Qual SSID usar?" com as recomendações de WB4APR; tocar numa linha preenche o SSID. Nada é transmitido. */
+@Composable
+private fun SsidHelpDialog(callsign: String, profile: String, current: Int?, onPick: (Int) -> Unit, onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    var dontShow by remember { mutableStateOf(true) }
+    val suggested = com.pt2vhf.aprs.data.SsidAdvice.suggestedFor(profile)
+    fun close(action: () -> Unit) {
+        if (dontShow) Settings.setFlag(context, SSID_HELP_SEEN, true)
+        action()
+    }
+    AlertDialog(
+        onDismissRequest = { close(onDismiss) },
+        containerColor = Pal.bar,
+        title = { Text(UiText.text(R.string.ssid_help_title)) },
+        text = {
+            Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(UiText.text(R.string.ssid_help_intro), color = Pal.muted, fontSize = 12.sp)
+                com.pt2vhf.aprs.data.SsidAdvice.VALUES.forEach { n ->
+                    val mark = n == suggested
+                    Row(Modifier.fillMaxWidth()
+                        .background(if (n == current) Pal.mine else if (mark) Pal.card else Pal.bar, RoundedCornerShape(6.dp))
+                        .clickable { close { onPick(n) } }.padding(horizontal = 6.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Text(if (n == 0) "—" else "-$n", fontWeight = FontWeight.Bold, fontSize = 14.sp,
+                            modifier = Modifier.padding(end = 8.dp).size(width = 32.dp, height = 20.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(UiText.text(SSID_USES[n]), fontSize = 13.sp)
+                            Text(com.pt2vhf.aprs.data.SsidAdvice.fullCall(callsign.ifBlank { "PY2XYZ" }, n) +
+                                (if (mark) "  ·  " + UiText.text(R.string.ssid_help_profile, profileLabel(profile)) else ""),
+                                color = if (mark) Pal.green else Pal.muted, fontSize = 11.sp)
+                        }
+                    }
+                }
+                Text(UiText.text(R.string.ssid_help_notes), color = Pal.muted, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+                CheckRow(UiText.text(R.string.ssid_help_dont_show), dontShow) { dontShow = it }
+                Text(UiText.text(R.string.ssid_help_source), color = Pal.muted, fontSize = 11.sp)
+            }
+        },
+        confirmButton = { TextButton(onClick = { close(onDismiss) }) { Text(UiText.text(R.string.close)) } },
+    )
+}
+
+private val SSID_USES = listOf(R.string.ssid_use_0, R.string.ssid_use_1, R.string.ssid_use_2, R.string.ssid_use_3,
+    R.string.ssid_use_4, R.string.ssid_use_5, R.string.ssid_use_6, R.string.ssid_use_7, R.string.ssid_use_8,
+    R.string.ssid_use_9, R.string.ssid_use_10, R.string.ssid_use_11, R.string.ssid_use_12, R.string.ssid_use_13,
+    R.string.ssid_use_14, R.string.ssid_use_15)
 
 /** #74: última aba aberta, lembrada enquanto o app está em memória. */
 internal object SettingsTabMemory { var last: SettingsTab = SettingsTab.STATION }

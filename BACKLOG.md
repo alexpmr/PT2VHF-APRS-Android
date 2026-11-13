@@ -2,8 +2,14 @@
 
 Itens registrados para as próximas versões. Não implementar até o pedido de versão nova.
 
-## Onde estamos (10/11/2026)
+## Onde estamos (13/11/2026)
 
+- **v1.0** (13/11/2026, versionCode 16, autorizada pelo mantenedor: "Implemente todos e suba no site"): #85 (Salvar
+  visível no Android 15/16 e ✓ no cabeçalho), #80 (SSID não volta para -9/-7; pergunta ao sair com alterações),
+  #82 ("Qual SSID usar?"), #79 (aba Sobre com colaboradores), #77 (sem acentos, padrão ligado), #78 (ICOM ID-5200),
+  #84 (indicativo na consulta de versão, PR #23), #83 (versão 1.0) e #68 (Android Auto, primeira versão: lista de
+  estações próximas, Beacon agora, última mensagem; **não testado em carro/DHU**). #81 é só do site.
+  **Sem mudança de código e ainda pendentes de teste real:** P0 #60 e #62, #25, #37 e #54.
 - **v0.1.15** (10/11/2026, autorizada pelo mantenedor: "Sugestões aceitas. Implemente todos os itens do backlog e gere
   nova versão"): #72 (busca), #73 (Minhas/Todas e Agrupadas/Lista), #74 (Configurações em 7 abas), #75 (banner de
   abertura) e #76 (traduções/constantes internas). As ideias do APRS World #66/#67/#69/#70 já tinham saído na 0.1.14.
