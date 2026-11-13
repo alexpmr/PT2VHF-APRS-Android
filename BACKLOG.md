@@ -3227,3 +3227,42 @@ linhas contraditórias).
 **Pendente de decisão:** PTT por CAT/RTS e TNC BLE continuam ✗ porque o código da 1.0 não tem `BluetoothGatt`
 (só Bluetooth clássico SPP) nem PTT por RTS (o `UsbTnc` só liga DTR+RTS ao abrir a porta). Se o mantenedor
 confirmar, marcar ✓ ou registrar a implementação como itens do app.
+
+### 92. TNC KISS por Bluetooth Low Energy (BLE)
+_Pedido do mantenedor em 13/11/2026 ("implemente o ble e ptt por cat/rts"), a partir do #91._
+
+**Pedido:** conectar a TNCs KISS que só falam BLE (sem Bluetooth clássico/SPP), hoje impossível: a 1.0 só tem
+`BluetoothTnc` com RFCOMM/SPP.
+
+**Proposta:**
+1. Nova opção de TNC "Bluetooth LE" na tela Rádio, com busca de aparelhos BLE próximos (permissão `BLUETOOTH_SCAN`
+   no Android 12+, localização no Android 8–11) e lembrança do último aparelho escolhido.
+2. Conexão por `BluetoothGatt` aceitando os dois serviços KISS-sobre-BLE mais usados:
+   - **KISS BLE padrão (Mobilinkd TNC4, PicoAPRS, trackers LoRa APRS e outros):** serviço
+     `00000001-ba2a-46c9-ae49-01b0961f68bb`, escrita `…0002…`, notificação `…0003…`;
+   - **Nordic UART (NUS):** serviço `6E400001-B5A3-F393-E0A9-E50E24DCCA9E`, escrita `…0002…`, notificação `…0003…`.
+3. Mesmo enquadramento KISS dos outros TNCs; quadros grandes divididos no tamanho do MTU negociado, uma escrita por vez.
+4. Reconexão automática ao perder o enlace enquanto o TNC estiver selecionado.
+
+**Critérios de aceite:** aparelho BLE com um dos serviços acima conecta, recebe e transmite pacotes; aparelho sem
+serviço KISS mostra erro claro; testes de unidade da fragmentação e da escolha de serviço.
+**Exige teste em hardware real** (não há TNC BLE no ambiente de desenvolvimento).
+
+### 93. PTT por RTS/DTR ou CAT no modo AFSK (áudio do celular)
+_Pedido do mantenedor em 13/11/2026 ("implemente o ble e ptt por cat/rts"), a partir do #91._
+
+**Pedido:** no modo AFSK pelo áudio do celular, acionar o PTT do rádio por linha de controle de um adaptador
+USB-serial (RTS ou DTR, como Digirig e cabos FTDI/CP210x) ou por comando CAT, em vez de depender só do VOX.
+Hoje o `UsbSerialTnc` só liga DTR+RTS ao abrir a porta do TNC KISS; não existe PTT.
+
+**Proposta:**
+1. Em Rádio → AFSK, escolha do PTT: VOX (padrão, como hoje), RTS, DTR ou CAT, pelo adaptador USB-serial (CDC-ACM,
+   FTDI ou CP210x, o mesmo driver próprio do #47).
+2. CAT: Kenwood/Elecraft (`TX;`/`RX;`), Yaesu novo (`TX1;`/`TX0;`, FT-991/FT-891/FTDX), Yaesu antigo de 5 bytes
+   (FT-817/818/857/897) e Icom CI-V (`1C 00`, endereço configurável), com velocidade da porta configurável.
+3. Liga o PTT, espera um instante, toca o pacote (com TX delay), espera a cauda e solta o PTT; solta sempre, mesmo
+   em erro. O tom de teste também aciona o PTT.
+
+**Critérios de aceite:** com RTS/DTR o sinal sobe só durante a transmissão; com CAT o rádio entra e sai de TX; VOX
+continua igual; testes de unidade dos comandos CAT e dos pedidos de linha de controle por chip.
+**Exige teste em hardware real** (rádio + adaptador).
