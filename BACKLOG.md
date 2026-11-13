@@ -3067,8 +3067,23 @@ não. Essa listagem nunca deve expirar e deverá mostrar usuários de qualquer v
 4. Perda do arquivo de dados é pouco provável: `stations.json` fica em `../pt2vhf-private-data/` (fora de
    `public_html`, mesma pasta dos contadores de download, que sobrevivem aos deploys) e nenhuma versão do código apaga
    registros com menos de 730 dias. Falta confirmar no servidor (Gerenciador de Arquivos da Hostinger) se o arquivo
-   existe e o que contém; não dá para acessá-lo daqui. A diferença "ontem/hoje" também pode ser a página olhada: a
-   lista do SAT Tool (`/sat`) mostra hoje só `PT2VHF`.
+   existe e o que contém; não dá para acessá-lo daqui.
+
+**Complemento (13/11/2026, após o mantenedor esclarecer que a lista não tem relação com o SAT Tool):**
+- Procurei no site (código da `main` e página pública `/aprs-android`) outra listagem de usuários do app, por exemplo
+  estações vistas no APRS-IS pelo tocall/destino do app, aprs.fi ou "últimas N horas". **Não existe:** a única lista da
+  página é a seção "Estações usando o PT2VHF APRS Client for Android", montada pelo `assets/js/main.js` a partir de
+  `/stations.php?product=aprs-android`. Não há chamada a APRS-IS/aprs.fi nem janela de tempo ou limite de quantidade
+  no código atual (o registro é permanente; os limites são só de cadastro novo: 10 por IP/dia e 300/dia no total).
+- O mesmo arquivo `stations.json` guarda os dois produtos separados (`products.sat` e `products["aprs-android"]`); o
+  SAT Tool só entra aqui porque o produção está com o `stations_lib.php` antigo, que foi escrito para o SAT Tool e
+  **recusa o produto `aprs-android`**. Com ele no ar, a seção do Android fica escondida e as consultas `&call=` da
+  1.0 não são gravadas.
+- Hipótese para "ontem aparecia e hoje não, e apareceu um novo": por algum tempo após a publicação da 1.0 o site rodou
+  o código novo (a lista aparecia), depois voltou a servir o `stations_lib.php`/`stations.php` antigos (deploy de
+  outro commit/branch, envio manual ou cache), e o que se vê agora vem de cache do navegador (a resposta tem
+  `max-age=300`) ou de outra página. **Pendente com o mantenedor:** o endereço exato e, se possível, captura da lista de
+  ontem e de hoje, e o indicativo que sumiu e o que apareceu, para fechar a causa.
 
 **O que fazer (quando for implementado):**
 1. **Site:** garantir que produção rode o código da `main` (Deploy manual no hPanel → GIT e limpar cache/OPcache);
