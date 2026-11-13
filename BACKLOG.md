@@ -3035,3 +3035,57 @@ tarefas cobre parte do rodapé; no X7 Pro cobre tudo). Suspeitas, em ordem:
 
 **Critérios de aceite:** "Salvar" e "Cancelar" visíveis e tocáveis em todas as abas de Configurações, em celular e
 tablet, com navegação por 3 botões ou gestos, fonte/exibição ampliadas e teclado aberto.
+
+### 86. Site: lista de estações (indicativos) nunca pode perder ninguém e deve mostrar usuários de qualquer versão
+_Pedido do mantenedor em 13/11/2026._
+
+**Relato:** "Ontem tinha meu indicativo como usuário do app no site e agora não tem mais, apareceu um novo mas o meu
+não. Essa listagem nunca deve expirar e deverá mostrar usuários de qualquer versão."
+
+**O que foi verificado (13/11/2026, ~11h20 UTC, só leitura):**
+- `www.pt2vhf.com/stations.php?product=sat` responde
+  `{"schema":1,"product":"sat","windowDays":365,"total":1,...,"calls":["PT2VHF"]}`. O campo `windowDays` só existe no
+  código **antigo** do registro (site PRs #21/#22, janela de 365 dias e exclusão após 730). O código da `main` do site
+  (#23 "registro permanente" e o commit 8bd69a3 que acrescenta `aprs-android`) não tem mais esse campo.
+- `stations.php?product=aprs-android` falha com erro de cliente (400 "Produto invalido"): o produção ainda aceita só
+  `sat`. Por isso a seção "Estações usando o PT2VHF APRS Client for Android" fica escondida na página `/aprs-android`.
+- `update.php?product=aprs-android` já responde `"version": "1.0"`, ou seja, `updates.json` está novo, mas
+  `stations_lib.php`/`stations.php` estão velhos.
+
+**Causa provável (em ordem):**
+1. **Produção rodando o registro antigo** (deploy da Hostinger parcial/travado ou OPcache do PHP servindo a versão
+   compilada antiga de `stations_lib.php`, já que o `updates.json`, que é lido como dado, está novo). Enquanto for
+   assim, toda consulta do app 1.0 com `&call=` é **descartada em silêncio** (o código antigo ignora produto que não
+   seja `sat`) e a lista do Android não aparece. O código antigo também tem a janela de expiração que o mantenedor não
+   quer.
+2. **Versões anteriores à 1.0 nunca enviam indicativo**: o `&call=` só entrou no app na 1.0 (commit 3babad2,
+   `UpdateCheck.reportedCallsign`). Quem está na 0.1.x só aparece depois de atualizar.
+3. **Regras do app que escondem o indicativo**: não envia se o indicativo for `PT2VHF` (tratado como exemplo), se a
+   opção "Informar meu indicativo" estiver desligada ou se a posição for manual sem lat/lon. **Se o indicativo do
+   mantenedor for PT2VHF, o app nunca o envia**; e a consulta só acontece ao abrir/retomar (no máximo 1 vez por hora)
+   ou a cada 12 h.
+4. Perda do arquivo de dados é pouco provável: `stations.json` fica em `../pt2vhf-private-data/` (fora de
+   `public_html`, mesma pasta dos contadores de download, que sobrevivem aos deploys) e nenhuma versão do código apaga
+   registros com menos de 730 dias. Falta confirmar no servidor (Gerenciador de Arquivos da Hostinger) se o arquivo
+   existe e o que contém; não dá para acessá-lo daqui. A diferença "ontem/hoje" também pode ser a página olhada: a
+   lista do SAT Tool (`/sat`) mostra hoje só `PT2VHF`.
+
+**O que fazer (quando for implementado):**
+1. **Site:** garantir que produção rode o código da `main` (Deploy manual no hPanel → GIT e limpar cache/OPcache);
+   confirmar que `stations.php?product=aprs-android` responde 200 e que `stations.php?product=sat` não traz mais
+   `windowDays`. Conferir `pt2vhf-private-data/stations.json` no servidor e, se o indicativo do mantenedor se perdeu,
+   restaurá-lo à mão.
+2. **Nunca expirar:** manter o registro permanente (sem janela nem exclusão) e acrescentar um teste em
+   `scripts/test_stations.php` que falhe se alguém reintroduzir expiração. Considerar backup diário do `stations.json`
+   (cópia com data na mesma pasta privada) para nunca perder a lista por gravação corrompida.
+3. **Usuários de qualquer versão:** versões 0.1.x não têm como informar o indicativo (o código delas já está nos
+   aparelhos). Viável: (a) a 1.0+ envia sempre que a opção estiver ligada, então quem atualizar entra na lista; (b) o
+   aviso OTA já leva todos para a 1.0; (c) opcional: o mantenedor cadastrar à mão indicativos conhecidos de usuários de
+   versões antigas (lista "semente" no servidor). Não é possível listar automaticamente quem continua na 0.1.x.
+4. **App:** decidir se `PT2VHF` deve continuar bloqueado como "exemplo"; se for o indicativo real do mantenedor,
+   trocar a regra para bloquear só quando o indicativo nunca foi alterado pelo usuário (ou aceitar `PT2VHF`).
+5. Considerar mostrar também o produto Android 1.0+ que consulta sem `&call=` só no contador, sem indicativo.
+
+**Critérios de aceite:** `stations.php?product=aprs-android` responde 200 em produção; o indicativo do mantenedor
+aparece na página `/aprs-android` e continua lá dias depois sem nova consulta; nenhum registro some com o tempo;
+qualquer versão 1.0+ registra; a regra das versões antigas fica explicada na página.
