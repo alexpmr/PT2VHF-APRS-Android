@@ -222,6 +222,7 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
     var retries by remember { mutableStateOf(current.msgRetries.toString()) }
     var retryBase by remember { mutableStateOf(current.msgRetryBaseSec.toString()) }
     var updateNotify by remember { mutableStateOf(current.updateNotify) }
+    var shareCallsign by remember { mutableStateOf(current.shareCallsign) }
     var deleteMessagesOpen by remember { mutableStateOf(false) }
     var backupIncludeMessages by remember { mutableStateOf(false) }
     var backupMessage by remember { mutableStateOf<String?>(null) }
@@ -311,7 +312,7 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
             announceVersion = announce,
             msgRetries = (retries.toIntOrNull() ?: 5).coerceIn(1, 10),
             msgRetryBaseSec = (retryBase.toIntOrNull() ?: 30).coerceIn(10, 300),
-            updateNotify = updateNotify)
+            updateNotify = updateNotify, shareCallsign = shareCallsign)
     }
 
     /** Loads the chosen profile into the form; nothing is saved or transmitted until Save. */
@@ -565,6 +566,8 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
                 SettingsTab.SYSTEM -> {
                 SectionTitle(UiText.text(R.string.notifications_section))
                 CheckRow(UiText.text(R.string.update_notify), updateNotify) { updateNotify = it }
+                CheckRow(UiText.text(R.string.share_callsign), shareCallsign) { shareCallsign = it }
+                Text(UiText.text(R.string.share_callsign_hint), color = Pal.muted, fontSize = 12.sp)
 
                 // ----- API (#15) -----
                 SectionTitle(UiText.text(R.string.api_section))

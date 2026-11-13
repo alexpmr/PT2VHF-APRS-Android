@@ -74,7 +74,7 @@ object UpdateManager {
         _state.value = st.copy(checking = true)
         Thread({
             try {
-                val outcome = runCatching { UpdateCheck.fetchResult() }.getOrElse { UpdateCheck.Result.Failure }
+                val outcome = runCatching { UpdateCheck.fetchResult(UpdateCheck.reportedCallsign(Settings.load(app))) }.getOrElse { UpdateCheck.Result.Failure }
                 val time = System.currentTimeMillis()
                 val next = when (outcome) {
                     is UpdateCheck.Result.Available -> State(outcome.info, time, "new")
