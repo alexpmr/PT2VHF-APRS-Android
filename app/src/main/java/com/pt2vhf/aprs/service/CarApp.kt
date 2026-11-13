@@ -103,7 +103,7 @@ private class CarStationsScreen(carContext: CarContext) : Screen(carContext) {
             .setActionStrip(ActionStrip.Builder()
                 .addAction(Action.Builder().setTitle(UiText.text(R.string.car_beacon_now))
                     .setOnClickListener { beaconNow(carContext) }.build())
-                .addAction(Action.Builder().setTitle(UiText.text(R.string.car_last_message))
+                .addAction(Action.Builder().setTitle(UiText.text(R.string.auto_last_message))
                     .setOnClickListener { screenManager.push(CarMessageScreen(carContext)) }.build())
                 .build())
             .build()
@@ -114,13 +114,13 @@ private class CarMessageScreen(carContext: CarContext) : Screen(carContext) {
     override fun onGetTemplate(): Template {
         val msg = AprsRepository.messages.value.filter { !it.outgoing }.maxByOrNull { it.time }
         val pane = Pane.Builder()
-        if (msg == null) pane.addRow(Row.Builder().setTitle(UiText.text(R.string.car_no_message)).build())
+        if (msg == null) pane.addRow(Row.Builder().setTitle(UiText.text(R.string.auto_no_message)).build())
         else pane.addRow(Row.Builder().setTitle("${msg.from} → ${msg.to}")
             .addText(msg.text.take(120))
             .addText(java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date(msg.time)))
             .build())
         return PaneTemplate.Builder(pane.build())
-            .setTitle(UiText.text(R.string.car_last_message))
+            .setTitle(UiText.text(R.string.auto_last_message))
             .setHeaderAction(Action.BACK)
             .build()
     }

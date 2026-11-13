@@ -7,9 +7,9 @@
     <string name="about_version">Version %1$s</string>
     <string name="car_beacon_now">Balise maintenant</string>
     <string name="car_beacon_sent">Balise demandée</string>
-    <string name="car_last_message">Dernier message</string>
+    <string name="auto_last_message">Dernier message</string>
     <string name="car_nearby">Stations proches</string>
-    <string name="car_no_message">Aucun message pour l\'instant</string>
+    <string name="auto_no_message">Aucun message pour l\'instant</string>
     <string name="car_no_stations">Aucune station reçue pour l\'instant</string>
     <string name="car_off">inactif</string>
     <string name="car_on">actif</string>
