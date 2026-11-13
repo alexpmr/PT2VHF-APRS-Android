@@ -179,6 +179,8 @@
     <string name="update_never">Never checked</string>
     <string name="update_notification_body">A new version of PT2VHF APRS is available. Tap to see.</string>
     <string name="update_notify">Notify new versions (checks every 12 h)</string>
+    <string name="share_callsign">Report my callsign when checking for a new version</string>
+    <string name="share_callsign_hint">Sends only the callsign (no SSID, location or locator) to www.pt2vhf.com, for the list of stations using the app.</string>
     <string name="update_result_fail">Result: could not check (will retry)</string>
     <string name="update_result_new">Result: version %1$s available</string>
     <string name="update_result_ok">Result: you have the latest version</string>

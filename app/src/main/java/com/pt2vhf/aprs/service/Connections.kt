@@ -122,7 +122,7 @@ class AprsIsClient(
     }
 }
 
-/** TNC KISS por Bluetooth clássico (SPP): Mobilinkd, BTECH UV-Pro, Radtel RT-950 Pro… */
+/** TNC KISS por Bluetooth clássico (SPP): Mobilinkd, BTECH UV-Pro, Radtel RT-950 Pro, ICOM ID-5200 (#78)… */
 class BluetoothTnc(
     private val onFrame: (String) -> Unit,
     private val onState: (connected: Boolean, name: String, error: String) -> Unit,

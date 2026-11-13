@@ -369,7 +369,8 @@ class AprsService : Service(), LocationListener {
         txWorker.execute {
             if (!AprsRepository.status.value.aprsIsVerified) return@execute
             if (Settings.readOption(this, "announced_version", "") == version) return@execute
-            val text = UiText.text(R.string.announce_bulletin, version).take(67)
+            val raw = UiText.text(R.string.announce_bulletin, version)
+            val text = (if (settings.stripAccents) com.pt2vhf.aprs.core.stripAccents(raw) else raw).take(67)
             val info = messageInfo(ANNOUNCE_DEST, text, null)
             val line = "${settings.fullCall}>$TOCALL,TCPIP*:$info"
             if (aprsIs.send(line)) {
@@ -729,7 +730,9 @@ class AprsService : Service(), LocationListener {
         if (dest == settings.fullCall) return false
         val general = dest == "CQ" || dest.startsWith("BLN")
         var allSubmitted = true
-        for (part in splitMessage(text)) {
+        // #77: sem acentos antes de contar os 67 caracteres; o balão mostra o texto como saiu.
+        val outgoing = if (settings.stripAccents) com.pt2vhf.aprs.core.stripAccents(text) else text
+        for (part in splitMessage(outgoing)) {
             val msgId = if (general) null else nextMsgId()
             val local = ChatMessage(AprsRepository.newId(), settings.fullCall, dest, part, System.currentTimeMillis(),
                 true, null, msgId = msgId, status = InternalText.MSG_SENDING,

@@ -62,6 +62,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import com.pt2vhf.aprs.R
 import com.pt2vhf.aprs.UiText
 import com.pt2vhf.aprs.core.AprsWeather
@@ -142,9 +144,11 @@ fun StationSheet(initialCall: String, onDismiss: () -> Unit, onMessage: (String)
     var tab by rememberSaveable(call) { mutableIntStateOf(0) }
     val settings = remember { com.pt2vhf.aprs.data.Settings.load(context) }
     var replyTo by remember(call) { mutableStateOf<Long?>(null) }
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+    // #85: mesma correção das Configurações — borda a borda com recuo das barras do sistema.
+    Dialog(onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         Surface(Modifier.fillMaxSize(), color = Pal.ground) {
-            Column(Modifier.fillMaxSize()) {
+            Column(Modifier.fillMaxSize().windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeDrawing)) {
                 SheetHeader(call, s, onDismiss)
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 6.dp)) {
                     TextButton(onClick = { onMessage(call) }) { Text("✉ " + UiText.text(R.string.message)) }

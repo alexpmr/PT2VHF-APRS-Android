@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- #68 Android Auto: o app usa só modelos (templates) da biblioteca Car App. -->
+<automotiveApp>
+    <uses name="template" />
+</automotiveApp>

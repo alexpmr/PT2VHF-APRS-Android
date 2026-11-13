@@ -213,4 +213,12 @@ class AprsTest {
         assertTrue(localRfEvidenceLinks(direct, true).isEmpty())
     }
 
+
+    @Test fun version10IsNewerThan0115() {
+        // #83: quem tem a 0.1.x recebe a 1.0 pelo OTA; a 1.0 não oferece a 0.1.15 de volta.
+        assertTrue(isNewerVersion("1.0", "0.1.15"))
+        assertTrue(!isNewerVersion("0.1.15", "1.0"))
+        assertTrue(!isNewerVersion("1.0", "1.0.0"))
+        assertTrue(isNewerVersion("1.0.1", "1.0"))
+    }
 }

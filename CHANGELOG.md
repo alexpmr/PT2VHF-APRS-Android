@@ -1,5 +1,37 @@
 # Changelog
 
+## 1.0 — Publicada (13/11/2026; testes item a item pendentes)
+
+Primeira versão 1.0 (versionCode 16), autorizada pelo mantenedor ("Implemente todos e suba no site"). Instala por
+cima da 0.1.15 sem perder dados e é oferecida pelo aviso de atualização (OTA): o app já compara 1.0 > 0.1.15.
+
+- **Botão Salvar sumido no Android 16 (#85):** a tela de Configurações agora respeita as barras do sistema e o
+  teclado (modo borda a borda obrigatório no Android 15/16), então "Cancelar" e "Salvar" ficam acima da barra de
+  navegação/tarefas em celular e tablet. O **✓ Salvar** também aparece no cabeçalho. A ficha da estação recebeu a
+  mesma correção.
+- **SSID que "voltava" para -9/-7 (#80):** tocar no perfil já marcado não recarrega mais nada; trocar de perfil nas
+  Configurações mantém o SSID que você digitou; abaixo do campo aparece "Salvo no perfil …". **Voltar/Cancelar não
+  descarta mais em silêncio:** com alterações pendentes o app pergunta "Salvar / Descartar". A troca rápida de
+  perfil no Rastreador mostra o indicativo que vai entrar (ex.: PY2ARS-9 → PY2ARS-7).
+- **"Qual SSID usar?" (#82):** janela com as 16 recomendações de SSID de WB4APR, destacando a sugestão do perfil e
+  mostrando o indicativo completo. Abre sozinha na primeira edição do SSID (até marcar "Não abrir sozinha de novo")
+  e sempre pelo ⓘ do campo; tocar numa linha preenche o SSID. É só orientação, nada é transmitido.
+- **Aba Sobre (#79):** 8ª aba das Configurações com nome e versão do app, verificação de atualização, Enviar log,
+  link para pt2vhf.com/aprs-android e os colaboradores **PU2PYC, PP5AU e PU2MUS**. A seção Sobre saiu do fim de Sistema.
+- **Mensagens sem acentos (#77):** nova opção em Configurações → Mensagens, **ligada por padrão**: "Olá, tudo bem?
+  Câmbio!" sai como "Ola, tudo bem? Cambio!", antes de contar os 67 caracteres; símbolos como º/ª, aspas e travessão
+  viram equivalentes ASCII e emojis viram "?". Vale para conversas, respostas, boletins, check-ins e o boletim de
+  versão; o balão mostra o texto como saiu. Mensagens recebidas não mudam.
+- **Registro do indicativo na consulta de versão (#84):** a consulta de versão nova leva só o indicativo (sem SSID,
+  posição ou locator) para a lista de estações do site; caixa em Configurações → Sistema para desligar.
+- **ICOM ID-5200 (#78)** na lista de rádios que funcionam (TNC KISS por Bluetooth).
+- **Android Auto (#68, primeira versão):** no painel do carro, lista das estações mais próximas com distância,
+  estado APRS-IS/TNC/GPS, **Beacon agora** e **Última mensagem**. Usa só modelos da biblioteca Car App. Fora da Play
+  Store o Android Auto exige o modo desenvolvedor com "Fontes desconhecidas"; **ainda não testado em carro/DHU**.
+- Continuam dependendo de teste em aparelho, servidor e rádio reais (sem mudança de código nesta versão): P0 #60
+  (envio que fica tentando) e #62 (fechamento ao apagar), #25, #37 e #54.
+- Testes de unidade novos: remoção de acentos, tabela de SSID, comparação 1.0 > 0.1.15 e montagem da URL do #84.
+
 ## 0.1.15 — Publicada (10/11/2026, beta; testes item a item pendentes)
 
 - **Banner de abertura (#75):** a arte "APRS · www.PT2VHF.com" aparece em tela cheia por cerca de 2 s ao abrir o app
