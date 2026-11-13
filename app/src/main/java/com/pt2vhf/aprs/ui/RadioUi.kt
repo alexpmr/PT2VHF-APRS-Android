@@ -114,6 +114,7 @@ fun RadioScreen(settings: Settings, onSettingsChanged: (Settings) -> Unit) {
                 "tcp" -> "KISS TCP"
                 "audio" -> UiText.text(R.string.tnc_audio)
                 "usb" -> UiText.text(R.string.tnc_usb)
+                "ble" -> "KISS " + UiText.text(R.string.tnc_ble)
                 else -> "KISS Bluetooth"
             }
             Text(if (status.tncConnected) "${status.tncName} · $kind · ${status.tncRx} RX · ${status.tncTx} TX"
@@ -121,6 +122,7 @@ fun RadioScreen(settings: Settings, onSettingsChanged: (Settings) -> Unit) {
                 color = if (status.tncConnected) Pal.green else Pal.muted, fontSize = 14.sp)
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 OutlinedChoice("Bluetooth", settings.tncType == "bt") { if (settings.tncType != "bt") saveTnc("bt") }
+                OutlinedChoice(UiText.text(R.string.tnc_ble), settings.tncType == "ble") { if (settings.tncType != "ble") saveTnc("ble") }
                 OutlinedChoice("KISS TCP", settings.tncType == "tcp") { if (settings.tncType != "tcp") saveTnc("tcp") }
                 OutlinedChoice(UiText.text(R.string.tnc_audio), settings.tncType == "audio") {
                     if (settings.tncType != "audio") { saveTnc("audio"); if (!micGranted) micLauncher.launch(Manifest.permission.RECORD_AUDIO) }
@@ -131,8 +133,12 @@ fun RadioScreen(settings: Settings, onSettingsChanged: (Settings) -> Unit) {
                 Text(UiText.text(R.string.disconnect))
             }
         }
-        if (settings.tncType == "audio") AudioTncCard(settings, ::change, onRequestMic = { micLauncher.launch(Manifest.permission.RECORD_AUDIO) }, micGranted)
+        if (settings.tncType == "audio") {
+            AudioTncCard(settings, ::change, onRequestMic = { micLauncher.launch(Manifest.permission.RECORD_AUDIO) }, micGranted)
+            PttCard(settings, ::change)
+        }
         else if (settings.tncType == "usb") UsbTncCard(settings, ::change)
+        else if (settings.tncType == "ble") BleTncCard(settings)
         else if (settings.tncType == "tcp") SectionCard("KISS TCP") {
             Text(UiText.text(R.string.kiss_tcp_hint), color = Pal.muted, fontSize = 12.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- #92 TNC KISS por Bluetooth LE e #93 PTT por RTS/DTR ou CAT. -->
+<resources>
+    <string name="tnc_ble">Bluetooth LE</string>
+    <string name="ble_card">TNC Bluetooth LE</string>
+    <string name="ble_hint">TNC KISS por Bluetooth Low Energy, sem parear: Mobilinkd TNC4, PicoAPRS, trackers LoRa APRS e outros com o serviço KISS BLE ou Nordic UART. Toque em Buscar e depois em Conectar.</string>
+    <string name="ble_hint_location">No Android 11 ou anterior, a busca também precisa da localização ligada.</string>
+    <string name="ble_scan">Buscar</string>
+    <string name="ble_scanning">Buscando…</string>
+    <string name="ble_none">Nenhum aparelho Bluetooth LE encontrado.</string>
+    <string name="ble_kiss">serviço KISS</string>
+    <string name="err_ble_closed">Conexão Bluetooth LE encerrada</string>
+    <string name="err_ble_no_kiss">Este aparelho não tem serviço KISS BLE</string>
+    <string name="err_ptt_failed">Falha ao acionar o PTT</string>
+    <string name="ptt_card">PTT do rádio</string>
+    <string name="ptt_hint">VOX: o áudio aciona o rádio (como antes). RTS, DTR e CAT acionam o rádio por um adaptador USB-serial na porta OTG (Digirig, cabo FTDI ou CP210x, ou a USB do próprio rádio), só durante a transmissão.</string>
+    <string name="ptt_ready">Adaptador de PTT pronto: %1$s</string>
+    <string name="ptt_cat_protocol">Protocolo CAT</string>
+    <string name="ptt_civ_address">Endereço CI-V (hex)</string>
+</resources>

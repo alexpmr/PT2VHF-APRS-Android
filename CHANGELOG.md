@@ -1,5 +1,16 @@
 # Changelog
 
+## Em desenvolvimento (ainda não lançado; sem versão definida)
+
+- **TNC KISS por Bluetooth LE (#92):** nova opção "Bluetooth LE" na tela Rádio, com busca de aparelhos próximos
+  (sem parear). Aceita o serviço KISS BLE padrão (Mobilinkd TNC4, PicoAPRS, trackers LoRa APRS e outros) e o
+  Nordic UART; quadros maiores que o MTU vão em pedaços; reconecta sozinho. **Não testado em TNC BLE real.**
+- **PTT por RTS/DTR ou CAT no modo AFSK (#93):** em Rádio → AFSK, novo cartão "PTT do rádio" com VOX (padrão, como
+  antes), RTS, DTR ou CAT por um adaptador USB-serial na porta OTG (Digirig, cabo FTDI/CP210x ou a USB do rádio).
+  CAT: Kenwood/Elecraft (`TX;`/`RX;`), Yaesu FT-991/891/DX (`TX1;`/`TX0;`), Yaesu FT-817/857/897 (5 bytes) e
+  Icom CI-V (`1C 00`, endereço configurável). O PTT é solto sempre, mesmo em erro; sem o adaptador, o pacote não
+  sai. A porta do PTT abre com DTR/RTS desligados. **Não testado com rádio real.**
+
 ## 1.0 — Publicada (13/11/2026; testes item a item pendentes)
 
 Primeira versão 1.0 (versionCode 16), autorizada pelo mantenedor ("Implemente todos e suba no site"). Instala por

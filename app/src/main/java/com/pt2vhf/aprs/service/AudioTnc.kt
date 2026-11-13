@@ -27,6 +27,11 @@ data class AudioConfig(
     val txDelayMs: Int = 300,
     val voxLeadMs: Int = 0,
     val highQuality: Boolean = true,
+    // #93 PTT: vox | rts | dtr | cat (o acionamento em si vem de fora, por [AudioTnc.ptt])
+    val pttMode: String = "vox",
+    val pttBaud: Int = 9600,
+    val catProtocol: String = "kenwood",
+    val civAddress: Int = 0x94,
 )
 
 /**
@@ -50,6 +55,12 @@ class AudioTnc(
     @Volatile private var config = AudioConfig()
     @Volatile private var scoStarted = false
     private val rate = 48_000
+
+    /**
+     * #93: PTT por hardware (RTS/DTR/CAT). null = VOX. Recebe true para entrar em TX e false para sair; devolve
+     * false se não conseguiu (aí o pacote não é transmitido).
+     */
+    @Volatile var ptt: ((Boolean) -> Boolean)? = null
 
     val connected: Boolean get() = running && listening
 
@@ -187,7 +198,12 @@ class AudioTnc(
         onLevel(0.0, true)
         val usage = if (cfg.output == "bt") AudioAttributes.USAGE_VOICE_COMMUNICATION else AudioAttributes.USAGE_MEDIA
         var track: AudioTrack? = null
+        val keyer = ptt
         return try {
+            if (keyer != null) {
+                if (!keyer(true)) return false
+                Thread.sleep(PTT_LEAD_MS)
+            }
             val t = AudioTrack.Builder()
                 .setAudioAttributes(AudioAttributes.Builder().setUsage(usage)
                     .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
@@ -211,6 +227,7 @@ class AudioTnc(
         } finally {
             runCatching { track?.stop() }
             track?.release()
+            if (keyer != null) runCatching { keyer(false) } // solta o PTT sempre, mesmo em erro
             transmitting.set(false)
             onLevel(0.0, false)
         }
@@ -218,6 +235,8 @@ class AudioTnc(
 
     companion object {
         const val NAME = "AFSK"
+        /** Espera entre acionar o PTT e começar o áudio (o TX delay do AX.25 vem depois, em flags). */
+        const val PTT_LEAD_MS = 40L
         const val ERR_PERMISSION = "Permissão de microfone negada"
         const val ERR_AUDIO = "Falha ao abrir o áudio"
     }

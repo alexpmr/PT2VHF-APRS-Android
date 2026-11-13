@@ -18,7 +18,7 @@ object SettingsBackup {
 
     /** Estado de sessão, pausas manuais, avisos e caches que não devem viajar para outro aparelho. */
     private val EXCLUDED_PREFIXES = listOf("update_", "tracker_explicit_off", "aprs_manual_pause", "tnc_manual_pause",
-        "announced_version", "crash_", "bt_address")
+        "announced_version", "crash_", "bt_address", "ble_address")
 
     private fun excluded(key: String) = EXCLUDED_PREFIXES.any { key.startsWith(it) }
 

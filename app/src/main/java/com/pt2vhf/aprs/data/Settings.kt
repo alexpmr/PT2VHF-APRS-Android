@@ -1,11 +1,13 @@
 package com.pt2vhf.aprs.data
 
 import android.content.Context
+import com.pt2vhf.aprs.core.CatPtt
 import com.pt2vhf.aprs.core.DEFAULT_FILTER
 import com.pt2vhf.aprs.core.DEFAULT_PORT
 import com.pt2vhf.aprs.core.DEFAULT_SERVER
 import com.pt2vhf.aprs.core.aprsPasscode
 import com.pt2vhf.aprs.core.fullCallsign
+import com.pt2vhf.aprs.core.PttMode
 import com.pt2vhf.aprs.core.plausibleAmateurCallsign
 import org.json.JSONObject
 
@@ -35,6 +37,7 @@ data class Settings(
     val smartMinTurnTimeSec: Int = 15,
     val stoppedBeaconMinutes: Int = 30,
     val btAddress: String = "",
+    val bleAddress: String = "", // #92 TNC KISS por Bluetooth LE
     // #10 perfis de operação
     val profile: String = PROFILE_CUSTOM,
     // #6 privacidade e conteúdo do beacon
@@ -58,7 +61,7 @@ data class Settings(
     val quietStart: Int = 22,
     val quietEnd: Int = 7,
     // TNC KISS por TCP (herdado da 0.1.0)
-    val tncType: String = "bt", // bt | tcp
+    val tncType: String = "bt", // bt | ble | tcp | audio | usb
     val tncHost: String = "",
     val tncPort: Int = 8001,
     // #15 API para outros apps (desligada por padrão)
@@ -80,6 +83,11 @@ data class Settings(
     val audioVoxLeadMs: Int = 0,
     val audioHighQuality: Boolean = true,
     val usbBaud: Int = 9600,
+    // #93 PTT do modem AFSK: vox | rts | dtr | cat, pelo adaptador USB-serial
+    val pttMode: String = "vox",
+    val pttBaud: Int = 9600,
+    val catProtocol: String = "kenwood",
+    val civAddress: Int = 0x94,
     // #6 fonte de posição e precisão do GPS
     val positionSource: String = "gps", // gps | manual
     val manualLat: Double? = null,
@@ -122,7 +130,7 @@ data class Settings(
         const val PROFILE_MOBILE = "mobile"
         const val PROFILE_PORTABLE = "portable"
         const val PROFILE_RX = "rx"
-        val TNC_TYPES = setOf("bt", "tcp", "audio", "usb")
+        val TNC_TYPES = setOf("bt", "ble", "tcp", "audio", "usb")
         val AUDIO_INPUTS = listOf("default", "unprocessed", "wired", "usb", "bt")
         val AUDIO_OUTPUTS = listOf("default", "wired", "usb", "bt")
         val USB_BAUDS = listOf(1200, 4800, 9600, 19200, 38400, 57600, 115200)
@@ -160,6 +168,7 @@ data class Settings(
                 smartMinTurnTimeSec = i("smart_turn_time", d.smartMinTurnTimeSec).coerceIn(5, 600),
                 stoppedBeaconMinutes = i("stopped_minutes", d.stoppedBeaconMinutes).coerceIn(0, 1440),
                 btAddress = s("bt_address", ""),
+                bleAddress = s("ble_address", ""),
                 profile = s("profile", d.profile).takeIf { it in PROFILES } ?: d.profile,
                 ambiguity = i("ambiguity", d.ambiguity).coerceIn(0, 4),
                 sendCourseSpeed = b("send_course_speed", d.sendCourseSpeed),
@@ -197,6 +206,10 @@ data class Settings(
                 audioVoxLeadMs = i("audio_vox_lead", d.audioVoxLeadMs).coerceIn(0, 1500),
                 audioHighQuality = b("audio_hq", d.audioHighQuality),
                 usbBaud = i("usb_baud", d.usbBaud).takeIf { it in USB_BAUDS } ?: d.usbBaud,
+                pttMode = s("ptt_mode", d.pttMode).takeIf { it in PttMode.ALL } ?: d.pttMode,
+                pttBaud = i("ptt_baud", d.pttBaud).takeIf { it in USB_BAUDS } ?: d.pttBaud,
+                catProtocol = s("cat_protocol", d.catProtocol).takeIf { it in CatPtt.PROTOCOLS } ?: d.catProtocol,
+                civAddress = i("civ_address", d.civAddress).takeIf { it in 0x01..0xDF } ?: d.civAddress,
                 positionSource = s("position_source", d.positionSource).takeIf { it == "gps" || it == "manual" } ?: d.positionSource,
                 manualLat = s("manual_lat", "").toDoubleOrNull()?.takeIf { it in -90.0..90.0 },
                 manualLon = s("manual_lon", "").toDoubleOrNull()?.takeIf { it in -180.0..180.0 },
@@ -239,6 +252,7 @@ data class Settings(
                 .putInt("smart_turn_time", s.smartMinTurnTimeSec.coerceIn(5, 600))
                 .putInt("stopped_minutes", s.stoppedBeaconMinutes.coerceIn(0, 1440))
                 .putString("bt_address", s.btAddress)
+                .putString("ble_address", s.bleAddress)
                 .putString("profile", s.profile)
                 .putInt("ambiguity", s.ambiguity.coerceIn(0, 4))
                 .putBoolean("send_course_speed", s.sendCourseSpeed)
@@ -276,6 +290,10 @@ data class Settings(
                 .putInt("audio_vox_lead", s.audioVoxLeadMs.coerceIn(0, 1500))
                 .putBoolean("audio_hq", s.audioHighQuality)
                 .putInt("usb_baud", s.usbBaud)
+                .putString("ptt_mode", s.pttMode)
+                .putInt("ptt_baud", s.pttBaud)
+                .putString("cat_protocol", s.catProtocol)
+                .putInt("civ_address", s.civAddress)
                 .putString("position_source", s.positionSource)
                 .putString("manual_lat", s.manualLat?.toString() ?: "")
                 .putString("manual_lon", s.manualLon?.toString() ?: "")

@@ -120,7 +120,7 @@ internal fun buildReport(context: Context, settings: Settings, anonymize: Boolea
     sb.appendLine()
     sb.appendLine("== Settings (passcode is never stored) ==")
     sb.appendLine("profile=${settings.profile} beacon=${settings.beaconMode} position=${settings.positionSource} gps=${settings.gpsPrecision}")
-    sb.appendLine("tnc=${settings.tncType} audioIn=${settings.audioInput} audioOut=${settings.audioOutput} vol=${settings.audioVolume} txdelay=${settings.audioTxDelayMs} vox=${settings.audioVoxLeadMs} usbBaud=${settings.usbBaud}")
+    sb.appendLine("tnc=${settings.tncType} audioIn=${settings.audioInput} audioOut=${settings.audioOutput} vol=${settings.audioVolume} txdelay=${settings.audioTxDelayMs} vox=${settings.audioVoxLeadMs} usbBaud=${settings.usbBaud} ptt=${settings.pttMode}/${settings.pttBaud}/${settings.catProtocol}")
     sb.appendLine("txRf=${settings.txViaRf} txIs=${settings.txViaInternet} autoIs=${settings.connectAprsIs} retries=${settings.msgRetries}/${settings.msgRetryBaseSec}s saver=${settings.batterySaver}")
     sb.appendLine("filter=${if (anonymize) "(hidden)" else settings.filter} path=${settings.rfPath}")
     sb.appendLine()

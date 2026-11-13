@@ -35,6 +35,9 @@ import com.pt2vhf.aprs.R
 import com.pt2vhf.aprs.core.AprsMessage
 import com.pt2vhf.aprs.core.AprsPacket
 import com.pt2vhf.aprs.core.SmartBeaconing
+import com.pt2vhf.aprs.core.CatPtt
+import com.pt2vhf.aprs.core.PttMode
+import com.pt2vhf.aprs.core.pttLines
 import com.pt2vhf.aprs.core.ackInfo
 import com.pt2vhf.aprs.core.effectiveAprsFilter
 import com.pt2vhf.aprs.core.messageInfo
@@ -138,24 +141,54 @@ class AprsService : Service(), LocationListener {
         })
     }
     private val usbTnc by lazy { UsbSerialTnc(this, onFrame = tncFrame, onState = tncState) }
+    // #92 TNC KISS por Bluetooth LE
+    private val bleTnc by lazy { BleTnc(this, onFrame = tncFrame, onState = tncState) }
+    // #93 PTT do modem AFSK por RTS/DTR ou CAT, numa porta USB-serial própria (não lê KISS)
+    private val pttPort by lazy {
+        UsbSerialTnc(this, onFrame = {}, kissMode = false, onState = { ready, name, error ->
+            val before = AprsRepository.status.value
+            AprsRepository.updateStatus { it.copy(pttReady = ready, pttName = name, pttError = error) }
+            if (before.pttReady != ready || (error.isNotBlank() && error != before.pttError))
+                AprsRepository.logConnection("PTT", (if (ready) "connected " else "disconnected ") + name +
+                    if (error.isNotBlank()) ": $error" else "")
+        })
+    }
     private var audioStarted = false
     private var usbStarted = false
+    private var bleStarted = false
+    private var pttStarted = false
     private fun tncConnected(): Boolean = tnc.connected || tcpTnc.connected ||
-        (audioStarted && audioTnc.connected) || (usbStarted && usbTnc.connected)
+        (audioStarted && audioTnc.connected) || (usbStarted && usbTnc.connected) || (bleStarted && bleTnc.connected)
     private fun tncSend(line: String): Boolean = when {
         audioStarted && audioTnc.connected -> audioTnc.send(line)
         usbStarted && usbTnc.connected -> usbTnc.send(line)
+        bleStarted && bleTnc.connected -> bleTnc.send(line)
         tcpTnc.connected -> tcpTnc.send(line)
         else -> tnc.send(line)
     }
     private fun audioConfig(s: Settings) = AudioConfig(s.audioInput, s.audioOutput, s.audioVolume, s.audioTxDelayMs,
-        s.audioVoxLeadMs, s.audioHighQuality)
+        s.audioVoxLeadMs, s.audioHighQuality, s.pttMode, s.pttBaud, s.catProtocol, s.civAddress)
     private fun disconnectAllTnc() {
         tnc.disconnect()
         tcpTnc.disconnect()
         if (audioStarted) { audioTnc.stop(); audioStarted = false }
         if (usbStarted) { usbTnc.disconnect(); usbStarted = false }
-        AprsRepository.updateStatus { it.copy(tncConnected = false, tncName = "", audioLevel = 0.0, audioTransmitting = false) }
+        if (bleStarted) { bleTnc.disconnect(); bleStarted = false }
+        if (pttStarted) { pttPort.disconnect(); pttStarted = false }
+        AprsRepository.updateStatus { it.copy(tncConnected = false, tncName = "", audioLevel = 0.0, audioTransmitting = false,
+            pttReady = false, pttName = "", pttError = "") }
+    }
+
+    /** #93: aciona o PTT conforme o modo; false se o adaptador não respondeu (aí o pacote não sai). */
+    private fun keyPtt(cfg: AudioConfig, transmit: Boolean): Boolean {
+        if (!pttPort.connected) {
+            if (transmit) AprsRepository.updateStatus { it.copy(pttError = InternalText.ERR_PTT_FAILED) }
+            return false
+        }
+        val ok = if (cfg.pttMode == PttMode.CAT) pttPort.writeRaw(CatPtt.command(cfg.catProtocol, transmit, cfg.civAddress))
+        else pttLines(cfg.pttMode, transmit).let { (dtr, rts) -> pttPort.setLines(dtr, rts) }
+        if (!ok && transmit) AprsRepository.logConnection("PTT", InternalText.ERR_PTT_FAILED)
+        return ok
     }
     @Volatile private var alertsQuietUntil = System.currentTimeMillis() + 60_000L
     private val alertCooldown = HashMap<String, Long>()
@@ -202,7 +235,7 @@ class AprsService : Service(), LocationListener {
                 if (previousTnc != listOf(settings.tncType, settings.tncHost, settings.tncPort, audioConfig(settings), settings.usbBaud) &&
                     !Settings.flag(this, "tnc_manual_pause")) connectTnc()
                 else if (!tncConnected() && !Settings.flag(this, "tnc_manual_pause") &&
-                    (settings.tncType == "audio" || settings.tncType == "usb")) connectTnc()
+                    (settings.tncType == "audio" || settings.tncType == "usb" || settings.tncType == "ble")) connectTnc()
                 if (previousLocation != listOf(settings.positionSource, settings.manualLat, settings.manualLon,
                         settings.gpsPrecision, settings.useNetworkLocation, settings.batterySaver, settings.batteryAutoPercent)) {
                     applyManualPosition()
@@ -302,6 +335,10 @@ class AprsService : Service(), LocationListener {
                 Settings.setFlag(this, "tnc_manual_pause", false)
                 settings = settings.copy(btAddress = it); Settings.save(this, settings); connectBluetooth(it)
             }
+            ACTION_BLE_CONNECT -> intent.getStringExtra(EXTRA_ADDRESS)?.let {
+                Settings.setFlag(this, "tnc_manual_pause", false)
+                settings = settings.copy(tncType = "ble", bleAddress = it); Settings.save(this, settings); connectTnc()
+            }
             ACTION_BT_PAUSE -> {
                 Settings.setFlag(this, "tnc_manual_pause", true)
                 disconnectAllTnc()
@@ -312,6 +349,7 @@ class AprsService : Service(), LocationListener {
             }
             ACTION_BT_DISCONNECT -> {
                 if (settings.tncType == "bt") { settings = settings.copy(btAddress = ""); Settings.save(this, settings) }
+                else if (settings.tncType == "ble") { settings = settings.copy(bleAddress = ""); Settings.save(this, settings) }
                 else Settings.setFlag(this, "tnc_manual_pause", true)
                 disconnectAllTnc()
             }
@@ -334,6 +372,8 @@ class AprsService : Service(), LocationListener {
         tcpTnc.disconnect()
         if (audioStarted) audioTnc.stop()
         if (usbStarted) usbTnc.release()
+        if (bleStarted) bleTnc.disconnect()
+        if (pttStarted) pttPort.release()
         screenReceiver?.let { runCatching { unregisterReceiver(it) } }
         running = false
         runCatching { (getSystemService(LOCATION_SERVICE) as LocationManager).removeUpdates(this) }
@@ -397,8 +437,22 @@ class AprsService : Service(), LocationListener {
         disconnectAllTnc()
         when (settings.tncType) {
             "tcp" -> if (settings.tncHost.isNotBlank()) tcpTnc.connect(settings.tncHost.trim(), settings.tncPort)
-            "audio" -> { audioStarted = true; audioTnc.start(audioConfig(settings)) }
+            "audio" -> {
+                audioStarted = true
+                val cfg = audioConfig(settings)
+                if (cfg.pttMode != PttMode.VOX) {
+                    pttStarted = true
+                    pttPort.connect(cfg.pttBaud)
+                    audioTnc.ptt = { on -> keyPtt(cfg, on) }
+                } else audioTnc.ptt = null
+                audioTnc.start(cfg)
+            }
             "usb" -> { usbStarted = true; usbTnc.connect(settings.usbBaud) }
+            "ble" -> if (settings.bleAddress.isNotEmpty() &&
+                (Build.VERSION.SDK_INT < 31 || granted(Manifest.permission.BLUETOOTH_CONNECT))) {
+                bleStarted = true
+                bleTnc.connect(settings.bleAddress)
+            }
             else -> if (settings.btAddress.isNotEmpty()) connectBluetooth(settings.btAddress)
         }
     }
@@ -1010,6 +1064,7 @@ class AprsService : Service(), LocationListener {
         const val ACTION_TRACKER_OFF = "tracker_off"
         const val ACTION_MESSAGE = "message"
         const val ACTION_BT_CONNECT = "bt_connect"
+        const val ACTION_BLE_CONNECT = "ble_connect"
         const val ACTION_BT_DISCONNECT = "bt_disconnect"
         const val ACTION_BT_PAUSE = "bt_pause"
         const val ACTION_BT_RESUME = "bt_resume"
