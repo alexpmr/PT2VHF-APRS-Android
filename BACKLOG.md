@@ -3141,3 +3141,73 @@ Salvar sumido nas Configurações no POCO X7 Pro e no POCO Pad com Android 16 (#
 coerentes com o app; nenhum texto traduzível novo.
 
 **Dependências/relacionados:** itens 79 (aba Sobre e colaboradores) e 85 (relato do PP5PK).
+
+### 88. Estações: e-mail no comentário vira link que abre o aplicativo de e-mail
+_Sugestão do PU2PYC, registrada pelo mantenedor em 13/11/2026._
+
+**Pedido:** quando o comentário de uma estação trouxer um endereço de e-mail, ele deve aparecer como link; ao tocar,
+abre o aplicativo de e-mail do Android com o destinatário preenchido.
+
+**Onde:** o comentário é mostrado como texto simples na ficha da estação (`ui/StationDetailUi.kt`, seção
+"Comentário"). Conferir também o balão do mapa e a lista de estações, se mostrarem o comentário.
+
+**O que fazer (quando for implementado):**
+1. Detectar e-mails no comentário (padrão simples `nome@dominio.tld`; ignorar indicativos e textos como `@` isolado).
+2. Mostrar o trecho sublinhado e na cor de destaque (`LinkAnnotation`/`buildAnnotatedString`); o restante do texto
+   continua igual, inclusive o "ver mais" do comentário longo.
+3. Ao tocar, abrir `mailto:` com `Intent.ACTION_SENDTO`; se não houver app de e-mail, avisar em vez de fechar o app.
+4. Opcional: tratar também endereços `http(s)://` e `www.` do mesmo jeito (muitos comentários trazem o site da
+   estação).
+
+**Critérios de aceite:** comentário "QRV 145.570 fulano@exemplo.com" mostra o e-mail como link; tocar abre o app de
+e-mail com o destinatário; texto sem e-mail não muda; nenhum texto fixo sem tradução.
+
+### 89. Estações: mostrar o rádio/aparelho usado e outros dados que vêm no pacote
+_Sugestão do PU2PYC, registrada pelo mantenedor em 13/11/2026._
+
+**Pedido:** ao selecionar uma estação, mostrar também o tipo de rádio (ou aplicativo/aparelho) que ela usa e outros
+detalhes que trafegam no pacote mas hoje não aparecem.
+
+**Hoje:** a ficha da estação mostra posição, distância, direção, velocidade, rumo, altitude, tipo, último pacote,
+primeira vez vista, transporte, símbolo, comentário e clima. O pacote Mic-E é só identificado como tipo, sem
+decodificação completa.
+
+**O que fazer (quando for implementado):**
+1. **Aparelho/software:** identificar pelo destino (tocall, ex.: `APDR16` = APRSdroid, `APZVHF` = este app) e, nos
+   pacotes Mic-E, pelos caracteres de fabricante no fim do comentário (ex.: Kenwood TH-D74/TM-D710, Yaesu FTM-400/
+   FT5D, ICOM ID-5200/ID-52). Usar a tabela pública `tocalls.yaml` do projeto aprs-deviceid (licença livre), embutida
+   no app e atualizada a cada versão; exibir "Rádio/aplicativo: Yaesu FTM-400" ou "Desconhecido (APxxxx)".
+2. **Mic-E completo:** decodificar posição, velocidade, rumo, altitude e o status Mic-E (Em rota, Em serviço,
+   Retornando, Emergência etc.).
+3. **Outros campos que já vêm no pacote e não aparecem:** caminho completo (digis/iGate usados no último pacote),
+   PHG/RNG (potência, altura, ganho, alcance), DAO (precisão extra da posição), frequência/tom/offset anunciados no
+   comentário (padrão `146.520MHz T088 +060`), telemetria e mensagem de status (`>`), quando houver.
+4. Mostrar cada campo só quando existir, seguindo a seção "Estação" da ficha; nada inventado.
+
+**Critérios de aceite:** estação com APRSdroid mostra "APRSdroid"; estação Mic-E de Kenwood/Yaesu mostra o modelo e o
+status Mic-E; campos ausentes não aparecem; testes de unidade para tocall, Mic-E e PHG; textos novos traduzidos.
+
+**Dependências/relacionados:** #58.6 (ficha da estação), #69 (decodificador de pacote).
+
+### 90. Aviso sonoro ao receber confirmação (ack) ou ouvir meu pacote repetido por um digipeater
+_Sugestão do PU2PYC, registrada pelo mantenedor em 13/11/2026._
+
+**Pedido:** tocar um sinal sonoro quando:
+1. chegar o **ack** de uma mensagem que enviei (confirmação de recebimento/leitura pela outra estação);
+2. o app **ouvir meu pacote repetido** por outra estação (digipeater/iGate passou adiante, "eco" do digi).
+
+**O que fazer (quando for implementado):**
+1. Ack: no ponto em que a mensagem enviada passa para "confirmada" (`AprsService`/`AprsRepository`), tocar um som
+   curto (bipe próprio ou som de notificação do sistema). Tocar uma vez por mensagem, não para acks repetidos.
+2. Eco do digi: pelo TNC (RF), detectar pacote com meu indicativo como origem e caminho com digi marcado como usado
+   (`*`); tocar um som diferente do ack. Agrupar ecos do mesmo pacote (vários digis) num único bipe. Pelo APRS-IS não
+   há eco de digi; não tocar por isso.
+3. Configurações (aba de alertas/notificações): ligar/desligar cada som separadamente (padrão: ligado para ack,
+   desligado para eco), respeitar o modo silencioso/Não Perturbe e usar o canal de notificação do app para que o
+   usuário possa trocar o som pelo Android.
+4. Funcionar com a tela desligada (serviço em primeiro plano).
+
+**Critérios de aceite:** enviar mensagem e receber ack toca o som uma vez; beacon repetido por digi via TNC toca o
+som de eco uma vez por pacote; com as opções desligadas ou em modo silencioso não toca; textos novos traduzidos.
+
+**Dependências/relacionados:** #4 (enlaces RF próprios, "meu beacon repetido por digi"), #60 (envio de mensagens).
