@@ -3280,3 +3280,28 @@ rádio" no modo AFSK; porta USB-serial própria (`UsbSerialTnc` com `kissMode = 
 **Critérios de aceite:** com RTS/DTR o sinal sobe só durante a transmissão; com CAT o rádio entra e sai de TX; VOX
 continua igual; testes de unidade dos comandos CAT e dos pedidos de linha de controle por chip.
 **Exige teste em hardware real** (rádio + adaptador).
+
+### 94. Mapa: escolher o tipo de mapa, incluindo um mapa escuro
+_Pedido do mantenedor em 14/11/2026 ("adicionar tipo de mapa, incluindo este escuro do exemplo"). Referência visual
+(outro app, só inspiração; não copiar aparência, nome nem ícones): `docs/inspiracao/item94-mapa-escuro.png`._
+
+**Pedido:** hoje o mapa usa só o OpenStreetMap padrão (`TileSourceFactory.MAPNIK` em `Screens.kt` e no minimapa de
+`StationDetailUi.kt`). Permitir escolher o tipo de mapa, com pelo menos uma opção **escura** como a do exemplo
+(fundo quase preto, ruas em cinza, água em azul-acinzentado escuro, nomes de cidades claros), boa para uso à noite
+e no carro, com os ícones e indicativos das estações bem legíveis por cima.
+
+**Proposta:**
+1. Botão/menu "Tipo de mapa" no mapa (e opção em Configurações → Mapa), com escolha lembrada entre aberturas.
+2. Tipos sugeridos: **Padrão** (OSM, como hoje), **Escuro**, e, se a licença permitir sem chave paga, **Claro/
+   minimalista**, **Topográfico** e **Satélite**. Conferir os termos de uso de cada servidor de tiles (atribuição
+   obrigatória no canto do mapa; nada de servidores que proíbam uso em apps ou exijam chave paga).
+3. Escuro: preferir um servidor de tiles escuros com uso liberado; se não houver, aplicar filtro de cores
+   (inverter + ajustar tons) só na camada de tiles, como já é feito no brilho (#22, `brightnessFilter`).
+4. Opção "Automático": escuro quando o tema do app/sistema estiver escuro (e no Android Auto, #68).
+5. O controle de brilho (#22) continua funcionando sobre qualquer tipo; o cache de tiles fica separado por tipo.
+6. Minimapa da ficha da estação usa o mesmo tipo escolhido. Textos novos traduzidos (#76).
+
+**Critérios de aceite:** trocar o tipo muda o mapa na hora sem perder posição/zoom; escolha mantida após fechar o
+app; no Escuro, ícones, rótulos e trilhas continuam legíveis; atribuição correta de cada fonte visível.
+
+**Dependências/relacionados:** #22 (brilho do mapa), #63 (ícones), #68 (Android Auto), #74 (Configurações em abas).
