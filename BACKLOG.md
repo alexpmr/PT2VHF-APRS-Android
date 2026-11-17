@@ -3481,3 +3481,24 @@ a conexão continua; novos pacotes voltam a contar a partir de zero; nada mais �
 **Dependências/relacionados:** #97 e #98 (outras sugestões de PU2PYC para a aba Rádio), #76 (traduções).
 
 **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+
+### 100. Modo carro: "Última mensagem" passa a "Última mensagem/informação"
+_Sugestão de PU2PYC, registrada pelo mantenedor em 17/11/2026 ("Backlog: pu2pyc: trocar mensagem para
+\"mensagem/informação\"")._
+Referência: `docs/inspiracao/item100-ultima-mensagem-informacao.png` (cartão "Última mensagem" no modo carro
+mostrando um boletim/informação de rede, não uma mensagem pessoal).
+
+**Pedido:** o cartão do modo carro também exibe boletins e informações (ex.: anúncio de rede "Sun Night Net"), então
+o título **"Última mensagem"** deve virar **"Última mensagem/informação"**.
+
+**Onde:** `car_last_message` (`res/values*/strings_v019.xml`, modo carro) e, para manter coerência, `auto_last_message`
+(`strings_v100.xml`, Android Auto #68) se o conteúdo mostrado lá for o mesmo. Atualizar as traduções (#76), por ex.
+EN "Last message/info", ES "Último mensaje/información". Se o texto ficar longo demais em tela estreita, pode quebrar
+linha, mas não cortar.
+
+**Critérios de aceite:** modo carro mostra "Última mensagem/informação" em PT e o equivalente nos outros idiomas;
+nada mais muda no comportamento.
+
+**Dependências/relacionados:** #68 (Android Auto), #76 (traduções), #97–#99 (outras sugestões de PU2PYC).
+
+**Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
