@@ -3434,3 +3434,29 @@ dos chips em celular estreito (quebra para a linha seguinte se preciso, sem cort
 **Dependências/relacionados:** #76 (traduções), aba Logs (histórico completo e limpeza própria).
 
 **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+
+### 98. TNC conectado: esconder aparelhos pareados e mostrar o nome do rádio no chip do topo
+_Sugestão de PU2PYC, registrada pelo mantenedor em 17/11/2026 ("Backlog: pu2pyc; uma vez conectado, deixar de
+mostrar os outros aparelhos, para não ocupar tela. Uma vez conectado, mostrar em cima, ao invés de TNC verde, o nome
+do dispositivo em verde. Quando desconectado, volta a aparecer TNC vermelho.")._
+Referência: `docs/inspiracao/item98-tnc-conectado-ocultar-pareados.png` (TH-D75 conectado e a lista "Aparelhos
+pareados" inteira circulada: DT0106, ICOM BT, AirPods, GoPro, JBL, DEH-S31BT, TH-D75 "em uso").
+
+**Pedido:**
+1. **Esconder a lista de pareados quando conectado:** na aba **Rádio**, com o TNC conectado, não mostrar a seção
+   **Aparelhos pareados** (hoje `SectionCard(R.string.paired_devices)` em `ui/RadioUi.kt` lista todos os
+   `bondedDevices`, mesmo os que não são rádio). Ao desconectar, a lista volta a aparecer para escolher outro aparelho.
+2. **Nome do aparelho no chip do topo:** no cabeçalho (`Chip("TNC", status.tncConnected)` em `ui/App.kt`, e o
+   equivalente em `ui/Features019.kt`), quando conectado mostrar o **nome do dispositivo** em verde (ex.: "TH-D75")
+   no lugar de "TNC"; desconectado, volta a "TNC" vermelho. Nome longo é cortado com reticências para não empurrar
+   os outros chips. Vale para todos os tipos de TNC (Bluetooth, BLE, USB, KISS TCP, Áudio), usando o nome que já
+   aparece em "TNC conectado" (ex.: "TH-D75 · KISS Bluetooth").
+
+**Critérios de aceite:** conectado ao TH-D75, o topo mostra "● TH-D75" verde e a lista de pareados some; ao
+desconectar (ou cair a conexão), o topo volta a "● TNC" vermelho e a lista reaparece; tocar no chip continua levando
+à aba Rádio; sem textos novos fixos sem tradução (#76).
+
+**Dependências/relacionados:** #92 (BLE), #44/#93 (TNCs e PTT), #76 (traduções), #97 (mesma sugestão de limpeza da
+aba Rádio).
+
+**Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
