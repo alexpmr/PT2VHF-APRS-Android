@@ -3460,3 +3460,24 @@ desconectar (ou cair a conexão), o topo volta a "● TNC" vermelho e a lista re
 aba Rádio).
 
 **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+
+### 99. TNC conectado: botão "Apagar estatísticas" (zerar contadores RX/TX)
+_Sugestão de PU2PYC, registrada pelo mantenedor em 17/11/2026 ("Backlog: pu2pyc: Botão apagar estatísticas")._
+Referência: `docs/inspiracao/item99-tnc-apagar-estatisticas.png` (seta apontando o canto direito do cartão
+"TNC conectado", ao lado do título, acima de "TH-D75 · KISS Bluetooth · 2035 RX · 28 TX").
+
+**Pedido:** no cartão **TNC conectado** da aba **Rádio** (`ui/RadioUi.kt`, linha com
+`${status.tncName} · $kind · ${status.tncRx} RX · ${status.tncTx} TX`), acrescentar um botão **"Apagar estatísticas"**
+(texto curto ou ícone com rótulo, no canto direito do título do cartão, onde está a seta) que **zera os contadores RX e
+TX** do TNC sem desconectar.
+
+**Sugestão de implementação:** função no `AprsRepository` que zera `tncRx`/`tncTx` no `status`; botão no estilo do
+"Limpar" de Registros RF. Não apaga pacotes, estações, mensagens nem a aba Logs; só os números do cartão. Texto novo
+traduzido (#76).
+
+**Critérios de aceite:** com o TNC conectado e contadores acima de zero, tocar no botão mostra "0 RX · 0 TX" na hora e
+a conexão continua; novos pacotes voltam a contar a partir de zero; nada mais é apagado.
+
+**Dependências/relacionados:** #97 e #98 (outras sugestões de PU2PYC para a aba Rádio), #76 (traduções).
+
+**Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
