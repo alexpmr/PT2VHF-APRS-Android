@@ -1702,6 +1702,7 @@ entram só para exibição (`AprsService` ~linha 120).
   `qAR,MEUCALL`; com IS→RF ligado, mensagem para estação ouvida localmente sai em RF
   e para estação não ouvida não sai; desligado, nada é retransmitido.
 - **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+- **17/11/2026:** a parte iGate passou para o **#95** (pedido de Yuri, PY6TL); este item fica com o digipeater.
 
 ### 53. ~~Modo satélite: passagens, apontador de antena (bússola + inclinômetro) e contatos APRS/voz~~ (CANCELADO — fora do escopo deste app)
 
@@ -3305,3 +3306,61 @@ e no carro, com os ícones e indicativos das estações bem legíveis por cima.
 app; no Escuro, ícones, rótulos e trilhas continuam legíveis; atribuição correta de cada fonte visível.
 
 **Dependências/relacionados:** #22 (brilho do mapa), #63 (ícones), #68 (Android Auto), #74 (Configurações em abas).
+
+### 95. Modo iGate no celular: tráfego RF → internet (APRS-IS) e internet → RF
+_Sugestão de Yuri, PY6TL (Salvador/BA), registrada pelo mantenedor em 17/11/2026: "Estou usando seu App e gostei
+muito. Bem intuitivo. Tenho vontade de por um Igate aqui em Salvador, existe algum App para celular que faça isso?
+Tráfego RF ir para Web e vice versa?"_
+
+**Relação com o #52:** o #52 (05/11/2026, ainda **não implementado**) já descreve digipeater **e** iGate juntos. Este
+item passa a ser o dono da **parte iGate**, agora com pedido de usuário real; o #52 fica com o digipeater (RF→RF).
+As regras de iGate escritas no #52 continuam valendo e estão detalhadas abaixo.
+
+**O que o app já tem (suporte parcial):**
+- **As duas pontas ao mesmo tempo:** o serviço em primeiro plano (`AprsService`) mantém o APRS-IS e o TNC conectados
+  juntos (KISS Bluetooth clássico, Bluetooth LE #92, USB-OTG, TCP — Direwolf/soundmodem — e modem AFSK pelo áudio #44).
+- **Login verificado no APRS-IS:** passcode calculado do indicativo (`Settings.passcode`), status "verificado" e
+  filtro de servidor (`effectiveAprsFilter`).
+- **Recepção RF:** cada quadro do TNC entra em `handleLine(..., Medium.RF)`, mas **só para exibir** (mapa, mensagens,
+  logs). Nada é encaminhado.
+- **Peças de decodificação prontas:** terceiros `}` (`thirdPartyGateway`, #54), códigos q e iGate do caminho
+  (`AprsPath`, `qIsRfGate`), estações ouvidas diretamente em RF (`StationInsights`/`RfStats`, `localRf`).
+- **Transmissão RF já existe** (beacon, mensagem, ACK, PTT #93) e o perfil "Somente recepção" (`rxOnly`) já bloqueia TX.
+- **Falta:** a lógica de gateway (encaminhar RF→IS e IS→RF), dedupe, limites, configurações, contadores e beacon de iGate.
+
+**Regras de iGate e o que elas implicam:**
+1. **Passcode obrigatório / login verificado:** só liga com APRS-IS verificado. Sem verificação o servidor descarta o
+   que o iGate envia; o app deve recusar ligar o modo e explicar. Indicativo genérico/exemplo (ex.: PT2VHF) bloqueado.
+2. **RF→IS:** reenviar ao APRS-IS cada pacote ouvido no TNC no formato `ORIGEM>DEST,PATH,qAR,MEUCALL:info` (o servidor
+   completa o qAR; o app manda o cabeçalho sem os aliases WIDE usados). **Não encaminhar** pacotes com `TCPIP`,
+   `TCPXX`, `NOGATE` ou `RFONLY` no caminho, consultas genéricas `?`, pacotes do próprio app que voltaram por digi
+   (`MEUCALL` como origem não é reenviado em duplicata) nem terceiros `}` cujo conteúdo interno tenha essas marcas;
+   terceiros válidos vão **desencapsulados**. Implica checar o caminho antes de qualquer envio, com testes unitários
+   dos filtros.
+3. **Dedupe:** não reenviar o mesmo pacote (origem + destino + info) dentro de ~30 s, nos dois sentidos, para não
+   gerar duplicatas quando o pacote é ouvido direto e por digi. Implica uma pequena tabela em memória com expiração.
+4. **IS→RF (opcional, padrão desligado):** só **mensagens** (e ACKs/REJ) para estações **ouvidas localmente em RF**
+   recentemente (janela configurável, ex.: 30 min) **e não** ouvidas via outro iGate/TCPIP; nada de posições, boletins
+   gerais ou tráfego para quem não está por perto. Enviar como terceiros:
+   `MEUCALL>APxxxx,WIDE1-1:}ORIGEM>DEST,TCPIP,MEUCALL*::DESTINO :texto{id}`. Opcionalmente uma posição de quem mandou
+   a mensagem, uma vez. Implica: lista de "ouvidos localmente" com horário, caminho RF curto e configurável, limite de
+   taxa (ex.: no máx. 1 envio a cada poucos segundos e N por minuto) e respeito ao `rxOnly`/autorizações de TX.
+   Observação: o servidor APRS-IS costuma entregar ao iGate as mensagens destinadas a estações que ele encaminhou
+   recentemente, mas convém conferir se o filtro atual (`r/`) cobre isso.
+5. **Beacon próprio do iGate:** símbolo `I` (ou overlay `R`/`T` conforme RX-only ou bidirecional), comentário e
+   intervalo próprios, com posição fixa (#6) recomendada; separado do beacon do tracker ou via perfil "Base/iGate".
+
+**Telas e monitoramento:** chave "iGate" em Configurações (aba Rádio/Conexões), com "RF → internet" e
+"internet → RF" separados; contadores RF→IS, IS→RF e descartados por motivo; marcação "IGATE" nos Logs; indicação no
+cabeçalho e na notificação quando ativo. Aviso ao ligar: responsabilidade do operador (licença, frequência e regras
+locais), celular na tomada e app sem economia de bateria (#49). Textos novos traduzidos (#76).
+
+**Critérios de aceite (dependem de rádio/TNC reais):** pacote RF de outra estação aparece em aprs.fi com
+`qAR,MEUCALL`; pacote com `NOGATE`/`RFONLY`/`TCPIP` não é encaminhado; o mesmo pacote ouvido duas vezes sobe uma vez só;
+com IS→RF ligado, mensagem da internet para estação ouvida localmente sai em RF e para estação não ouvida não sai;
+desligado, nada é encaminhado; sem login verificado o modo não liga.
+
+**Dependências/relacionados:** #52 (digi/iGate original), #54 (mensagens RF↔iGate↔APRS-IS), #44/#92/#93 (TNCs e PTT),
+#49 (bateria), #6 (posição fixa), #81/#91 (tabela comparativa do site, linha iGate quando implementado).
+
+**Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
