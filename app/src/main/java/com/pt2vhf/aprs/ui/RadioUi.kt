@@ -212,6 +212,31 @@ fun RadioScreen(settings: Settings, onSettingsChanged: (Settings) -> Unit) {
             TextButton(onClick = { AprsRepository.clearRfEvents() }) { Text(UiText.text(R.string.rf_records_clear), color = Pal.orange) }
         }
 
+        // #95 iGate e #52 digi inteligente: estado e contadores
+        if (settings.igateEnabled || settings.digiEnabled) SectionCard(UiText.text(R.string.gw_status_section)) {
+            if (settings.igateEnabled) {
+                KeyValue("iGate", UiText.text(if (status.igateActive) R.string.gw_active else R.string.gw_inactive))
+                KeyValue(UiText.text(R.string.gw_rf_to_is), status.igateRfToIs.toString())
+                if (settings.igateIsToRf) KeyValue(UiText.text(R.string.gw_is_to_rf), status.igateIsToRf.toString())
+                KeyValue(UiText.text(R.string.gw_skipped), status.igateSkipped.toString())
+                KeyValue(UiText.text(R.string.gw_local), status.igateLocalStations.toString())
+            }
+            if (settings.digiEnabled) {
+                KeyValue("Digi", UiText.text(if (status.digiActive) R.string.gw_active else R.string.gw_inactive))
+                KeyValue(UiText.text(R.string.gw_repeated), status.digiRepeated.toString())
+                KeyValue(UiText.text(R.string.gw_channel), UiText.text(R.string.gw_channel_value, status.digiLoadPerMin, status.digiAirtimePct))
+                val dropped = status.digiDropped.filterValues { it > 0 }
+                if (dropped.isNotEmpty()) {
+                    Text(UiText.text(R.string.gw_dropped), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    dropped.entries.sortedByDescending { it.value }.forEach { (k, v) -> KeyValue(digiReasonLabel(k), v.toString()) }
+                }
+                if (status.digiNeighbors.isNotEmpty()) {
+                    Text(UiText.text(R.string.gw_neighbors), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text(status.digiNeighbors.joinToString(" · "), fontSize = 12.sp, color = Pal.muted)
+                }
+            }
+        }
+
         // #13: centro de diagnóstico
         SectionCard(UiText.text(R.string.diagnostics)) {
             KeyValue("APRS-IS", if (status.aprsIsVerified) UiText.text(R.string.aprs_ok)
@@ -280,6 +305,22 @@ private val COORD_LON = Regex("""\d{5}\.\d{2}[EW]""")
 private val DECIMAL = Regex("""-?\d{1,3}\.\d{3,}""")
 
 /** Texto de diagnóstico (#13). Nunca inclui passcode; anonimiza indicativo próprio e coordenadas se pedido. */
+/** #52: nome legível do motivo de não repetir (chave = nome do enum DigiReason). */
+private fun digiReasonLabel(key: String): String = when (key) {
+    "DUPLICATE" -> UiText.text(R.string.gw_r_duplicate)
+    "COVERED" -> UiText.text(R.string.gw_r_covered)
+    "BUSY" -> UiText.text(R.string.gw_r_busy)
+    "SATURATED" -> UiText.text(R.string.gw_r_saturated)
+    "OUT_OF_RADIUS" -> UiText.text(R.string.gw_r_out_of_radius)
+    "SOURCE_RATE" -> UiText.text(R.string.gw_r_source_rate)
+    "GLOBAL_RATE" -> UiText.text(R.string.gw_r_global_rate)
+    "EXCESS_PATH" -> UiText.text(R.string.gw_r_excess_path)
+    "NOT_DIRECT" -> UiText.text(R.string.gw_r_not_direct)
+    "OWN_PACKET" -> UiText.text(R.string.gw_r_own_packet)
+    "NON_RF" -> UiText.text(R.string.gw_r_non_rf)
+    else -> key
+}
+
 internal fun buildDiagnostics(settings: Settings, status: LinkStatus, anonymize: Boolean): String {
     val df = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.MEDIUM)
     fun clean(text: String): String {

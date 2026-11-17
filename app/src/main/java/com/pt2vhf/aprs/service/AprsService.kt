@@ -87,6 +87,14 @@ class AprsService : Service(), LocationListener {
         Thread(task, "aprs-tx").apply { isDaemon = true }
     }
     private var lastBeaconCourse: Int? = null
+    // #95 iGate e #52 digi inteligente: estado só em memória, recriado quando a configuração muda.
+    private val igateRfDupes = com.pt2vhf.aprs.core.GateDupeFilter(30_000L)
+    private val igateIsDupes = com.pt2vhf.aprs.core.GateDupeFilter(30_000L)
+    private var igateRate = com.pt2vhf.aprs.core.RateLimiter(6)
+    private var igateRateMax = 6
+    private var localHeard = com.pt2vhf.aprs.core.LocalHeard(30 * 60_000L)
+    private var localHeardMinutes = 30
+    private var digi: com.pt2vhf.aprs.core.SmartDigipeater? = null
     private var lastLocation: Location? = null
     private var msgCounter = (System.currentTimeMillis() / 1000 % 900).toInt() + 1
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
@@ -248,6 +256,7 @@ class AprsService : Service(), LocationListener {
                     aprsIs.stop()
                     AprsRepository.updateStatus { it.copy(aprsIsConnected = false, aprsIsVerified = false, aprsIsError = "") }
                 }
+                publishGatewayStatus()
                 refreshNotification()
             }
             ACTION_APRS_CONNECT -> {
@@ -856,8 +865,132 @@ class AprsService : Service(), LocationListener {
         return msgCounter.toString()
     }
 
+    // ---------- #95 iGate e #52 digi inteligente ----------
+
+    private fun igateAllowed(): Boolean = settings.igateEnabled && settings.configured && !settings.rxOnly &&
+        AprsRepository.status.value.aprsIsVerified
+    private fun igateRfAllowed(): Boolean = igateAllowed() && settings.igateIsToRf && settings.txViaRf && tncConnected()
+    private fun digiAllowed(): Boolean = settings.digiEnabled && settings.configured && !settings.rxOnly &&
+        settings.txViaRf && tncConnected()
+
+    private fun digiEngine(): com.pt2vhf.aprs.core.SmartDigipeater {
+        val cfg = settings.digiConfig
+        val d = digi ?: com.pt2vhf.aprs.core.SmartDigipeater(cfg).also { digi = it }
+        if (d.config != cfg) d.config = cfg
+        return d
+    }
+
+    private fun syncGatewayConfig() {
+        if (localHeardMinutes != settings.igateLocalMinutes) {
+            localHeardMinutes = settings.igateLocalMinutes
+            localHeard = com.pt2vhf.aprs.core.LocalHeard(localHeardMinutes * 60_000L)
+        }
+        if (igateRateMax != settings.igateMaxPerMin) {
+            igateRateMax = settings.igateMaxPerMin
+            igateRate = com.pt2vhf.aprs.core.RateLimiter(igateRateMax)
+        }
+    }
+
+    /** Pacote ouvido no TNC: anota estação local, sobe para o APRS-IS (iGate) e decide a repetição (digi). */
+    private fun gateFromRf(line: String) {
+        val now = System.currentTimeMillis()
+        val pkt = com.pt2vhf.aprs.core.Tnc2.parse(line) ?: return
+        syncGatewayConfig()
+        if (!pkt.info.startsWith("}") && !com.pt2vhf.aprs.core.hasNoGateHop(pkt.path)) localHeard.heard(pkt.source, now)
+        if (igateAllowed()) {
+            when (val r = com.pt2vhf.aprs.core.rfToIs(line, settings.fullCall)) {
+                is com.pt2vhf.aprs.core.GateResult.Send -> {
+                    val key = com.pt2vhf.aprs.core.Tnc2.parse(r.line)?.dupeKey() ?: r.line
+                    if (igateRfDupes.isDuplicate(key, now)) igateSkipped()
+                    else if (!txWorker.isShutdown) txWorker.execute {
+                        if (aprsIs.send(r.line)) {
+                            AprsRepository.updateStatus { it.copy(igateRfToIs = it.igateRfToIs + 1, aprsTx = it.aprsTx + 1) }
+                            AprsRepository.logPacket("TX", Medium.INTERNET, r.line)
+                            if (settings.monitorEnabled) AprsRepository.monitorLine("IGATE RF→IS ${r.line}")
+                        }
+                    }
+                }
+                is com.pt2vhf.aprs.core.GateResult.Skip -> igateSkipped()
+            }
+        }
+        if (digiAllowed()) {
+            val engine = digiEngine()
+            val me = AprsRepository.status.value
+            val decision = engine.onHeard(line, now, me.lat, me.lon) { call ->
+                AprsRepository.stations.value[call]?.let { it.lat to it.lon }
+            }
+            when (decision) {
+                is com.pt2vhf.aprs.core.DigiDecision.Repeat ->
+                    if (decision.delayMs <= 0) digiTransmit(decision.line)
+                    else handler.postDelayed({
+                        engine.release(decision.token)?.let { digiTransmit(it) }
+                        publishGatewayStatus()
+                    }, decision.delayMs)
+                is com.pt2vhf.aprs.core.DigiDecision.Drop -> Unit
+            }
+        }
+        publishGatewayStatus()
+    }
+
+    /** Linha do APRS-IS: mensagem para estação ouvida localmente sai em RF como terceiros (IS→RF opcional). */
+    private fun gateFromInternet(line: String) {
+        if (!igateRfAllowed()) return
+        val now = System.currentTimeMillis()
+        syncGatewayConfig()
+        val path = settings.igateRfPath.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+        when (val r = com.pt2vhf.aprs.core.isToRf(line, settings.fullCall, TOCALL, path) { localHeard.isLocal(it, now) }) {
+            is com.pt2vhf.aprs.core.GateResult.Send -> {
+                val key = com.pt2vhf.aprs.core.Tnc2.parse(line)?.dupeKey() ?: line
+                if (igateIsDupes.isDuplicate(key, now) || !igateRate.tryAcquire(now)) { igateSkipped(); return }
+                if (!txWorker.isShutdown) txWorker.execute {
+                    if (tncSend(r.line)) {
+                        AprsRepository.updateStatus { it.copy(igateIsToRf = it.igateIsToRf + 1, tncTx = it.tncTx + 1) }
+                        AprsRepository.logPacket("TX", Medium.RF, r.line)
+                        if (settings.monitorEnabled) AprsRepository.monitorLine("IGATE IS→RF ${r.line}")
+                    }
+                }
+            }
+            is com.pt2vhf.aprs.core.GateResult.Skip -> Unit // quase todo o tráfego da internet não é para RF
+        }
+    }
+
+    private fun igateSkipped() = AprsRepository.updateStatus { it.copy(igateSkipped = it.igateSkipped + 1) }
+
+    private fun digiTransmit(line: String) {
+        if (txWorker.isShutdown || !digiAllowed()) return
+        txWorker.execute {
+            if (tncSend(line)) {
+                AprsRepository.updateStatus { it.copy(tncTx = it.tncTx + 1) }
+                AprsRepository.logPacket("TX", Medium.RF, line)
+                if (settings.monitorEnabled) AprsRepository.monitorLine("DIGI $line")
+            }
+        }
+    }
+
+    private fun publishGatewayStatus() {
+        if (!::settings.isInitialized) return
+        val now = System.currentTimeMillis()
+        val engine = digi
+        val stats = engine?.stats().orEmpty()
+        val load = engine?.channelLoad(now)
+        AprsRepository.updateStatus { s ->
+            s.copy(
+                igateActive = igateAllowed() && tncConnected(),
+                igateLocalStations = localHeard.count(now),
+                digiActive = digiAllowed(),
+                digiRepeated = stats.filterKeys { it.repeated }.values.sum(),
+                digiDropped = stats.filterKeys { !it.repeated && it != com.pt2vhf.aprs.core.DigiReason.NOT_FOR_ME &&
+                    it != com.pt2vhf.aprs.core.DigiReason.MALFORMED }.mapKeys { it.key.name },
+                digiLoadPerMin = load?.first ?: 0,
+                digiAirtimePct = ((load?.second ?: 0.0) * 100).toInt(),
+                digiNeighbors = engine?.neighbors(now)?.take(10)?.map { "${it.call} (${it.sources})" }.orEmpty(),
+            )
+        }
+    }
+
     private fun handleLine(line: String, medium: Medium) {
         AprsRepository.logPacket("RX", medium, line)
+        runCatching { if (medium == Medium.RF) gateFromRf(line) else gateFromInternet(line) }
         val packet = AprsPacket.parse(line) ?: return
         if (medium == Medium.INTERNET)
             AprsRepository.updateStatus { it.copy(aprsRx = it.aprsRx + 1) }
@@ -1014,6 +1147,8 @@ class AprsService : Service(), LocationListener {
         val parts = mutableListOf<String>()
         parts += if (s.aprsIsVerified) UiText.text(R.string.aprs_ok) else if (s.aprsIsConnected) UiText.text(R.string.aprs_unverified) else UiText.text(R.string.aprs_disconnected)
         if (s.tncConnected) parts += "TNC ${s.tncName}"
+        if (s.igateActive) parts += "iGate"
+        if (s.digiActive) parts += "Digi"
         if (settings.rxOnly) parts += UiText.text(R.string.profile_rx)
         if (s.trackerOn) parts += UiText.text(R.string.active_tracker_notification, s.beaconsSent)
         return NotificationCompat.Builder(this, CH_SERVICE)
@@ -1026,6 +1161,7 @@ class AprsService : Service(), LocationListener {
     }
 
     private fun refreshNotification() {
+        runCatching { publishGatewayStatus() }
         runCatching { StatusWidget.refresh(this) }
         if (!canNotify()) return
         runCatching { getSystemService(NotificationManager::class.java).notify(NOTIF_SERVICE, buildNotification()) }

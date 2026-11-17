@@ -230,6 +230,25 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
     var updateNotify by remember { mutableStateOf(current.updateNotify) }
     var shareCallsign by remember { mutableStateOf(current.shareCallsign) }
     var stripAccents by remember { mutableStateOf(current.stripAccents) }
+    // #95 iGate e #52 digi inteligente
+    var igateOn by remember { mutableStateOf(current.igateEnabled) }
+    var igateIsRf by remember { mutableStateOf(current.igateIsToRf) }
+    var igatePath by remember { mutableStateOf(current.igateRfPath) }
+    var igateLocal by remember { mutableStateOf(current.igateLocalMinutes.toString()) }
+    var igateMax by remember { mutableStateOf(current.igateMaxPerMin.toString()) }
+    var digiOn by remember { mutableStateOf(current.digiEnabled) }
+    var digiAliases by remember { mutableStateOf(current.digiAliases) }
+    var digiFill by remember { mutableStateOf(current.digiFillIn) }
+    var digiDirect by remember { mutableStateOf(current.digiDirectOnly) }
+    var digiWide by remember { mutableStateOf(current.digiWideN) }
+    var digiMaxN by remember { mutableStateOf(current.digiMaxN.toString()) }
+    var digiTrap by remember { mutableStateOf(current.digiTrapDrop) }
+    var digiVisc by remember { mutableStateOf(current.digiViscous) }
+    var digiViscSec by remember { mutableStateOf(current.digiViscousSec.toString()) }
+    var digiAdapt by remember { mutableStateOf(current.digiAdaptive) }
+    var digiRadius by remember { mutableStateOf(current.digiRadiusKm.toString()) }
+    var digiSource by remember { mutableStateOf(current.digiSourceSec.toString()) }
+    var digiMaxMin by remember { mutableStateOf(current.digiMaxPerMin.toString()) }
     // #80: SSID digitado nesta edição não é trocado pelo do perfil; #82: janela "Qual SSID usar?".
     var ssidTouched by remember { mutableStateOf(false) }
     var ssidHelp by remember { mutableStateOf(false) }
@@ -327,7 +346,17 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
             announceVersion = announce,
             msgRetries = (retries.toIntOrNull() ?: 5).coerceIn(1, 10),
             msgRetryBaseSec = (retryBase.toIntOrNull() ?: 30).coerceIn(10, 300),
-            updateNotify = updateNotify, shareCallsign = shareCallsign, stripAccents = stripAccents)
+            updateNotify = updateNotify, shareCallsign = shareCallsign, stripAccents = stripAccents,
+            igateEnabled = igateOn, igateIsToRf = igateIsRf, igateRfPath = igatePath.trim().uppercase(),
+            igateLocalMinutes = (igateLocal.toIntOrNull() ?: 30).coerceIn(5, 180),
+            igateMaxPerMin = (igateMax.toIntOrNull() ?: 6).coerceIn(1, 30),
+            digiEnabled = digiOn, digiAliases = digiAliases.trim().uppercase(), digiFillIn = digiFill,
+            digiDirectOnly = digiDirect, digiWideN = digiWide, digiMaxN = (digiMaxN.toIntOrNull() ?: 2).coerceIn(1, 7),
+            digiTrapDrop = digiTrap, digiViscous = digiVisc,
+            digiViscousSec = (digiViscSec.toIntOrNull() ?: 5).coerceIn(1, 30), digiAdaptive = digiAdapt,
+            digiRadiusKm = (digiRadius.toIntOrNull() ?: 0).coerceIn(0, 1000),
+            digiSourceSec = (digiSource.toIntOrNull() ?: 60).coerceIn(0, 3600),
+            digiMaxPerMin = (digiMaxMin.toIntOrNull() ?: 20).coerceIn(1, 120))
     }
 
     /** Loads the chosen profile into the form; nothing is saved or transmitted until Save. */
@@ -627,6 +656,49 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
                 clearResult?.let { Text(it, color = Pal.muted, fontSize = 13.sp) }
                 }
 
+                SettingsTab.GATEWAY -> {
+                SectionTitle(UiText.text(R.string.gw_igate_section))
+                CheckRow(UiText.text(R.string.gw_igate_enable), igateOn) { igateOn = it }
+                if (igateOn) {
+                    CheckRow(UiText.text(R.string.gw_igate_is_to_rf), igateIsRf) { igateIsRf = it }
+                    if (igateIsRf) {
+                        OutlinedTextField(igatePath, { igatePath = it.uppercase() }, label = { Text(UiText.text(R.string.gw_igate_rf_path)) },
+                            singleLine = true, modifier = Modifier.fillMaxWidth())
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            NumberField(UiText.text(R.string.gw_igate_local_min), igateLocal, { igateLocal = it }, Modifier.weight(1f))
+                            NumberField(UiText.text(R.string.gw_igate_max_per_min), igateMax, { igateMax = it }, Modifier.weight(1f))
+                        }
+                    }
+                }
+                Text(UiText.text(R.string.gw_igate_notice), color = Pal.muted, fontSize = 12.sp)
+
+                SectionTitle(UiText.text(R.string.gw_digi_section))
+                CheckRow(UiText.text(R.string.gw_digi_enable), digiOn) { digiOn = it }
+                if (digiOn) {
+                    CheckRow(UiText.text(R.string.gw_digi_fill_in), digiFill) { digiFill = it }
+                    if (digiFill) CheckRow(UiText.text(R.string.gw_digi_direct_only), digiDirect) { digiDirect = it }
+                    CheckRow(UiText.text(R.string.gw_digi_wide_n), digiWide) { digiWide = it }
+                    if (digiWide) {
+                        NumberField(UiText.text(R.string.gw_digi_max_n), digiMaxN, { digiMaxN = it })
+                        CheckRow(UiText.text(R.string.gw_digi_trap_drop), digiTrap) { digiTrap = it }
+                    }
+                    OutlinedTextField(digiAliases, { digiAliases = it.uppercase() }, label = { Text(UiText.text(R.string.gw_digi_aliases)) },
+                        singleLine = true, modifier = Modifier.fillMaxWidth())
+                    CheckRow(UiText.text(R.string.gw_digi_viscous), digiVisc) { digiVisc = it }
+                    if (digiVisc) NumberField(UiText.text(R.string.gw_digi_viscous_sec), digiViscSec, { digiViscSec = it })
+                    CheckRow(UiText.text(R.string.gw_digi_adaptive), digiAdapt) { digiAdapt = it }
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        NumberField(UiText.text(R.string.gw_digi_radius), digiRadius, { digiRadius = it }, Modifier.weight(1f))
+                        NumberField(UiText.text(R.string.gw_digi_source_sec), digiSource, { digiSource = it }, Modifier.weight(1f))
+                    }
+                    NumberField(UiText.text(R.string.gw_digi_max_per_min), digiMaxMin, { digiMaxMin = it })
+                }
+                Text(UiText.text(R.string.gw_digi_notice), color = Pal.muted, fontSize = 12.sp)
+                if (igateOn || digiOn) Text(UiText.text(R.string.gw_warning), color = Pal.orange, fontSize = 12.sp)
+                if (profile == Settings.PROFILE_RX && (igateOn || digiOn))
+                    Text(UiText.text(R.string.profile_rx_notice), color = Pal.orange, fontSize = 12.sp)
+                }
+
                 SettingsTab.SYSTEM -> {
                 SectionTitle(UiText.text(R.string.notifications_section))
                 CheckRow(UiText.text(R.string.update_notify), updateNotify) { updateNotify = it }
@@ -784,7 +856,7 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
 
 /** #74: abas da tela de configurações, na ordem exibida. */
 internal enum class SettingsTab {
-    STATION, APRS_IS, BEACON, POSITION, MAP, MESSAGES, SYSTEM, ABOUT;
+    STATION, APRS_IS, BEACON, POSITION, MAP, MESSAGES, GATEWAY, SYSTEM, ABOUT;
 
     fun label(): String = when (this) {
         STATION -> UiText.text(R.string.station_section)
@@ -793,13 +865,14 @@ internal enum class SettingsTab {
         POSITION -> UiText.text(R.string.position_section)
         MAP -> UiText.text(R.string.nav_map)
         MESSAGES -> UiText.text(R.string.nav_messages)
+        GATEWAY -> "iGate/Digi"
         SYSTEM -> UiText.text(R.string.settings_tab_system)
         ABOUT -> UiText.text(R.string.about_section)
     }
 }
 
 /** #79: radioamadores que ajudaram a melhorar o app (indicativos não se traduzem). Ampliar só aqui. */
-internal val CONTRIBUTORS = listOf("PU2PYC", "PP5AU", "PU2MUS", "PP5PK")
+internal val CONTRIBUTORS = listOf("PU2PYC", "PP5AU", "PU2MUS", "PP5PK", "PY6TL")
 
 private const val SSID_HELP_SEEN = "ssid_help_seen"
 
