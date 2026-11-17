@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.2 — Publicada (17/11/2026; teste em aparelho pendente)
+
+Versão 1.2 (versionCode 18), autorizada pelo mantenedor ("Lance a versão 1.2 no site"). Instala por cima da 1.1
+sem perder dados e é oferecida pelo aviso de atualização (OTA).
+
+- **Tipo de mapa, incluindo mapa escuro (#94):** botão ◐ no mapa e Configurações → Mapa → "Tipo de mapa":
+  **Padrão** (OpenStreetMap), **Escuro** (bom à noite e no carro), **Cinza claro**, **Topográfico** (OpenTopoMap)
+  e **Automático** (escuro quando o sistema estiver no modo escuro). Troca na hora, sem perder posição e zoom, e a
+  escolha fica salva. Escuro e Cinza são filtros de cor só nos tiles, então ícones, indicativos e trilhas não mudam;
+  o brilho do mapa (#22) continua valendo em qualquer tipo e o minimapa da ficha usa o mesmo tipo. A atribuição de
+  cada fonte aparece no canto do mapa. Satélite não foi incluído: os servidores gratuitos proíbem uso em app ou
+  exigem chave paga.
+- **Versão iOS em testes:** o repositório passa a ter o app nativo para iPhone/iPad (pasta `ios/`), que será
+  distribuído pelo TestFlight. Não muda nada no Android.
+
 ## 1.1 — Publicada (13/11/2026; testes item a item pendentes)
 
 Versão 1.1 (versionCode 17), autorizada pelo mantenedor ("Gere nova versão completa com todo o backlog

@@ -2,8 +2,12 @@
 
 Itens registrados para as próximas versões. Não implementar até o pedido de versão nova.
 
-## Onde estamos (13/11/2026)
+## Onde estamos (17/11/2026)
 
+- **v1.2** (17/11/2026, versionCode 18, autorizada pelo mantenedor: "Lance a versão 1.2 no site"): #94 tipo de mapa
+  (Padrão, Escuro, Cinza claro, Topográfico, Automático; **não testado em aparelho**). Junto, a primeira versão do
+  app **iOS** nativo (pasta `ios/`, SwiftUI; CI no macOS; distribuição pelo TestFlight depende da conta Apple
+  Developer do mantenedor). **Sem mudança de código (dependem de teste real):** #68, P0 #60 e #62, #25, #37, #54.
 - **v1.1** (13/11/2026, versionCode 17, autorizada pelo mantenedor: "Gere nova versão completa com todo o backlog
   implementado"): #92 TNC KISS por Bluetooth LE e #93 PTT por RTS/DTR ou CAT (PR #25; **não testados em hardware
   real**), #89 (rádio/aplicativo pela tabela aprs-deviceid, Mic-E completo, PHG, frequência, status e caminho),
