@@ -470,6 +470,12 @@ object AprsRepository {
 
     fun monitorLine(line: String) = _monitor.update { (it + line).takeLast(200) }
 
+    /** #97: esvazia só o monitor ao vivo da tela; o histórico da aba Logs não é afetado. */
+    fun clearMonitor() { _monitor.value = emptyList() }
+
+    /** #99: zera os contadores RX/TX do TNC sem desconectar. */
+    fun clearTncStats() = updateStatus { it.copy(tncRx = 0, tncTx = 0) }
+
     fun logConnection(source: String, text: String) {
         _connectionLog.update { (it + ConnectionEvent(System.currentTimeMillis(), source, text)).takeLast(300) }
     }

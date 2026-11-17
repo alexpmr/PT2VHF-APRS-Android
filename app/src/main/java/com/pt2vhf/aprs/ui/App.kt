@@ -81,6 +81,9 @@ import com.pt2vhf.aprs.data.AprsRepository
 import com.pt2vhf.aprs.data.Settings
 import com.pt2vhf.aprs.data.UpdateCheck
 import com.pt2vhf.aprs.data.UpdateInfo
+import com.pt2vhf.aprs.data.LinkStatus
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.layout.widthIn
 import com.pt2vhf.aprs.service.AprsService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -359,7 +362,7 @@ private fun TopBar(settings: Settings, onSettings: () -> Unit, onRadio: () -> Un
                 AprsService.send(context, if (status.aprsIsConnected)
                     AprsService.ACTION_APRS_DISCONNECT else AprsService.ACTION_APRS_CONNECT)
             })
-            Chip("TNC", status.tncConnected, onClick = {
+            Chip(tncChipLabel(status), status.tncConnected, onClick = {
                 when {
                     status.tncConnected -> AprsService.send(context, AprsService.ACTION_BT_PAUSE)
                     settings.tncType != "bt" || settings.btAddress.isNotBlank() -> AprsService.send(context, AprsService.ACTION_BT_RESUME)
@@ -372,6 +375,10 @@ private fun TopBar(settings: Settings, onSettings: () -> Unit, onRadio: () -> Un
     }
 }
 
+/** #98: conectado mostra o nome do aparelho (ex.: TH-D75) no chip; desconectado volta a "TNC". */
+fun tncChipLabel(status: LinkStatus): String =
+    if (status.tncConnected) status.tncName.trim().ifBlank { "TNC" } else "TNC"
+
 @Composable
 fun Chip(text: String, ok: Boolean, onClick: (() -> Unit)? = null) {
     Row(
@@ -383,17 +390,22 @@ fun Chip(text: String, ok: Boolean, onClick: (() -> Unit)? = null) {
     ) {
         Box(Modifier.size(8.dp).background(if (ok) Color(0xFF3CCF7C) else Color(0xFFF26F70), CircleShape))
         Spacer(Modifier.size(6.dp))
-        Text(text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = if (ok) Pal.green else Color(0xFFF26F70))
+        Text(text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = if (ok) Pal.green else Color(0xFFF26F70),
+            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 120.dp))
     }
 }
 
 @Composable
-fun SectionCard(title: String? = null, content: @Composable () -> Unit) {
+fun SectionCard(title: String? = null, action: (@Composable () -> Unit)? = null, content: @Composable () -> Unit) {
     Column(
         Modifier.fillMaxWidth().background(Pal.bar, RoundedCornerShape(12.dp)).border(1.dp, Pal.line, RoundedCornerShape(12.dp)).padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        if (title != null) Text(title.uppercase(), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Pal.muted, letterSpacing = 0.5.sp)
+        if (title != null && action != null) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(title.uppercase(), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Pal.muted, letterSpacing = 0.5.sp,
+                modifier = Modifier.weight(1f))
+            action()
+        } else if (title != null) Text(title.uppercase(), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Pal.muted, letterSpacing = 0.5.sp)
         content()
     }
 }

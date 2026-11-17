@@ -51,7 +51,7 @@
     <string name="battery_saver_inactive">saver inactive</string>
     <string name="battery_section">Battery saver</string>
     <string name="car_exit">Exit car mode</string>
-    <string name="car_last_message">Last message</string>
+    <string name="car_last_message">Last message/info</string>
     <string name="car_mode">Car mode</string>
     <string name="car_next_beacon">next beacon in %1$d s</string>
     <string name="car_no_message">No messages received</string>

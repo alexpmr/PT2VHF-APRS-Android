@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
 package com.pt2vhf.aprs.ui
 
 import android.annotation.SuppressLint
@@ -11,6 +13,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -109,7 +112,10 @@ fun RadioScreen(settings: Settings, onSettingsChanged: (Settings) -> Unit) {
         AprsService.send(context, AprsService.ACTION_RELOAD)
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        SectionCard(if (status.tncConnected) UiText.text(R.string.tnc_connected) else "TNC") {
+        SectionCard(if (status.tncConnected) UiText.text(R.string.tnc_connected) else "TNC", action = if (status.tncConnected) {
+            { TextButton(onClick = { AprsRepository.clearTncStats() }, enabled = status.tncRx > 0 || status.tncTx > 0) {
+                Text(UiText.text(R.string.tnc_clear_stats), color = Pal.orange, fontSize = 13.sp) } }
+        } else null) {
             val kind = when (settings.tncType) {
                 "tcp" -> "KISS TCP"
                 "audio" -> UiText.text(R.string.tnc_audio)
@@ -153,7 +159,7 @@ fun RadioScreen(settings: Settings, onSettingsChanged: (Settings) -> Unit) {
                 saveTnc("tcp", tcpHost, portN ?: 8001)
                 AprsService.send(context, AprsService.ACTION_TCP_CONNECT)
             }) { Text(UiText.text(R.string.connect)) }
-        } else SectionCard(UiText.text(R.string.paired_devices)) {
+        } else if (!status.tncConnected) SectionCard(UiText.text(R.string.paired_devices)) { // #98: some quando conectado
             if (bonded.isEmpty()) Text(UiText.text(R.string.no_paired), color = Pal.muted, fontSize = 14.sp)
             for (d in bonded) {
                 val name = runCatching { d.name }.getOrNull() ?: d.address
@@ -277,10 +283,14 @@ fun RadioScreen(settings: Settings, onSettingsChanged: (Settings) -> Unit) {
         }
         SectionCard(UiText.text(R.string.live_monitor)) {
             Text(UiText.text(R.string.live_monitor_logs_hint), color = Pal.muted, fontSize = 12.sp)
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 listOf("all" to R.string.filter_all, "rx" to R.string.monitor_rx, "tx" to R.string.monitor_tx,
                     "rf" to R.string.msg_filter_rf).forEach { (key, label) ->
                     OutlinedChoice(UiText.text(label), monitorMedium == key) { monitorMedium = key }
+                }
+                // #97: apaga só o monitor ao vivo; a aba Logs mantém o histórico
+                TextButton(onClick = { AprsRepository.clearMonitor() }, enabled = monitor.isNotEmpty()) {
+                    Text(UiText.text(R.string.monitor_clear_all), color = if (monitor.isNotEmpty()) Pal.orange else Pal.muted)
                 }
             }
             OutlinedTextField(monitorFilter, { monitorFilter = it }, singleLine = true, modifier = Modifier.fillMaxWidth(),

@@ -5,7 +5,12 @@ Itens registrados para as próximas versões. Não implementar até o pedido de 
 ## Onde estamos (17/11/2026)
 
 - **Validados pelo mantenedor em 17/11/2026 (Alex):** #25, #37, #54, #60, #62 e #68 (Android Auto) funcionam no
-  teste real e estão **encerrados**. Ainda sem teste real: #52 e #95 (PR #28).
+  teste real e estão **encerrados**. Ainda sem teste real: #52 e #95 (lançados na 1.3).
+- **v1.3** (17/11/2026, versionCode 19, autorizada pelo mantenedor: "Gere nova versão android e atualize o site,
+  executando os itens do backlog"): #95 iGate no celular e #52 digipeater inteligente (PR #28, padrão desligado,
+  **não testados com rádio real**), #96 PY6TL nos colaboradores, e as sugestões de PU2PYC: #97 Apagar tudo no
+  monitor, #98 pareados escondidos e nome do rádio no chip, #99 Apagar estatísticas e #100 "Última
+  mensagem/informação". Tudo aguarda teste em aparelho.
 - **v1.2** (17/11/2026, versionCode 18, autorizada pelo mantenedor: "Lance a versão 1.2 no site"): #94 tipo de mapa
   (Padrão, Escuro, Cinza claro, Topográfico, Automático; **não testado em aparelho**). Junto, a primeira versão do
   app **iOS** nativo (pasta `ios/`, SwiftUI; CI no macOS; distribuição pelo TestFlight depende da conta Apple
@@ -3413,7 +3418,7 @@ desligado, nada é encaminhado; sem login verificado o modo não liga.
 **Status (17/11/2026):** implementado no PR da branch `claude/project-thread-e9p3cz` (`core/Igate.kt` com testes,
 ligado em `AprsService`; Configurações → iGate/Digi; contadores na tela Rádio; "iGate" na notificação).
 **Não testado com rádio/TNC real nem no aprs.fi.** Ficam para depois: beacon próprio do iGate e posição de quem
-mandou a mensagem IS→RF. Nenhum APK novo gerado.
+mandou a mensagem IS→RF. **Lançado na v1.3** (17/11/2026, PR #28 incorporado).
 
 ### 96. Incluir PY6TL na lista de colaboradores
 _Pedido do mantenedor em 17/11/2026 ("Backlog; coloque o indicativo dele na lista de colaboradores")._
@@ -3427,8 +3432,8 @@ traduzível novo.
 
 **Dependências/relacionados:** #79, #87, #95.
 
-**Status (17/11/2026):** PY6TL incluído em `CONTRIBUTORS` no mesmo PR do #95. README, CHANGELOG e site ficam para a
-versão que levar a mudança.
+**Status (17/11/2026):** PY6TL incluído em `CONTRIBUTORS` no mesmo PR do #95; lançado na **v1.3** com README,
+CHANGELOG e site.
 
 ### 97. Monitor ao vivo: botão "Apagar tudo"
 _Sugestão de PU2PYC, registrada pelo mantenedor em 17/11/2026 ("Backlog: PU2PYC")._
@@ -3450,7 +3455,7 @@ dos chips em celular estreito (quebra para a linha seguinte se preciso, sem cort
 
 **Dependências/relacionados:** #76 (traduções), aba Logs (histórico completo e limpeza própria).
 
-**Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+**Status (17/11/2026):** implementado e lançado na **v1.3** (versionCode 19). Aguarda teste em aparelho.
 
 ### 98. TNC conectado: esconder aparelhos pareados e mostrar o nome do rádio no chip do topo
 _Sugestão de PU2PYC, registrada pelo mantenedor em 17/11/2026 ("Backlog: pu2pyc; uma vez conectado, deixar de
@@ -3476,7 +3481,7 @@ desconectar (ou cair a conexão), o topo volta a "● TNC" vermelho e a lista re
 **Dependências/relacionados:** #92 (BLE), #44/#93 (TNCs e PTT), #76 (traduções), #97 (mesma sugestão de limpeza da
 aba Rádio).
 
-**Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+**Status (17/11/2026):** implementado e lançado na **v1.3** (versionCode 19). Aguarda teste em aparelho.
 
 ### 99. TNC conectado: botão "Apagar estatísticas" (zerar contadores RX/TX)
 _Sugestão de PU2PYC, registrada pelo mantenedor em 17/11/2026 ("Backlog: pu2pyc: Botão apagar estatísticas")._
@@ -3497,7 +3502,7 @@ a conexão continua; novos pacotes voltam a contar a partir de zero; nada mais �
 
 **Dependências/relacionados:** #97 e #98 (outras sugestões de PU2PYC para a aba Rádio), #76 (traduções).
 
-**Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+**Status (17/11/2026):** implementado e lançado na **v1.3** (versionCode 19). Aguarda teste em aparelho.
 
 ### 100. Modo carro: "Última mensagem" passa a "Última mensagem/informação"
 _Sugestão de PU2PYC, registrada pelo mantenedor em 17/11/2026 ("Backlog: pu2pyc: trocar mensagem para
@@ -3518,4 +3523,4 @@ nada mais muda no comportamento.
 
 **Dependências/relacionados:** #68 (Android Auto), #76 (traduções), #97–#99 (outras sugestões de PU2PYC).
 
-**Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+**Status (17/11/2026):** implementado e lançado na **v1.3** (versionCode 19). Aguarda teste em aparelho.

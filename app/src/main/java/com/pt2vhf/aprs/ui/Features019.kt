@@ -471,7 +471,7 @@ internal fun CarModeScreen(settings: Settings, onExit: () -> Unit) {
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Chip("APRS-IS", status.aprsIsVerified)
-            Chip("TNC", status.tncConnected)
+            Chip(tncChipLabel(status), status.tncConnected)
             Chip("GPS", status.manualPosition || (status.gpsAccuracyM != null && System.currentTimeMillis() - status.gpsFixTimeMs <= 120_000L))
         }
         Text("%.0f km/h".format(status.speedKmh), color = Pal.text, fontSize = 72.sp, fontWeight = FontWeight.Bold,
