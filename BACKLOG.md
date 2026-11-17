@@ -3401,3 +3401,25 @@ colaboradores, nos mesmos lugares do #87: `CONTRIBUTORS` em `ui/SettingsUi.kt` (
 traduzível novo.
 
 **Dependências/relacionados:** #79, #87, #95.
+
+### 97. Monitor ao vivo: botão "Apagar tudo"
+_Sugestão de PU2PYC, registrada pelo mantenedor em 17/11/2026 ("Backlog: PU2PYC")._
+Referência: `docs/inspiracao/item97-monitor-apagar-tudo.png` (seta indicando o espaço à direita dos chips RF).
+
+**Pedido:** na aba **Rádio**, seção **Monitor ao vivo**, acrescentar um botão **"Apagar tudo"** na mesma linha dos
+chips de filtro *Todos os tipos / RX / TX / RF*, que limpa as linhas exibidas no monitor. Hoje o monitor guarda as
+últimas 200 linhas (`AprsRepository.monitor`, `monitorLine`) e não há como esvaziá-lo, ao contrário de "Registros RF",
+que já tem botão de limpar (`clearRfEvents`, `R.string.rf_records_clear`) em `ui/RadioUi.kt`.
+
+**Sugestão de implementação:** `AprsRepository.clearMonitor()` zerando `_monitor`; `TextButton` (ou ícone de lixeira
+com rótulo) na linha dos chips em `RadioUi.kt`, no mesmo estilo laranja do botão de "Registros RF". Apaga só o monitor
+ao vivo da tela; o histórico da aba **Logs** (pacotes salvos) **não** é afetado. Desabilitado quando o monitor está
+vazio. Texto novo traduzido (#76).
+
+**Critérios de aceite:** tocar em "Apagar tudo" esvazia o monitor na hora, novas linhas voltam a aparecer
+normalmente; a aba Logs mantém todo o histórico; filtros de tipo e texto continuam funcionando; o botão cabe na linha
+dos chips em celular estreito (quebra para a linha seguinte se preciso, sem cortar).
+
+**Dependências/relacionados:** #76 (traduções), aba Logs (histórico completo e limpeza própria).
+
+**Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
