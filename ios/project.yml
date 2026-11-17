@@ -1,0 +1,62 @@
+# Projeto Xcode gerado pelo XcodeGen (brew install xcodegen; xcodegen generate).
+name: PT2VHFAPRS
+options:
+  bundleIdPrefix: com.pt2vhf
+  deploymentTarget:
+    iOS: "17.0"
+  developmentLanguage: pt-BR
+settings:
+  base:
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.0"
+    DEVELOPMENT_TEAM: ${DEVELOPMENT_TEAM}
+    CODE_SIGN_STYLE: Automatic
+targets:
+  PT2VHFAPRS:
+    type: application
+    platform: iOS
+    sources:
+      - path: PT2VHFAPRS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.pt2vhf.aprs
+        PRODUCT_NAME: PT2VHF APRS
+        PRODUCT_MODULE_NAME: PT2VHFAPRS
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: PT2VHF APRS
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.navigation
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
+        INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "A posição é usada para mostrar estações próximas e enviar o seu beacon APRS."
+        INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription: "Com o rastreador ligado, a posição continua sendo enviada em segundo plano."
+        INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription: "O Bluetooth conecta o app ao TNC KISS (BLE) do seu rádio."
+    info:
+      path: PT2VHFAPRS/Info.plist
+      properties:
+        UIBackgroundModes: [location, bluetooth-central]
+        ITSAppUsesNonExemptEncryption: false
+        CFBundleLocalizations: [pt-BR, en]
+  PT2VHFAPRSTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: PT2VHFAPRSTests
+    dependencies:
+      - target: PT2VHFAPRS
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.pt2vhf.aprs.tests
+schemes:
+  PT2VHFAPRS:
+    build:
+      targets:
+        PT2VHFAPRS: all
+        PT2VHFAPRSTests: [test]
+    test:
+      targets:
+        - PT2VHFAPRSTests
