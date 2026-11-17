@@ -4,6 +4,8 @@ Itens registrados para as próximas versões. Não implementar até o pedido de 
 
 ## Onde estamos (17/11/2026)
 
+- **Validados pelo mantenedor em 17/11/2026 (Alex):** #25, #37, #54, #60, #62 e #68 (Android Auto) funcionam no
+  teste real e estão **encerrados**. Ainda sem teste real: #52 e #95 (PR #28).
 - **v1.2** (17/11/2026, versionCode 18, autorizada pelo mantenedor: "Lance a versão 1.2 no site"): #94 tipo de mapa
   (Padrão, Escuro, Cinza claro, Topográfico, Automático; **não testado em aparelho**). Junto, a primeira versão do
   app **iOS** nativo (pasta `ios/`, SwiftUI; CI no macOS; distribuição pelo TestFlight depende da conta Apple
@@ -37,8 +39,8 @@ Itens registrados para as próximas versões. Não implementar até o pedido de 
 - Dependem de hardware e **não puderam ser validados aqui** (só testes de unidade do código): AFSK no ar (#44),
   adaptadores USB-OTG, widget (#46) e consumo de bateria (#49). O modem AFSK passa nos testes com ruído,
   de-ênfase e 44,1 kHz, mas nível de áudio, VOX e rádios reais precisam do teste T52.
-- O P0 **#37** (queda do APRS-IS ao transmitir) ainda precisa de confirmação em servidor real.
-- **Nova falha P0 (#60, 08/11): envio de mensagens fica tentando sem concluir.** Investigar junto com #25, #37 e #54 antes de publicar nova versão; falha relatada, ainda não reproduzida em teste.
+- O P0 **#37** (queda do APRS-IS ao transmitir): **validado por Alex em 17/11/2026, encerrado.**
+- P0 **#60** (envio de mensagens ficava tentando sem concluir), com #25, #37 e #54: **validados por Alex em 17/11/2026, encerrados.**
 - Fora do escopo: download em massa de mapas offline (a política de tiles do OpenStreetMap proíbe; o cache
   do osmdroid já guarda as áreas visitadas).
 - Numeração: o item "31" duplicado (remover aviso de abertura, 04/11) passou a ser o **#38**. Não há #32.
@@ -180,7 +182,7 @@ O backlog permanece parcialmente implementado, com homologação física pendent
 | 34 | **P2 — Pendente (31/10/2026):** indicadores APRS-IS e TNC do cabeçalho são apenas visuais; toque não conecta/desconecta | Transformar **chips APRS-IS e TNC em controles clicáveis e acessíveis**: toque em APRS-IS conectado/desconectado → desconectar/conectar; toque em TNC conectado/desconectado → desconectar/conectar ao dispositivo previamente selecionado; se não houver TNC configurado, abrir seleção de dispositivo Bluetooth em vez de falhar silenciosamente. Exibir estado real durante conexão/reconexão/falha e dar retorno imediato, sem afirmar conexão antes de validação (APRS-IS `verified` e TNC efetivamente conectado). **Desconexão manual deve bloquear reconexão automática/rede/serviço até nova ordem explícita**, sem mudar autorizações TX por APRS-IS/RF nem ligar o tracker; **preservar dispositivo TNC pareado/selecionado ao desconectar**. Respeitar permissão Bluetooth, evitar ações duplicadas por toques rápidos, manter cores/semântica de estado, testar perda de sinal e retorno. GPS permanece somente indicador, sem ação de toque. |
 | 35 | **P2 — Pendente (31/10/2026):** campo “Buscar indicativo” da aba Estações está grande e ocupa espaço excessivo | Compactar a barra de busca **somente da aba Estações**: reduzir principalmente a altura visual, os paddings externos e internos e a largura consumida sem comprometer a digitação; preferir campo de pesquisa de uma linha com dica curta “Indicativo”, ícone de busca e ação de limpar. Manter campo e controle de filtros/ordenação na mesma linha quando houver espaço; em telas estreitas, adaptar responsivamente sem sobreposição. Preservar pesquisa parcial e por SSID, filtros combinados, teclado, estado/persistência existentes e área de toque acessível. Validar Android 320/360/412 dp, fontes ampliadas, rotação e número de estações visíveis na tela. Não confundir com campo de busca em Mensagens (item #31). |
 | 36 | **P2 — Pendente (31/10/2026):** botão superior **Enviar beacon** permanece amarelo ao tocar, sem indicar envio em andamento ou falha | Ao tocar, mudar **imediatamente** a cor do botão de amarelo para cor de atividade (ex.: azul), com estado visual e acessível **“Enviando…”**; impedir toques duplicados durante a tentativa. **Voltar ao amarelo somente após o serviço retornar sucesso verificável da entrega local ao(s) transporte(s) APRS autorizado(s)** (escrita bem-sucedida no socket APRS-IS verificado e/ou envio aceito pelo TNC/KISS), correlacionando o resultado à solicitação manual específica; não tomar o incremento de contadores, o simples clique nem o sucesso de outros beacons automáticos como confirmação desta ação. Caso não haja rota TX/GPS, haja erro ou timeout, mostrar estado de falha distinto (vermelho + mensagem específica) sem simular sucesso; permitir nova tentativa. Em envio parcial APRS-IS/RF, indicar quais transportes tiveram sucesso/falha. Como beacon APRS não tem ACK obrigatório, **não afirmar recepção por terceiros ou transmissão RF comprovada no ar**; informar exatamente o nível de confirmação disponível. Preservar botão amarelo como estado de repouso, configurações TX, tracker e envio por ambos os canais, sem beacons extras; testar conexão/desconexão no meio do TX, latência, clique rápido, falha e sessão não verificada. |
-| 37 | **P0 — Correção candidata integrada na v0.1.7 QA (PR #12, CI aprovado); confirmação em APRS-IS/TNC reais pendente:** ao estar conectado e autenticado no APRS-IS, **qualquer tentativa de TX (mensagem ou beacon manual/automático) derruba a conexão APRS-IS** | **Corrigir antes de nova release.** Reproduzir com o TNC desligado e depois com TNC ativo; capturar sequência de estado APRS-IS, `onState`, motivo de fechamento do socket, login `logresp`, escrita/flush TX, endereço/porta, temporizadores e eventos de rede, sem expor passcode ou dados sensíveis. Inspecionar especialmente `Connections.kt` → `AprsIsClient.send()` (se `sent=false`, chama `reconnectNow()` e fecha o socket), `start()/stop()/reconnectNow()` (concorrência, época da sessão e sincronização de escrita/fechamento), `soTimeout=120_000` e `AprsService.kt` (autoconexão, filtro no primeiro GPS fix e `NetworkCallback`), além de possível encerramento pelo servidor por pacote TNC2 inválido. **Estas são hipóteses, não causas confirmadas.** Preservar a sessão APRS-IS após envios válidos, sem forçar reconexão a cada TX; quando houver erro genuíno, registrar diagnóstico útil, sinalizar desconectado e reconectar conforme política, sem perda silenciosa nem duplicação de mensagens/beacons. Validar 10 beacons e 10 mensagens consecutivos, intervalados e em sequência rápida, retorno/ACK quando aplicável, tráfego RX contínuo, alternância Wi-Fi/dados, modo apenas APRS-IS e APRS-IS+TNC, foreground/background, relógio de 120 s, server logresp e manutenção do estado conectado após o TX. Não marcar resolvido com base apenas em testes unitários: exigir teste real contra servidor APRS-IS e dispositivo Android. |
+| 37 | **✅ Validado por Alex em 17/11/2026, encerrado.** **P0 — Correção candidata integrada na v0.1.7 QA (PR #12, CI aprovado); confirmação em APRS-IS/TNC reais pendente:** ao estar conectado e autenticado no APRS-IS, **qualquer tentativa de TX (mensagem ou beacon manual/automático) derruba a conexão APRS-IS** | **Corrigir antes de nova release.** Reproduzir com o TNC desligado e depois com TNC ativo; capturar sequência de estado APRS-IS, `onState`, motivo de fechamento do socket, login `logresp`, escrita/flush TX, endereço/porta, temporizadores e eventos de rede, sem expor passcode ou dados sensíveis. Inspecionar especialmente `Connections.kt` → `AprsIsClient.send()` (se `sent=false`, chama `reconnectNow()` e fecha o socket), `start()/stop()/reconnectNow()` (concorrência, época da sessão e sincronização de escrita/fechamento), `soTimeout=120_000` e `AprsService.kt` (autoconexão, filtro no primeiro GPS fix e `NetworkCallback`), além de possível encerramento pelo servidor por pacote TNC2 inválido. **Estas são hipóteses, não causas confirmadas.** Preservar a sessão APRS-IS após envios válidos, sem forçar reconexão a cada TX; quando houver erro genuíno, registrar diagnóstico útil, sinalizar desconectado e reconectar conforme política, sem perda silenciosa nem duplicação de mensagens/beacons. Validar 10 beacons e 10 mensagens consecutivos, intervalados e em sequência rápida, retorno/ACK quando aplicável, tráfego RX contínuo, alternância Wi-Fi/dados, modo apenas APRS-IS e APRS-IS+TNC, foreground/background, relógio de 120 s, server logresp e manutenção do estado conectado após o TX. Não marcar resolvido com base apenas em testes unitários: exigir teste real contra servidor APRS-IS e dispositivo Android. |
 
 
 **Baixa definitiva:** marcar `Concluído` somente após CI aprovado,
@@ -977,6 +979,7 @@ alinhando as mensagens próprias à direita e as recebidas à esquerda.
   físico pendentes. Nenhuma versão gerada nesta solicitação.
 
 ### 25. Mensagens: APRS-IS conectado/verificado, mas não consegue transmitir
+**Validado pelo mantenedor em 17/11/2026 (Alex), em aparelho/rádio/servidor real: item encerrado.**
 _Solicitado em 31/10/2026; usuário forneceu captura relatando que está conectado e não consegue enviar no Android v0.1.4._
 
 **Severidade P1 — falha funcional reportada, causa raiz ainda não identificada.**
@@ -1832,6 +1835,7 @@ cores próprios (tema PT2VHF), sem reproduzir o visual daquele app.
 - **Status:** **cancelado / fora de escopo** (vai para um app de satélite separado). Não implementar aqui.
 
 ### 54. Mensagens: mensagem pessoal vinda de RF (via iGate) não aparece no APRS-IS + filtro pessoais/todas
+**Validado pelo mantenedor em 17/11/2026 (Alex), em aparelho/rádio/servidor real: item encerrado.**
 _Solicitado em 06/11/2026: "Backlog: eu conectado por aprs-is não recebo uma mensage de um amigo que está conectado por rf na rede que tem um igate. Ele recebe a minha mensagem mas só olhando o pacote. Não aparece como um pacote recebido. Eu também deixo ligado por horas e não recebo nada além dos boletins. No log, vejo tudo chegando de todos. Seria bom na parte mensagens, filtrar mensagem pessoal ou de todos, empilhada ou concatenada por emissor."_
 
 **Bug (P1).** Cenário: eu no app só por APRS-IS; amigo só por RF, numa rede com iGate.
@@ -2246,6 +2250,7 @@ palavra e consiga entrar."
   (só formato); tabela ITU **não implementada**. Nenhum APK novo gerado.
 
 ### 60. Mensagens: envio não conclui, permanece tentando indefinidamente (P0)
+**Validado pelo mantenedor em 17/11/2026 (Alex), em aparelho/rádio/servidor real: item encerrado.**
 _Solicitado em 08/11/2026: "Backlog: O app não consegue enviar msg...fica tentando.."_
 
 **Falha relatada (v0.1.9; reprodução ainda não coletada):** ao enviar mensagem, a interface permanece
@@ -2331,6 +2336,7 @@ com conexão ativa, verificar reaparecimento apenas por novos pacotes.
   nenhum APK novo gerado.
 
 ### 62. P0 — Falha crítica: fechar ao apagar mensagens ou estações (v0.1.10 QA)
+**Validado pelo mantenedor em 17/11/2026 (Alex), em aparelho/rádio/servidor real: item encerrado.**
 _Relatado em 08/11/2026 após uso real da beta. Ao apagar mensagem ou estação, o aplicativo encerra._
 
 **Impacto:** crash no aparelho e risco operacional na exclusão. A causa exata depende
@@ -2492,6 +2498,7 @@ _Registrado em 10/11/2026 (ideia do APRS World aprovada)._
 - **Teste:** unidade da formatação do rótulo (temperatura em °C, vento em km/h e rumo, dado ausente).
 
 ### 68. Android Auto
+**Validado pelo mantenedor em 17/11/2026 (Alex), em aparelho/rádio/servidor real: item encerrado.**
 **Status 0.1.15:** continua fora (mesmos motivos); o modo carro do app segue valendo.
 **Status 0.1.14:** **não implementado na 0.1.14** (exige biblioteca Car App, aprovação de categoria pelo Google e teste em carro/DHU).
 
