@@ -188,6 +188,7 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
     var courseSpeed by remember { mutableStateOf(current.sendCourseSpeed) }
     var altitude by remember { mutableStateOf(current.sendAltitude) }
     var keepScreen by remember { mutableStateOf(current.keepScreenOn) }
+    var mapType by remember { mutableStateOf(MapTypePrefs.read(context)) }
     var mapIconSize by remember { mutableStateOf(MapIconSize.fromKey(Settings.readOption(context, MapIconSize.OPTION_KEY, "medium"))) }
     var maxAge by remember { mutableStateOf(current.stationMaxAgeHours) }
     var notifyMsg by remember { mutableStateOf(current.notifyMessages) }
@@ -571,6 +572,13 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
                     Settings.saveOption(context, MapIconSize.OPTION_KEY, it.key)
                     MapIconPrefs.changed.value = it
                 }
+                // #94: tipo de mapa, salvo na hora (o mapa aberto por baixo troca sem perder posição/zoom).
+                Text(UiText.text(R.string.map_type), fontSize = 13.sp)
+                Choices(com.pt2vhf.aprs.data.MapType.entries.map { it to mapTypeLabel(it) }, mapType) {
+                    mapType = it
+                    MapTypePrefs.save(context, it)
+                }
+                Text(UiText.text(R.string.map_type_hint), color = Pal.muted, fontSize = 12.sp)
                 }
 
                 SettingsTab.MESSAGES -> {

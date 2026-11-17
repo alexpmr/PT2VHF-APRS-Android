@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- #94: tipo de mapa. -->
+<resources>
+    <string name="map_type">Type de carte</string>
+    <string name="map_type_standard">Standard (OpenStreetMap)</string>
+    <string name="map_type_dark">Sombre</string>
+    <string name="map_type_gray">Gris clair</string>
+    <string name="map_type_topo">Topographique (OpenTopoMap)</string>
+    <string name="map_type_auto">Automatique (sombre quand le système est sombre)</string>
+    <string name="map_type_hint">La luminosité de la carte fonctionne avec tous les types. Pas de satellite : les serveurs gratuits interdisent l\'usage en application ou exigent une clé payante.</string>
+</resources>

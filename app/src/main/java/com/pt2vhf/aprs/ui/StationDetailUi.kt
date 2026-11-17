@@ -593,6 +593,10 @@ private fun TrailTab(call: String, data: StationInsights) {
     val now = remember(data) { System.currentTimeMillis() }
     val points = remember(data, period) { com.pt2vhf.aprs.data.trailWithin(data.positions, now, TRAIL_PERIODS[period].second) }
     val distance = remember(points) { com.pt2vhf.aprs.data.trailDistanceKm(points) }
+    val miniContext = androidx.compose.ui.platform.LocalContext.current
+    remember { MapTypePrefs.read(miniContext) }
+    val miniChosen by MapTypePrefs.current.collectAsState()
+    val miniMapType = (miniChosen ?: com.pt2vhf.aprs.data.MapType.STANDARD).resolve(systemIsDark(miniContext))
     Column(Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             TRAIL_PERIODS.forEachIndexed { i, (label, _) ->
@@ -608,11 +612,12 @@ private fun TrailTab(call: String, data: StationInsights) {
             modifier = Modifier.fillMaxWidth().weight(1f).background(Pal.card, RoundedCornerShape(8.dp)),
             factory = { ctx ->
                 org.osmdroid.views.MapView(ctx).apply {
-                    setTileSource(org.osmdroid.tileprovider.tilesource.TileSourceFactory.MAPNIK)
+                    setTileSource(tileSourceFor(miniMapType))
                     setMultiTouchControls(true)
                 }
             },
             update = { map ->
+                applyMapType(map, miniMapType, 100) // #94: mesmo tipo de mapa escolhido no mapa principal.
                 map.overlays.clear()
                 val geo = points.map { org.osmdroid.util.GeoPoint(it.lat, it.lon) }
                 if (geo.size > 1) map.overlays.add(org.osmdroid.views.overlay.Polyline(map).apply {

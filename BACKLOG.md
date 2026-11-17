@@ -3305,3 +3305,10 @@ e no carro, com os ícones e indicativos das estações bem legíveis por cima.
 app; no Escuro, ícones, rótulos e trilhas continuam legíveis; atribuição correta de cada fonte visível.
 
 **Dependências/relacionados:** #22 (brilho do mapa), #63 (ícones), #68 (Android Auto), #74 (Configurações em abas).
+
+**Implementação (17/11/2026, branch `claude/project-thread-6w8nmr`, aguarda teste em aparelho):** botão ◐ no mapa e
+Configurações → Mapa → "Tipo de mapa": Padrão (OSM), Escuro, Cinza claro, Topográfico (OpenTopoMap) e Automático
+(escuro quando o sistema estiver escuro). Escuro e Cinza são filtros de cor só nos tiles do OSM (mesmo cache do
+Padrão); Topográfico tem cache próprio. Brilho (#22) combina com qualquer tipo; minimapa da ficha segue o tipo;
+atribuição de cada fonte no canto inferior direito. **Satélite não incluído:** os servidores gratuitos conhecidos
+proíbem uso em app ou exigem chave/conta. Android Auto (#68) usa telas de lista, sem mapa, então não há o que mudar lá.

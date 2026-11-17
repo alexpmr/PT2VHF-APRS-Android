@@ -138,28 +138,6 @@ internal fun Empty(text: String) {
 
 // ---------- Mapa ----------
 
-/** #22: brilho só da camada cartográfica (tiles), sem tocar nos marcadores nem no brilho do Android. */
-internal fun brightnessFilter(percent: Int): android.graphics.ColorMatrixColorFilter? {
-    val f = percent.coerceIn(50, 150) / 100f
-    if (f == 1f) return null
-    val matrix = if (f < 1f) floatArrayOf(
-        f, 0f, 0f, 0f, 0f,
-        0f, f, 0f, 0f, 0f,
-        0f, 0f, f, 0f, 0f,
-        0f, 0f, 0f, 1f, 0f,
-    ) else {
-        // Lighten toward white: out = in * (2 - f) + 255 * (f - 1)
-        val k = 2f - f
-        val add = 255f * (f - 1f)
-        floatArrayOf(
-            k, 0f, 0f, 0f, add,
-            0f, k, 0f, 0f, add,
-            0f, 0f, k, 0f, add,
-            0f, 0f, 0f, 1f, 0f,
-        )
-    }
-    return android.graphics.ColorMatrixColorFilter(android.graphics.ColorMatrix(matrix))
-}
 
 internal fun trackArgb(name: String, opacityPercent: Int): Int {
     val rgb = when (name) {
@@ -222,6 +200,11 @@ fun MapScreen(settings: Settings, onStation: (String) -> Unit, onSettingsChanged
     }
     var brightnessOpen by remember { mutableStateOf(false) }
     var layersOpen by remember { mutableStateOf(false) }
+    // #94: tipo de mapa (Padrão, Escuro, Cinza, Topográfico, Automático), lembrado entre aberturas.
+    remember { MapTypePrefs.read(context) }
+    val chosenMapType by MapTypePrefs.current.collectAsState()
+    val mapType = (chosenMapType ?: com.pt2vhf.aprs.data.MapType.STANDARD).resolve(systemIsDark(context))
+    var mapTypeOpen by remember { mutableStateOf(false) }
     fun layer(key: String, default: Boolean) = Settings.readOption(context, key, default.toString()) == "true"
     var showLinks by remember { mutableStateOf(layer("map_layer_links", true)) }
     var showMyLinks by remember { mutableStateOf(layer("map_layer_mylinks", true)) }
@@ -247,7 +230,7 @@ fun MapScreen(settings: Settings, onStation: (String) -> Unit, onSettingsChanged
         modifier = Modifier.fillMaxSize(),
         factory = { ctx ->
             MapView(ctx).apply {
-                setTileSource(TileSourceFactory.MAPNIK)
+                setTileSource(tileSourceFor(mapType))
                 setMultiTouchControls(true)
                 mapRef[0] = this
                 // #66: reagrupar quando o zoom muda (passo inteiro, para não redesenhar a cada quadro).
@@ -288,7 +271,7 @@ fun MapScreen(settings: Settings, onStation: (String) -> Unit, onSettingsChanged
             }
         },
         update = { map ->
-            map.overlayManager.tilesOverlay.setColorFilter(brightnessFilter(brightness))
+            applyMapType(map, mapType, brightness)
             map.overlays.clear()
             // Toque longo no mapa: definir posição fixa ou criar objeto neste ponto (#6, #48).
             map.overlays.add(org.osmdroid.views.overlay.MapEventsOverlay(object : org.osmdroid.events.MapEventsReceiver {
@@ -463,6 +446,18 @@ fun MapScreen(settings: Settings, onStation: (String) -> Unit, onSettingsChanged
                 }
             }
         }
+        Box {
+            TextButton(modifier = Modifier.background(Pal.bar, RoundedCornerShape(10.dp))
+                .semantics { contentDescription = UiText.text(R.string.map_type) },
+                onClick = { mapTypeOpen = true }) { Text("◐") }
+            DropdownMenu(expanded = mapTypeOpen, onDismissRequest = { mapTypeOpen = false }) {
+                com.pt2vhf.aprs.data.MapType.entries.forEach { t ->
+                    DropdownMenuItem(
+                        text = { Text((if (t == (chosenMapType ?: com.pt2vhf.aprs.data.MapType.STANDARD)) "● " else "○ ") + mapTypeLabel(t)) },
+                        onClick = { MapTypePrefs.save(context, t); mapTypeOpen = false })
+                }
+            }
+        }
         TextButton(modifier = Modifier.background(Pal.bar, RoundedCornerShape(10.dp))
             .semantics { contentDescription = UiText.text(R.string.map_brightness) },
             onClick = { brightnessOpen = !brightnessOpen }) { Text("☀") }
@@ -497,6 +492,10 @@ fun MapScreen(settings: Settings, onStation: (String) -> Unit, onSettingsChanged
                 valueRange = 50f..150f, steps = 19)
         }
     }
+    // #94: atribuição obrigatória de cada fonte de tiles.
+    Text(mapType.attribution, fontSize = 9.sp, color = Color(0xFFE6EDF3),
+        modifier = Modifier.align(Alignment.BottomEnd).padding(2.dp)
+            .background(Color(0x99000000), RoundedCornerShape(4.dp)).padding(horizontal = 4.dp, vertical = 1.dp))
     val visibleRoutes = routes.filter { it.visible && it.points.size > 1 }
     if (visibleRoutes.isNotEmpty() && status.lat != null && status.lon != null) {
         Column(Modifier.align(Alignment.TopStart).padding(top = 56.dp, start = 8.dp)
