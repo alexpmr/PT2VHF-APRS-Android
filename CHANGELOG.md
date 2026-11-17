@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.3 — Publicada (17/11/2026; teste em aparelho pendente)
+
+Versão 1.3 (versionCode 19), autorizada pelo mantenedor ("Gere nova versão android e atualize o site, executando os
+itens do backlog"). Instala por cima da 1.2 sem perder dados e é oferecida pelo aviso de atualização (OTA).
+
+- **Modo iGate no celular (#95, sugestão de PY6TL):** Configurações → aba iGate/Digi (padrão desligado). Pacotes
+  ouvidos pelo TNC vão para o APRS-IS com `qAR` (nunca TCPIP, TCPXX, NOGATE, RFONLY, consultas ou terceiros);
+  opcionalmente, mensagens da internet para estações ouvidas localmente voltam para o RF como terceiros, com
+  dedupe e limite por minuto. Exige indicativo com passcode verificado. **Não testado com rádio real.**
+- **Digipeater inteligente (#52):** fill-in, WIDEn-N com trap, aliases e trace; aprende os digis vizinhos, se adapta
+  à carga do canal, respeita raio, limite por estação e por minuto e dá prioridade a mensagens, ACK e emergência.
+  A tela Rádio mostra contadores e o motivo de cada pacote não repetido. **Não testado com rádio real.**
+- **Monitor ao vivo: botão "Apagar tudo" (#97, PU2PYC):** na linha dos filtros RX/TX/RF; limpa só o monitor da
+  tela, a aba Logs mantém o histórico.
+- **TNC conectado (#98, PU2PYC):** a lista "Aparelhos pareados" some enquanto o TNC está conectado e volta ao
+  desconectar; o chip do topo mostra o nome do aparelho (ex.: TH-D75) em verde e volta a "TNC" vermelho quando
+  desconectado (nome longo é cortado com reticências).
+- **Apagar estatísticas (#99, PU2PYC):** botão no cartão "TNC conectado" que zera os contadores RX/TX sem
+  desconectar e sem apagar pacotes, estações ou mensagens.
+- **"Última mensagem/informação" (#100, PU2PYC):** novo título do cartão no modo carro e no Android Auto, porque
+  ele também mostra boletins e informações. Traduzido em EN/ES/FR/IT.
+- **Colaboradores (#96):** PY6TL entra na aba Sobre (PU2PYC, PP5AU, PU2MUS, PP5PK, PY6TL).
+
 ## 1.2 — Publicada (17/11/2026; teste em aparelho pendente)
 
 Versão 1.2 (versionCode 18), autorizada pelo mantenedor ("Lance a versão 1.2 no site"). Instala por cima da 1.1

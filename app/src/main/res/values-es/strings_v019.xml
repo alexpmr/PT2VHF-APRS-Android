@@ -51,7 +51,7 @@
     <string name="battery_saver_inactive">ahorro inactivo</string>
     <string name="battery_section">Ahorro de batería</string>
     <string name="car_exit">Salir del modo coche</string>
-    <string name="car_last_message">Último mensaje</string>
+    <string name="car_last_message">Último mensaje/información</string>
     <string name="car_mode">Modo coche</string>
     <string name="car_next_beacon">próxima baliza en %1$d s</string>
     <string name="car_no_message">Ningún mensaje recibido</string>

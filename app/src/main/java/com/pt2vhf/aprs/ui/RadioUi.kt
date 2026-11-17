@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
 package com.pt2vhf.aprs.ui
 
 import android.annotation.SuppressLint
@@ -11,6 +13,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -109,7 +112,10 @@ fun RadioScreen(settings: Settings, onSettingsChanged: (Settings) -> Unit) {
         AprsService.send(context, AprsService.ACTION_RELOAD)
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        SectionCard(if (status.tncConnected) UiText.text(R.string.tnc_connected) else "TNC") {
+        SectionCard(if (status.tncConnected) UiText.text(R.string.tnc_connected) else "TNC", action = if (status.tncConnected) {
+            { TextButton(onClick = { AprsRepository.clearTncStats() }, enabled = status.tncRx > 0 || status.tncTx > 0) {
+                Text(UiText.text(R.string.tnc_clear_stats), color = Pal.orange, fontSize = 13.sp) } }
+        } else null) {
             val kind = when (settings.tncType) {
                 "tcp" -> "KISS TCP"
                 "audio" -> UiText.text(R.string.tnc_audio)
@@ -153,7 +159,7 @@ fun RadioScreen(settings: Settings, onSettingsChanged: (Settings) -> Unit) {
                 saveTnc("tcp", tcpHost, portN ?: 8001)
                 AprsService.send(context, AprsService.ACTION_TCP_CONNECT)
             }) { Text(UiText.text(R.string.connect)) }
-        } else SectionCard(UiText.text(R.string.paired_devices)) {
+        } else if (!status.tncConnected) SectionCard(UiText.text(R.string.paired_devices)) { // #98: some quando conectado
             if (bonded.isEmpty()) Text(UiText.text(R.string.no_paired), color = Pal.muted, fontSize = 14.sp)
             for (d in bonded) {
                 val name = runCatching { d.name }.getOrNull() ?: d.address
@@ -212,6 +218,31 @@ fun RadioScreen(settings: Settings, onSettingsChanged: (Settings) -> Unit) {
             TextButton(onClick = { AprsRepository.clearRfEvents() }) { Text(UiText.text(R.string.rf_records_clear), color = Pal.orange) }
         }
 
+        // #95 iGate e #52 digi inteligente: estado e contadores
+        if (settings.igateEnabled || settings.digiEnabled) SectionCard(UiText.text(R.string.gw_status_section)) {
+            if (settings.igateEnabled) {
+                KeyValue("iGate", UiText.text(if (status.igateActive) R.string.gw_active else R.string.gw_inactive))
+                KeyValue(UiText.text(R.string.gw_rf_to_is), status.igateRfToIs.toString())
+                if (settings.igateIsToRf) KeyValue(UiText.text(R.string.gw_is_to_rf), status.igateIsToRf.toString())
+                KeyValue(UiText.text(R.string.gw_skipped), status.igateSkipped.toString())
+                KeyValue(UiText.text(R.string.gw_local), status.igateLocalStations.toString())
+            }
+            if (settings.digiEnabled) {
+                KeyValue("Digi", UiText.text(if (status.digiActive) R.string.gw_active else R.string.gw_inactive))
+                KeyValue(UiText.text(R.string.gw_repeated), status.digiRepeated.toString())
+                KeyValue(UiText.text(R.string.gw_channel), UiText.text(R.string.gw_channel_value, status.digiLoadPerMin, status.digiAirtimePct))
+                val dropped = status.digiDropped.filterValues { it > 0 }
+                if (dropped.isNotEmpty()) {
+                    Text(UiText.text(R.string.gw_dropped), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    dropped.entries.sortedByDescending { it.value }.forEach { (k, v) -> KeyValue(digiReasonLabel(k), v.toString()) }
+                }
+                if (status.digiNeighbors.isNotEmpty()) {
+                    Text(UiText.text(R.string.gw_neighbors), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text(status.digiNeighbors.joinToString(" · "), fontSize = 12.sp, color = Pal.muted)
+                }
+            }
+        }
+
         // #13: centro de diagnóstico
         SectionCard(UiText.text(R.string.diagnostics)) {
             KeyValue("APRS-IS", if (status.aprsIsVerified) UiText.text(R.string.aprs_ok)
@@ -252,10 +283,14 @@ fun RadioScreen(settings: Settings, onSettingsChanged: (Settings) -> Unit) {
         }
         SectionCard(UiText.text(R.string.live_monitor)) {
             Text(UiText.text(R.string.live_monitor_logs_hint), color = Pal.muted, fontSize = 12.sp)
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 listOf("all" to R.string.filter_all, "rx" to R.string.monitor_rx, "tx" to R.string.monitor_tx,
                     "rf" to R.string.msg_filter_rf).forEach { (key, label) ->
                     OutlinedChoice(UiText.text(label), monitorMedium == key) { monitorMedium = key }
+                }
+                // #97: apaga só o monitor ao vivo; a aba Logs mantém o histórico
+                TextButton(onClick = { AprsRepository.clearMonitor() }, enabled = monitor.isNotEmpty()) {
+                    Text(UiText.text(R.string.monitor_clear_all), color = if (monitor.isNotEmpty()) Pal.orange else Pal.muted)
                 }
             }
             OutlinedTextField(monitorFilter, { monitorFilter = it }, singleLine = true, modifier = Modifier.fillMaxWidth(),
@@ -280,6 +315,22 @@ private val COORD_LON = Regex("""\d{5}\.\d{2}[EW]""")
 private val DECIMAL = Regex("""-?\d{1,3}\.\d{3,}""")
 
 /** Texto de diagnóstico (#13). Nunca inclui passcode; anonimiza indicativo próprio e coordenadas se pedido. */
+/** #52: nome legível do motivo de não repetir (chave = nome do enum DigiReason). */
+private fun digiReasonLabel(key: String): String = when (key) {
+    "DUPLICATE" -> UiText.text(R.string.gw_r_duplicate)
+    "COVERED" -> UiText.text(R.string.gw_r_covered)
+    "BUSY" -> UiText.text(R.string.gw_r_busy)
+    "SATURATED" -> UiText.text(R.string.gw_r_saturated)
+    "OUT_OF_RADIUS" -> UiText.text(R.string.gw_r_out_of_radius)
+    "SOURCE_RATE" -> UiText.text(R.string.gw_r_source_rate)
+    "GLOBAL_RATE" -> UiText.text(R.string.gw_r_global_rate)
+    "EXCESS_PATH" -> UiText.text(R.string.gw_r_excess_path)
+    "NOT_DIRECT" -> UiText.text(R.string.gw_r_not_direct)
+    "OWN_PACKET" -> UiText.text(R.string.gw_r_own_packet)
+    "NON_RF" -> UiText.text(R.string.gw_r_non_rf)
+    else -> key
+}
+
 internal fun buildDiagnostics(settings: Settings, status: LinkStatus, anonymize: Boolean): String {
     val df = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.MEDIUM)
     fun clean(text: String): String {

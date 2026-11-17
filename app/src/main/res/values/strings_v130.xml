@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- v1.3: #97 apagar monitor ao vivo, #99 zerar contadores RX/TX do TNC. -->
+<resources>
+    <string name="monitor_clear_all">Clear all</string>
+    <string name="tnc_clear_stats">Clear stats</string>
+</resources>

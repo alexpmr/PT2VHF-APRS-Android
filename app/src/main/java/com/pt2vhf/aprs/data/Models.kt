@@ -109,6 +109,19 @@ data class LinkStatus(
     /** #49: economia de bateria ativa neste momento (tela desligada + modo ligado/automático). */
     val batterySaverActive: Boolean = false,
     val batteryPercent: Int? = null,
+    /** #95 iGate: ativo agora (ligado + APRS-IS verificado + TNC), contadores e estações locais em RF. */
+    val igateActive: Boolean = false,
+    val igateRfToIs: Int = 0,
+    val igateIsToRf: Int = 0,
+    val igateSkipped: Int = 0,
+    val igateLocalStations: Int = 0,
+    /** #52 digi: ativo agora, repetidos, descartados por motivo, carga do canal e vizinhos aprendidos. */
+    val digiActive: Boolean = false,
+    val digiRepeated: Int = 0,
+    val digiDropped: Map<String, Int> = emptyMap(),
+    val digiLoadPerMin: Int = 0,
+    val digiAirtimePct: Int = 0,
+    val digiNeighbors: List<String> = emptyList(),
 )
 
 /** Local RF evidence (#4, #14): only packets that arrived through this device's TNC. */

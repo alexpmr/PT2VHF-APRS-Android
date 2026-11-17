@@ -6,7 +6,7 @@ ou pelo próprio áudio do celular (modem AFSK 1200).
 
 **Download oficial:** https://www.pt2vhf.com/android
 
-## Recursos da versão 1.2
+## Recursos da versão 1.3
 
 - APRS-IS com servidor à escolha (padrão `soam.aprs2.net:14580`, lista de servidores ou "Outro…"),
   passcode calculado automaticamente a partir do indicativo e filtro editável (padrão `r/4000`).
@@ -18,7 +18,23 @@ ou pelo próprio áudio do celular (modem AFSK 1200).
 - TNC KISS por Bluetooth (Mobilinkd, BTECH UV-Pro, Radtel RT-950 Pro, ICOM ID-5200 e similares) com monitor ao vivo.
 - TNC KISS por **Bluetooth LE** (serviço KISS BLE ou Nordic UART) e, no modo AFSK, **PTT por RTS/DTR ou CAT** por
   adaptador USB-serial.
+- **iGate** (RF ↔ APRS-IS) e **digipeater inteligente** no próprio celular, ligados pelo TNC (padrão desligado).
 - Aviso de nova versão pelo site www.pt2vhf.com (o aviso de "Downloads no site oficial" na abertura saiu na 0.1.8).
+
+## Novidades da 1.3
+
+- **Modo iGate no celular**: pacotes ouvidos pelo TNC vão para o APRS-IS e, se ligado, mensagens da internet para
+  estações ouvidas localmente voltam para o RF (sugestão de PY6TL; não testado com rádio real).
+- **Digipeater inteligente**: repete WIDEn-N/fill-in com limites de canal, raio, estação e minuto, aprende os digis
+  vizinhos e mostra por que deixou de repetir (não testado com rádio real).
+- Tela Rádio: botão **Apagar tudo** no Monitor ao vivo, botão **Apagar estatísticas** (zera RX/TX do TNC sem
+  desconectar) e a lista de **aparelhos pareados some enquanto o TNC está conectado**.
+- O chip do topo mostra o **nome do rádio** (ex.: TH-D75) em verde quando conectado e volta a **TNC** vermelho
+  quando desconectado.
+- Modo carro e Android Auto: "Última mensagem" passa a **"Última mensagem/informação"**.
+- PY6TL entra nos colaboradores (PU2PYC, PP5AU, PU2MUS, PP5PK, PY6TL).
+
+Sugestões de PU2PYC: Apagar tudo, Apagar estatísticas, nome do rádio no topo e "Última mensagem/informação".
 
 ## Novidades da 1.2
 
