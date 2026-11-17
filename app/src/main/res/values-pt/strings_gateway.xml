@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- #95 iGate e #52 digi inteligente. -->
+<resources>
+    <string name="gw_igate_section">iGate (rádio ↔ internet)</string>
+    <string name="gw_igate_enable">iGate: enviar ao APRS-IS os pacotes ouvidos no rádio</string>
+    <string name="gw_igate_is_to_rf">Internet → rádio: mensagens para estações ouvidas localmente</string>
+    <string name="gw_igate_rf_path">Caminho no rádio para internet → rádio</string>
+    <string name="gw_igate_local_min">Estação é local se ouvida nos últimos (min)</string>
+    <string name="gw_igate_max_per_min">Máximo internet → rádio por minuto</string>
+    <string name="gw_igate_notice">Exige APRS-IS verificado (indicativo com passcode válido) e TNC conectado. Pacotes com TCPIP, NOGATE ou RFONLY no caminho nunca sobem, e duplicados em 30 s são descartados.</string>
+    <string name="gw_digi_section">Digipeater inteligente (rádio → rádio)</string>
+    <string name="gw_digi_enable">Digipeater: repetir pacotes de outras estações</string>
+    <string name="gw_digi_aliases">Aliases extras (separados por vírgula)</string>
+    <string name="gw_digi_fill_in">WIDE1-1 (fill-in)</string>
+    <string name="gw_digi_direct_only">Fill-in só para estações ouvidas diretamente</string>
+    <string name="gw_digi_wide_n">WIDEn-N</string>
+    <string name="gw_digi_max_n">N máximo</string>
+    <string name="gw_digi_trap_drop">Descartar caminhos acima do máximo (senão, reduzir)</string>
+    <string name="gw_digi_viscous">Aprender os digipeaters vizinhos e esperar quando a estação já é coberta</string>
+    <string name="gw_digi_viscous_sec">Espera (s)</string>
+    <string name="gw_digi_adaptive">Adaptar à carga do canal (ocupado: só fill-in direto; saturado: só mensagens e emergências)</string>
+    <string name="gw_digi_radius">Raio (km, 0 = sem limite)</string>
+    <string name="gw_digi_source_sec">Mesma estação no máximo a cada (s)</string>
+    <string name="gw_digi_max_per_min">Máximo de repetições por minuto</string>
+    <string name="gw_digi_notice">Mensagens, ACKs e emergências passam na frente. Seus próprios pacotes nunca são repetidos. Exige TNC e transmissão por rádio ligada.</string>
+    <string name="gw_warning">A responsabilidade pela licença, frequência e regras locais é do operador. Deixe o celular na tomada e a economia de bateria desligada.</string>
+    <string name="gw_status_section">iGate e digipeater</string>
+    <string name="gw_active">Ativo</string>
+    <string name="gw_inactive">Inativo (confira APRS-IS, TNC e transmissão por rádio)</string>
+    <string name="gw_rf_to_is">Rádio → internet</string>
+    <string name="gw_is_to_rf">Internet → rádio</string>
+    <string name="gw_skipped">Não encaminhados</string>
+    <string name="gw_local">Estações locais</string>
+    <string name="gw_repeated">Repetidos</string>
+    <string name="gw_channel">Canal</string>
+    <string name="gw_channel_value" formatted="true">%1$d pacotes/min · %2$d%% de tempo de ar</string>
+    <string name="gw_neighbors">Digipeaters vizinhos</string>
+    <string name="gw_dropped">Não repetidos</string>
+    <string name="gw_r_duplicate">Duplicado</string>
+    <string name="gw_r_covered">Coberto por vizinho</string>
+    <string name="gw_r_busy">Canal ocupado</string>
+    <string name="gw_r_saturated">Canal saturado</string>
+    <string name="gw_r_out_of_radius">Fora do raio</string>
+    <string name="gw_r_source_rate">Limite por estação</string>
+    <string name="gw_r_global_rate">Limite por minuto</string>
+    <string name="gw_r_excess_path">Caminho excessivo</string>
+    <string name="gw_r_not_direct">Não ouvido diretamente</string>
+    <string name="gw_r_own_packet">Pacote próprio</string>
+    <string name="gw_r_non_rf">Caminho da internet</string>
+</resources>

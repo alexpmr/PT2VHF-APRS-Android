@@ -112,6 +112,26 @@ data class Settings(
     val shareCallsign: Boolean = true,
     // #77 remover acentos das mensagens enviadas (padrão ligado)
     val stripAccents: Boolean = true,
+    // #95 iGate (padrão desligado; exige APRS-IS verificado e TNC)
+    val igateEnabled: Boolean = false,
+    val igateIsToRf: Boolean = false,
+    val igateRfPath: String = "WIDE1-1",
+    val igateLocalMinutes: Int = 30,
+    val igateMaxPerMin: Int = 6,
+    // #52 digipeater inteligente (padrão desligado; exige TNC e TX por RF)
+    val digiEnabled: Boolean = false,
+    val digiAliases: String = "",
+    val digiFillIn: Boolean = true,
+    val digiWideN: Boolean = true,
+    val digiMaxN: Int = 2,
+    val digiTrapDrop: Boolean = false,
+    val digiDirectOnly: Boolean = true,
+    val digiViscous: Boolean = true,
+    val digiViscousSec: Int = 5,
+    val digiAdaptive: Boolean = true,
+    val digiRadiusKm: Int = 0,
+    val digiSourceSec: Int = 60,
+    val digiMaxPerMin: Int = 20,
 ) {
     val fullCall: String get() = fullCallsign(callsign, ssid)
     val passcode: Int get() = aprsPasscode(callsign)
@@ -120,6 +140,12 @@ data class Settings(
     val rxOnly: Boolean get() = profile == PROFILE_RX
     /** #6: posição fixa digitada ou escolhida no mapa, usada no lugar do GPS. */
     val manualPosition: Boolean get() = positionSource == "manual" && manualLat != null && manualLon != null
+    /** #52: configuração do digi inteligente a partir das preferências. */
+    val digiConfig: com.pt2vhf.aprs.core.DigiConfig get() = com.pt2vhf.aprs.core.DigiConfig(
+        myCall = fullCall, aliases = digiAliases.split(',', ' ').map { it.trim().uppercase() }.filter { it.isNotEmpty() }.toSet(),
+        fillIn = digiFillIn, wideN = digiWideN, maxN = digiMaxN, trapDrop = digiTrapDrop, directOnlyFillIn = digiDirectOnly,
+        viscous = digiViscous, viscousDelayMs = digiViscousSec * 1000L, adaptive = digiAdaptive, radiusKm = digiRadiusKm,
+        perSourceSec = digiSourceSec, maxPerMinute = digiMaxPerMin)
 
     val retention: RetentionPolicy get() = RetentionPolicy(
         RetentionRule(retPrivateDays, retPrivateMax),
@@ -229,6 +255,24 @@ data class Settings(
                 updateNotify = b("update_notify", d.updateNotify),
                 shareCallsign = b("share_callsign", d.shareCallsign),
                 stripAccents = b("strip_accents", d.stripAccents),
+                igateEnabled = b("igate_enabled", d.igateEnabled),
+                igateIsToRf = b("igate_is_to_rf", d.igateIsToRf),
+                igateRfPath = s("igate_rf_path", d.igateRfPath),
+                igateLocalMinutes = i("igate_local_min", d.igateLocalMinutes).coerceIn(5, 180),
+                igateMaxPerMin = i("igate_max_per_min", d.igateMaxPerMin).coerceIn(1, 30),
+                digiEnabled = b("digi_enabled", d.digiEnabled),
+                digiAliases = s("digi_aliases", d.digiAliases),
+                digiFillIn = b("digi_fill_in", d.digiFillIn),
+                digiWideN = b("digi_wide_n", d.digiWideN),
+                digiMaxN = i("digi_max_n", d.digiMaxN).coerceIn(1, 7),
+                digiTrapDrop = b("digi_trap_drop", d.digiTrapDrop),
+                digiDirectOnly = b("digi_direct_only", d.digiDirectOnly),
+                digiViscous = b("digi_viscous", d.digiViscous),
+                digiViscousSec = i("digi_viscous_sec", d.digiViscousSec).coerceIn(1, 30),
+                digiAdaptive = b("digi_adaptive", d.digiAdaptive),
+                digiRadiusKm = i("digi_radius_km", d.digiRadiusKm).coerceIn(0, 1000),
+                digiSourceSec = i("digi_source_sec", d.digiSourceSec).coerceIn(0, 3600),
+                digiMaxPerMin = i("digi_max_per_min", d.digiMaxPerMin).coerceIn(1, 120),
             )
         }
 
@@ -315,6 +359,24 @@ data class Settings(
                 .putBoolean("update_notify", s.updateNotify)
                 .putBoolean("share_callsign", s.shareCallsign)
                 .putBoolean("strip_accents", s.stripAccents)
+                .putBoolean("igate_enabled", s.igateEnabled)
+                .putBoolean("igate_is_to_rf", s.igateIsToRf)
+                .putString("igate_rf_path", s.igateRfPath.trim())
+                .putInt("igate_local_min", s.igateLocalMinutes)
+                .putInt("igate_max_per_min", s.igateMaxPerMin)
+                .putBoolean("digi_enabled", s.digiEnabled)
+                .putString("digi_aliases", s.digiAliases.trim())
+                .putBoolean("digi_fill_in", s.digiFillIn)
+                .putBoolean("digi_wide_n", s.digiWideN)
+                .putInt("digi_max_n", s.digiMaxN)
+                .putBoolean("digi_trap_drop", s.digiTrapDrop)
+                .putBoolean("digi_direct_only", s.digiDirectOnly)
+                .putBoolean("digi_viscous", s.digiViscous)
+                .putInt("digi_viscous_sec", s.digiViscousSec)
+                .putBoolean("digi_adaptive", s.digiAdaptive)
+                .putInt("digi_radius_km", s.digiRadiusKm)
+                .putInt("digi_source_sec", s.digiSourceSec)
+                .putInt("digi_max_per_min", s.digiMaxPerMin)
                 .apply()
             // Each profile keeps its own transmission-related choices (#10).
             saveProfileSnapshot(context, s.profile, s)
