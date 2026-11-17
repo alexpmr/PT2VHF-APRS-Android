@@ -3,6 +3,7 @@ package com.pt2vhf.aprs.ui
 import android.content.Context
 import android.content.res.Configuration
 import com.pt2vhf.aprs.R
+import com.pt2vhf.aprs.UiText
 import com.pt2vhf.aprs.data.MapColors
 import com.pt2vhf.aprs.data.MapType
 import com.pt2vhf.aprs.data.Settings
