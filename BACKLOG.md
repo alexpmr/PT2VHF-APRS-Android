@@ -3524,3 +3524,22 @@ nada mais muda no comportamento.
 **Dependências/relacionados:** #68 (Android Auto), #76 (traduções), #97–#99 (outras sugestões de PU2PYC).
 
 **Status (17/11/2026):** implementado e lançado na **v1.3** (versionCode 19). Aguarda teste em aparelho.
+
+### 101. Mensagens: ACK não está funcionando (v1.3)
+_Relato do mantenedor em 17/11/2026 ("Backlog: problema com ACK, não funcionando."), com a v1.3 já publicada._
+
+**Relato:** a confirmação (ACK) de mensagens não funciona. O relato ainda é **vago** e falta definir:
+- **Sentido:** a mensagem que eu envio não recebe/mostra o ACK da outra estação, ou o app não manda ACK para as
+  mensagens que recebo (o remetente continua reenviando)?
+- **Meio:** APRS-IS, RF (qual TNC/rádio: Bluetooth, BLE, USB, AFSK) ou ambos? Com o iGate (#95) ligado ou não?
+- **Sintoma:** fica tentando sem parar (como o antigo #60), mostra 1 check e nunca 2 (#57), ou o som de ack (#90)
+  não toca?
+- Indicativo da outra estação e horário de um caso, para conferir em aprs.fi / aba Logs.
+
+**Relacionados:** #47 (ACK/REJ visível), #54 e #60 (validados em 17/11/2026), #57 (checks), #90 (som de ack),
+#95 (iGate, novo na 1.3: mensagens RF↔IS podem ter mudado o caminho do ACK).
+
+**Critérios de aceite:** definidos após os detalhes; no mínimo, ACK enviado e recebido em APRS-IS e em RF, com o
+balão passando a 2 checks e sem reenvio depois do ACK.
+
+**Status:** registrado no backlog, **não implementado**; aguarda detalhes do mantenedor. Nenhum APK novo gerado.
