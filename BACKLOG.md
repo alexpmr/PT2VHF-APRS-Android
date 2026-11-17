@@ -1704,6 +1704,31 @@ entram só para exibição (`AprsService` ~linha 120).
 - **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
 - **17/11/2026:** a parte iGate passou para o **#95** (pedido de Yuri, PY6TL); este item fica com o digipeater.
 
+**Atualização 17/11/2026 — digi inteligente.** Pedido do mantenedor: "Backlog: implemente igate e digi inteligente
+também. Um digi com recursos de roteamento inteligente que nenhum outro app de aprs faz." Além do básico acima
+(aliases, trace, dedupe, nunca repetir o próprio, descartar caminho excessivo, limites), o digi do app decide **cada**
+pacote com as regras abaixo, todas configuráveis e com o motivo da decisão registrado:
+1. **Viscoso com aprendizado da vizinhança:** o app aprende quais digipeaters ouve e quais estações cada um já cobre
+   (repetiu pacote daquela origem nos últimos ~15 min). Se a origem **já é coberta** por um vizinho, o app espera
+   alguns segundos (com variação aleatória) e **cancela** se ouvir o vizinho repetir; se **não é coberta**, repete na
+   hora, preenchendo o buraco de cobertura.
+2. **Adaptativo à carga do canal:** mede pacotes por minuto e tempo de ar estimado (1200 bd). Canal ocupado → só
+   fill-in (`WIDE1-1`) de estações ouvidas diretamente; canal saturado → pausa tudo menos prioridade (item 4).
+3. **Só ouvidas diretamente no fill-in** (padrão ligado): `WIDE1-1` só de quem foi ouvido sem nenhum salto usado.
+4. **Prioridade:** mensagens, ACK/REJ e emergência (Mic-E "Emergency" ou texto `EMERGENCY`) passam na frente e
+   furam a pausa por carga; posições da mesma origem no máximo 1 a cada X s (padrão 60 s) e limite global por minuto.
+5. **Raio geográfico** (opcional, 0 = sem limite): só repete estações cuja posição (do pacote ou a última conhecida)
+   está a até R km do celular. Pacote sem posição conhecida segue as demais regras.
+6. **Correção de caminho (trap):** `WIDEn-N` acima do máximo configurado (padrão 2) é reduzido ao máximo em vez de
+   repetido como veio, ou descartado (opção). Saltos de rede (`TCPIP`, `NOGATE`, `RFONLY` não se aplicam ao digi,
+   mas `TCPIP`/`TCPXX` nunca vão para RF por esta via).
+7. **Explicação e vizinhos na tela:** contadores por motivo (repetido, coberto por vizinho, duplicado, canal
+   ocupado, fora do raio, limite por origem, caminho excessivo) e a lista de digis vizinhos aprendidos.
+
+Honestidade no site: fill-in, viscoso e dedupe já existem em digis de Linux (aprx/Direwolf); o diferencial é a
+**combinação** (aprendizado de cobertura, adaptação à carga, raio e prioridade) num app de celular. Conferir antes de
+anunciar como exclusivo. Implementação dos #52 e #95 pedida pelo mantenedor em 17/11/2026 (sem gerar versão).
+
 ### 53. ~~Modo satélite: passagens, apontador de antena (bússola + inclinômetro) e contatos APRS/voz~~ (CANCELADO — fora do escopo deste app)
 
 > **Cancelado em 05/11/2026** a pedido do usuário: "Melhor, tire essa parte de sat do app. Irei pensar em um outro específico para sat, para concorrer com o iss detector."
@@ -3364,3 +3389,15 @@ desligado, nada é encaminhado; sem login verificado o modo não liga.
 #49 (bateria), #6 (posição fixa), #81/#91 (tabela comparativa do site, linha iGate quando implementado).
 
 **Status:** registrado no backlog, **não implementado**. Nenhum APK novo gerado.
+
+### 96. Incluir PY6TL na lista de colaboradores
+_Pedido do mantenedor em 17/11/2026 ("Backlog; coloque o indicativo dele na lista de colaboradores")._
+
+**Pedido:** acrescentar **PY6TL** (Yuri, Salvador/BA, que sugeriu o iGate no celular, #95) aos radioamadores
+colaboradores, nos mesmos lugares do #87: `CONTRIBUTORS` em `ui/SettingsUi.kt` (aba Sobre), `README.md` e o site
+(se listar colaboradores). Registrar no `CHANGELOG.md` da versão que trouxer a mudança.
+
+**Critérios de aceite:** a aba Sobre mostra PU2PYC, PP5AU, PU2MUS, PP5PK e PY6TL; README coerente; nenhum texto
+traduzível novo.
+
+**Dependências/relacionados:** #79, #87, #95.
