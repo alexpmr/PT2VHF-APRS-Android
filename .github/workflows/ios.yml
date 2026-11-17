@@ -1,0 +1,99 @@
+name: iOS build
+
+on:
+  pull_request:
+    paths: ['ios/**', '.github/workflows/ios.yml']
+  push:
+    branches: [main]
+    paths: ['ios/**', '.github/workflows/ios.yml']
+  workflow_dispatch:
+    inputs:
+      testflight:
+        description: 'Enviar para o TestFlight (precisa dos segredos da conta Apple)'
+        type: boolean
+        default: false
+
+concurrency:
+  group: ios-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: ios
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Xcode e XcodeGen
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.4.app || sudo xcode-select -s /Applications/Xcode.app
+          xcodebuild -version
+          brew install xcodegen
+          xcodegen generate
+
+      - name: Testes de unidade (simulador)
+        run: |
+          set -o pipefail
+          DEST=$(xcrun simctl list devices available -j | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; print(next(x['udid'] for k,v in d.items() if 'iOS' in k for x in v if x['name'].startswith('iPhone')))")
+          xcodebuild test -project PT2VHFAPRS.xcodeproj -scheme PT2VHFAPRS \
+            -destination "id=$DEST" CODE_SIGNING_ALLOWED=NO | tail -n 80
+
+      - name: Build para aparelho (sem assinatura)
+        run: |
+          set -o pipefail
+          xcodebuild build -project PT2VHFAPRS.xcodeproj -scheme PT2VHFAPRS -configuration Release \
+            -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO | tail -n 40
+
+  testflight:
+    name: TestFlight
+    needs: build
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.testflight }}
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: ios
+    env:
+      DEVELOPMENT_TEAM: ${{ secrets.APPLE_TEAM_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Conferir segredos
+        env:
+          KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8 }}
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ISSUER: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          for v in DEVELOPMENT_TEAM KEY KEY_ID ISSUER; do
+            if [ -z "${!v}" ]; then echo "::error::Falta o segredo $v (veja ios/README.md)"; exit 1; fi
+          done
+          mkdir -p ~/private_keys
+          printf '%s' "$KEY" > ~/private_keys/AuthKey_$KEY_ID.p8
+      - name: Arquivar e enviar
+        env:
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ISSUER: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          set -o pipefail
+          sudo xcode-select -s /Applications/Xcode_16.4.app || sudo xcode-select -s /Applications/Xcode.app
+          brew install xcodegen
+          xcodegen generate
+          AUTH="-allowProvisioningUpdates -authenticationKeyPath $HOME/private_keys/AuthKey_$KEY_ID.p8 -authenticationKeyID $KEY_ID -authenticationKeyIssuerID $ISSUER"
+          xcodebuild archive -project PT2VHFAPRS.xcodeproj -scheme PT2VHFAPRS -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath build/PT2VHFAPRS.xcarchive \
+            CURRENT_PROJECT_VERSION=${{ github.run_number }} DEVELOPMENT_TEAM=$DEVELOPMENT_TEAM $AUTH | tail -n 40
+          cat > build/ExportOptions.plist <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>$DEVELOPMENT_TEAM</string>
+            <key>signingStyle</key><string>automatic</string>
+          </dict></plist>
+          PLIST
+          xcodebuild -exportArchive -archivePath build/PT2VHFAPRS.xcarchive \
+            -exportOptionsPlist build/ExportOptions.plist -exportPath build/export $AUTH | tail -n 40

@@ -6,19 +6,25 @@ ou pelo próprio áudio do celular (modem AFSK 1200).
 
 **Download oficial:** https://www.pt2vhf.com/android
 
-## Recursos da versão 1.1
+## Recursos da versão 1.2
 
 - APRS-IS com servidor à escolha (padrão `soam.aprs2.net:14580`, lista de servidores ou "Outro…"),
   passcode calculado automaticamente a partir do indicativo e filtro editável (padrão `r/4000`).
 - Reconexão automática ao trocar entre Wi-Fi e dados móveis.
 - Mapa (OpenStreetMap) com estações e enlaces RF comprovados; internet e redes digitais (DMR, D-STAR…)
-  não contam como RF.
+  não contam como RF. Tipos de mapa: Padrão, Escuro, Cinza claro, Topográfico (OpenTopoMap) e Automático.
 - Mensagens: conversas, canal geral (CQ) e boletins; ACK, novas tentativas e notificações.
 - Botão **Enviar beacon** e **modo tracker** (SmartBeaconing) com notificação fixa.
 - TNC KISS por Bluetooth (Mobilinkd, BTECH UV-Pro, Radtel RT-950 Pro, ICOM ID-5200 e similares) com monitor ao vivo.
 - TNC KISS por **Bluetooth LE** (serviço KISS BLE ou Nordic UART) e, no modo AFSK, **PTT por RTS/DTR ou CAT** por
   adaptador USB-serial.
 - Aviso de nova versão pelo site www.pt2vhf.com (o aviso de "Downloads no site oficial" na abertura saiu na 0.1.8).
+
+## Novidades da 1.2
+
+- **Tipo de mapa, incluindo mapa escuro**: Padrão, Escuro, Cinza claro, Topográfico e Automático, no botão ◐ do
+  mapa e em Configurações → Mapa. O brilho do mapa vale em qualquer tipo.
+- Versão para **iPhone/iPad** em testes (pasta `ios/`, distribuição pelo TestFlight).
 
 ## Novidades da 1.1
 
