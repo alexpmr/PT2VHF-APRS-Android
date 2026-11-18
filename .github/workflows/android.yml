@@ -217,19 +217,12 @@ jobs:
           printf '%s' "$ANDROID_KEYSTORE_BASE64" | LC_ALL=C tr -cd 'A-Za-z0-9+/=' | base64 -d > "$RUNNER_TEMP/play.jks"
           curl -sSfL -o "$RUNNER_TEMP/pepk.jar" https://www.gstatic.com/play-apps-publisher-rapid/signing-tool/prod/pepk.jar
           sha256sum "$RUNNER_TEMP/pepk.jar"
-          java -jar "$RUNNER_TEMP/pepk.jar" --help 2>&1 | grep -iE "pass|keystore|alias|output|encrypt" || true
           mkdir -p play-key
           keypass="${ANDROID_KEY_PASSWORD:-$ANDROID_KEYSTORE_PASSWORD}"
-          export PEPK_KS_PASS="$ANDROID_KEYSTORE_PASSWORD" PEPK_KEY_PASS="$keypass"
-          if ! java -jar "$RUNNER_TEMP/pepk.jar" --keystore="$RUNNER_TEMP/play.jks" --alias="$ANDROID_KEY_ALIAS" \
-                 --output=play-key/encrypted_private_key.zip --include-cert --rsa-aes-encryption \
-                 --encryption-key-path=docs/play/encryption_public_key.pem \
-                 --keystore-pass=env:PEPK_KS_PASS --key-pass=env:PEPK_KEY_PASS; then
-            echo "Flags de senha não aceitas; tentando pela entrada padrão"
-            printf '%s\n%s\n' "$PEPK_KS_PASS" "$PEPK_KEY_PASS" | java -jar "$RUNNER_TEMP/pepk.jar" --keystore="$RUNNER_TEMP/play.jks" \
-              --alias="$ANDROID_KEY_ALIAS" --output=play-key/encrypted_private_key.zip --include-cert --rsa-aes-encryption \
-              --encryption-key-path=docs/play/encryption_public_key.pem
-          fi
+          java -jar "$RUNNER_TEMP/pepk.jar" --keystore="$RUNNER_TEMP/play.jks" --alias="$ANDROID_KEY_ALIAS" \
+            --output=play-key/encrypted_private_key.zip --include-cert --rsa-aes-encryption \
+            --encryption-key-path=docs/play/encryption_public_key.pem \
+            --keystore-pass="$ANDROID_KEYSTORE_PASSWORD" --key-pass="$keypass"
           rm -f "$RUNNER_TEMP/play.jks"
           unzip -l play-key/encrypted_private_key.zip
           keytool -printcert -file <(unzip -p play-key/encrypted_private_key.zip '*.pem' 2>/dev/null || true) 2>/dev/null | grep -m1 SHA256 || true
