@@ -400,7 +400,7 @@ private fun ThirdPartyDialog(key: String, list: List<ChatMessage>, clock: Long, 
 }
 
 /** Ações da pressão longa (#20). Nenhuma delas transmite; só o botão Enviar transmite. */
-private enum class BubbleAction { REPLY, REPLY_PUBLIC, REPLY_PRIVATE, DIRECT, COPY, RESEND, CANCEL }
+private enum class BubbleAction { REPLY, REPLY_PUBLIC, REPLY_PRIVATE, DIRECT, COPY, RESEND, CANCEL, GIVE_UP_RESEND }
 
 /** #47: ícone, cor e texto do estado de entrega; null para mensagens recebidas ou sem confirmação. */
 private fun deliveryIcon(m: ChatMessage): Pair<String, androidx.compose.ui.graphics.Color>? = when {
@@ -464,7 +464,7 @@ private fun Bubble(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (icon != null) Text(icon.first + " ", color = icon.second, fontSize = 13.sp,
                             modifier = Modifier.clickable(enabled = actions.contains(BubbleAction.RESEND) ||
-                                actions.contains(BubbleAction.CANCEL)) { menu = true })
+                                actions.contains(BubbleAction.CANCEL) || actions.contains(BubbleAction.GIVE_UP_RESEND)) { menu = true })
                         Text(meta, color = icon?.second?.takeIf { m.status != InternalText.MSG_SENDING } ?: Pal.muted, fontSize = 11.sp)
                     }
                 }
@@ -473,7 +473,9 @@ private fun Bubble(
                         DropdownMenuItem(text = {
                             Text(when (action) {
                                 BubbleAction.RESEND -> UiText.text(R.string.msg_resend)
-                                BubbleAction.CANCEL -> UiText.text(R.string.msg_cancel_retries)
+                                BubbleAction.CANCEL -> UiText.text(R.string.msg_give_up_ack)
+                                BubbleAction.GIVE_UP_RESEND -> UiText.text(
+                                    if (canCancel(m)) R.string.msg_give_up_resend else R.string.msg_resend_as_new)
                                 BubbleAction.REPLY -> UiText.text(R.string.reply_to_message)
                                 BubbleAction.REPLY_PUBLIC -> UiText.text(R.string.reply_public_cq)
                                 BubbleAction.REPLY_PRIVATE -> UiText.text(R.string.reply_private, m.from)
@@ -621,6 +623,7 @@ internal fun Conversation(
             items(list, key = { it.id }) { m ->
                 val actions = if (m.outgoing) listOfNotNull(
                     BubbleAction.RESEND.takeIf { canResend(m) && !settings.rxOnly },
+                    BubbleAction.GIVE_UP_RESEND.takeIf { !settings.rxOnly && !canResend(m) },
                     BubbleAction.CANCEL.takeIf { canCancel(m) }, BubbleAction.COPY)
                     else listOf(BubbleAction.REPLY, BubbleAction.DIRECT, BubbleAction.COPY)
                 Bubble(m, false, actions, onStation, clock, retries[m.id], settings.msgRetries) { action ->
@@ -629,6 +632,8 @@ internal fun Conversation(
                         BubbleAction.DIRECT -> onReplyChange(null)
                         BubbleAction.COPY -> clipboard.setText(AnnotatedString(m.text))
                         BubbleAction.RESEND -> AprsService.send(context, AprsService.ACTION_MSG_RESEND,
+                            mapOf(AprsService.EXTRA_MESSAGE_ID to m.id.toString()))
+                        BubbleAction.GIVE_UP_RESEND -> AprsService.send(context, AprsService.ACTION_MSG_GIVE_UP_RESEND,
                             mapOf(AprsService.EXTRA_MESSAGE_ID to m.id.toString()))
                         BubbleAction.CANCEL -> AprsService.send(context, AprsService.ACTION_MSG_CANCEL,
                             mapOf(AprsService.EXTRA_MESSAGE_ID to m.id.toString()))

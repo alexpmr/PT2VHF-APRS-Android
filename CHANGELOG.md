@@ -1,5 +1,33 @@
 # Changelog
 
+## 1.4 — Publicada (18/11/2026; teste em aparelho pendente)
+
+Versão 1.4 (versionCode 20), autorizada pelo mantenedor ("Gere novo apk e suba no site"). Instala por cima da 1.3
+sem perder dados e é oferecida pelo aviso de atualização (OTA).
+
+- **ACK de mensagens corrigido (#101, relatado pelo mantenedor e por PT2ATC):** toda cópia repetida de uma
+  mensagem recebida volta a ser confirmada (antes só a primeira recebia ACK; se ele se perdia, o remetente ficava
+  reenviando até desistir). ACK vindo de `PT2ATC-7` agora confirma mensagem enviada para `PT2ATC` (e o contrário),
+  e mensagem endereçada ao indicativo sem SSID é confirmada com esse mesmo endereço. ACK com espaço no fim ou `}`
+  sem número também é reconhecido, e um ACK muito rápido não é mais sobrescrito por "Aguardando". O mesmo número de
+  mensagem só conta como repetição dentro de 1 hora. **Não testado em campo (RF ↔ APRS-IS).**
+- **Desistir do ACK e reenviar (#105):** manter pressionada a mensagem enviada mostra "Desistir do ACK e reenviar"
+  (um toque: para as tentativas e manda de novo como mensagem nova, com novo número e novo ciclo de ACK) e
+  "Desistir do ACK". Em mensagem já entregue aparece "Reenviar como nova mensagem". Reenviar não cria mais duas
+  sequências de tentativas em paralelo.
+- **Notificações por tipo (#106, PU2PYC):** nova aba **Notificações** nas Configurações. Mensagens pessoais,
+  boletins (BLN), mensagens gerais (CQ), ACK, eco do digi e alertas de favoritas têm cada um o seu canal, com
+  ligar/desligar, **som próprio** (padrão, silencioso ou qualquer som do aparelho), botão **Testar** e atalho para
+  vibração/prioridade no Android. Boletins e CQ começam desligados; boletim repetido em 24 h não avisa de novo.
+- **Tracker (#102 e #103, PU2MUS):** **Iniciar/Parar tracker** e **Modo carro** lado a lado no topo, sem rolar; a
+  parte informativa (configuração, aviso e posição manual) vai para o fim da tela.
+- **Mapa: "Você" segue a minha estação (#104, PU2MUS):** tocar **◎ Você** recentra a cada nova posição até arrastar
+  o mapa ou seguir outra estação; o botão fica destacado enquanto segue.
+- **Servidor em minúsculo (#107, PU2PYC):** os campos de servidor (APRS-IS e TNC TCP) não ligam maiúscula nem
+  corretor e guardam o endereço em minúsculo.
+- **Chip do TNC com nome completo (#108):** o chip do topo mostra o nome inteiro do rádio, do tamanho exato do
+  texto; se não couber, a linha de chips rola para o lado.
+
 ## 1.3 — Publicada (17/11/2026; teste em aparelho pendente)
 
 Versão 1.3 (versionCode 19), autorizada pelo mantenedor ("Gere nova versão android e atualize o site, executando os

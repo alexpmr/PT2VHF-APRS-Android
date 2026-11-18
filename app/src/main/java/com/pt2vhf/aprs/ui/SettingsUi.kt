@@ -92,6 +92,10 @@ private fun CheckRow(label: String, checked: Boolean, onChange: (Boolean) -> Uni
     }
 }
 
+/** #107: teclado para endereço de servidor (APRS-IS, TNC TCP): sem maiúscula automática nem corretor. */
+internal val HOST_KEYBOARD = KeyboardOptions(capitalization = KeyboardCapitalization.None, autoCorrectEnabled = false,
+    keyboardType = KeyboardType.Uri)
+
 @Composable
 private fun NumberField(label: String, value: String, onChange: (String) -> Unit, modifier: Modifier = Modifier.fillMaxWidth()) {
     OutlinedTextField(value, { onChange(it.filter(Char::isDigit).take(5)) }, label = { Text(label) }, singleLine = true,
@@ -200,6 +204,8 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
     var myDigi by remember { mutableStateOf(current.alertMyDigi) }
     var soundAck by remember { mutableStateOf(current.soundAck) }
     var soundDigi by remember { mutableStateOf(current.soundDigiEcho) }
+    var notifyBln by remember { mutableStateOf(current.notifyBulletins) }
+    var notifyGroup by remember { mutableStateOf(current.notifyGroup) }
     var returnMin by remember { mutableStateOf(current.alertReturnMinutes.toString()) }
     var quiet by remember { mutableStateOf(current.quietHours) }
     var quietStart by remember { mutableStateOf(current.quietStart.toString()) }
@@ -329,7 +335,8 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
             voiceFrequency = voiceFreq.trim(), keepScreenOn = keepScreen, stationMaxAgeHours = maxAge,
             notifyMessages = notifyMsg, monitorEnabled = monitorOn,
             alertFavFirst = favFirst, alertFavReturn = favReturn, alertFavPosition = favPos, alertFavRf = favRf,
-            alertMyDigi = myDigi, soundAck = soundAck, soundDigiEcho = soundDigi, alertReturnMinutes = (returnMin.toIntOrNull() ?: 60).coerceIn(5, 1440),
+            alertMyDigi = myDigi, soundAck = soundAck, soundDigiEcho = soundDigi,
+            notifyBulletins = notifyBln, notifyGroup = notifyGroup, alertReturnMinutes = (returnMin.toIntOrNull() ?: 60).coerceIn(5, 1440),
             quietHours = quiet, quietStart = (quietStart.toIntOrNull() ?: 22).coerceIn(0, 23),
             quietEnd = (quietEnd.toIntOrNull() ?: 7).coerceIn(0, 23),
             apiEnabled = apiOn, apiAllowControl = apiControl, apiAllowBeacon = apiBeacon,
@@ -508,7 +515,9 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
                         DropdownMenuItem(text = { Text(UiText.text(R.string.other_type)) }, onClick = { custom = true; server = ""; expanded = false })
                     }
                 }
-                if (custom) OutlinedTextField(server, { server = it.trim() }, label = { Text(UiText.text(R.string.server)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                // #107: endereço de servidor sempre em minúsculo, sem maiúscula automática nem corretor.
+                if (custom) OutlinedTextField(server, { server = it.trim().lowercase(java.util.Locale.ROOT) }, label = { Text(UiText.text(R.string.server)) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = HOST_KEYBOARD)
                 NumberField(UiText.text(R.string.port), port, { port = it })
                 CheckRow(UiText.text(R.string.aprs_auto_connect), autoAprsIs) { autoAprsIs = it }
                 OutlinedTextField(filter, { filter = it }, label = { Text(UiText.text(R.string.aprs_filter)) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
@@ -610,14 +619,23 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
                 Text(UiText.text(R.string.map_type_hint), color = Pal.muted, fontSize = 12.sp)
                 }
 
-                SettingsTab.MESSAGES -> {
-                // ----- Notificações e alertas (#6, #12) -----
+                SettingsTab.NOTIFICATIONS -> {
+                // ----- #106: notificações por tipo (ligar/desligar, som, testar, ajustes do Android) -----
                 SectionTitle(UiText.text(R.string.notifications_section))
+                Text(UiText.text(R.string.notif_section_hint), color = Pal.muted, fontSize = 12.sp)
                 CheckRow(UiText.text(R.string.notify_messages), notifyMsg) { notifyMsg = it }
-                // #90: sons pelo canal de notificação (respeita silencioso/Não perturbe; som trocável no Android).
+                NotificationSoundRow(com.pt2vhf.aprs.service.NotificationType.PERSONAL)
+                CheckRow(UiText.text(R.string.notify_bulletins), notifyBln) { notifyBln = it }
+                NotificationSoundRow(com.pt2vhf.aprs.service.NotificationType.BULLETIN)
+                CheckRow(UiText.text(R.string.notify_group), notifyGroup) { notifyGroup = it }
+                NotificationSoundRow(com.pt2vhf.aprs.service.NotificationType.GROUP)
+                // #90: sons pelo canal de notificação (respeita silencioso/Não perturbe).
                 CheckRow(UiText.text(R.string.sound_ack), soundAck) { soundAck = it }
+                NotificationSoundRow(com.pt2vhf.aprs.service.NotificationType.ACK)
                 CheckRow(UiText.text(R.string.sound_digi_echo), soundDigi) { soundDigi = it }
+                NotificationSoundRow(com.pt2vhf.aprs.service.NotificationType.DIGI)
                 Text(UiText.text(R.string.alerts_favorites), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                NotificationSoundRow(com.pt2vhf.aprs.service.NotificationType.ALERTS)
                 CheckRow(UiText.text(R.string.alert_opt_first), favFirst) { favFirst = it }
                 CheckRow(UiText.text(R.string.alert_opt_return), favReturn) { favReturn = it }
                 if (favReturn) NumberField(UiText.text(R.string.alert_return_minutes), returnMin, { returnMin = it })
@@ -630,7 +648,9 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
                     NumberField(UiText.text(R.string.quiet_end), quietEnd, { quietEnd = it.take(2) }, Modifier.weight(1f))
                 }
                 Text(UiText.text(R.string.alerts_notice), color = Pal.muted, fontSize = 12.sp)
+                }
 
+                SettingsTab.MESSAGES -> {
                 // #47 reenvio e #43 boletim de versão
                 SectionTitle(UiText.text(R.string.nav_messages))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -864,7 +884,7 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
 
 /** #74: abas da tela de configurações, na ordem exibida. */
 internal enum class SettingsTab {
-    STATION, APRS_IS, BEACON, POSITION, MAP, MESSAGES, GATEWAY, SYSTEM, ABOUT;
+    STATION, APRS_IS, BEACON, POSITION, MAP, MESSAGES, NOTIFICATIONS, GATEWAY, SYSTEM, ABOUT;
 
     fun label(): String = when (this) {
         STATION -> UiText.text(R.string.station_section)
@@ -873,6 +893,7 @@ internal enum class SettingsTab {
         POSITION -> UiText.text(R.string.position_section)
         MAP -> UiText.text(R.string.nav_map)
         MESSAGES -> UiText.text(R.string.nav_messages)
+        NOTIFICATIONS -> UiText.text(R.string.notifications_tab)
         GATEWAY -> "iGate/Digi"
         SYSTEM -> UiText.text(R.string.settings_tab_system)
         ABOUT -> UiText.text(R.string.about_section)

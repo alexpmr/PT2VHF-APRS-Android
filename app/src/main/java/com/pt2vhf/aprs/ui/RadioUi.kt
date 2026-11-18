@@ -148,8 +148,8 @@ fun RadioScreen(settings: Settings, onSettingsChanged: (Settings) -> Unit) {
         else if (settings.tncType == "tcp") SectionCard("KISS TCP") {
             Text(UiText.text(R.string.kiss_tcp_hint), color = Pal.muted, fontSize = 12.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(tcpHost, { tcpHost = it.trim() }, singleLine = true, modifier = Modifier.weight(2f),
-                    label = { Text(UiText.text(R.string.server)) })
+                OutlinedTextField(tcpHost, { tcpHost = it.trim().lowercase(java.util.Locale.ROOT) }, singleLine = true, modifier = Modifier.weight(2f),
+                    label = { Text(UiText.text(R.string.server)) }, keyboardOptions = HOST_KEYBOARD)
                 OutlinedTextField(tcpPort, { tcpPort = it.filter(Char::isDigit).take(5) }, singleLine = true,
                     modifier = Modifier.weight(1f), label = { Text(UiText.text(R.string.port)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))

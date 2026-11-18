@@ -50,6 +50,8 @@ import com.pt2vhf.aprs.core.positionInfo
 import com.pt2vhf.aprs.core.splitMessage
 import com.pt2vhf.aprs.data.AprsRepository
 import com.pt2vhf.aprs.data.ChatMessage
+import com.pt2vhf.aprs.data.ackSourceFor
+import com.pt2vhf.aprs.data.isPendingStatus
 import com.pt2vhf.aprs.data.Medium
 import com.pt2vhf.aprs.data.OutboundSendResult
 import com.pt2vhf.aprs.data.OutboundBeaconResult
@@ -284,15 +286,21 @@ class AprsService : Service(), LocationListener {
             }
             ACTION_AUDIO_TEST -> if (audioStarted && !settings.rxOnly && settings.txViaRf)
                 txWorker.execute { runCatching { audioTnc.testTone() } }
-            ACTION_MSG_CANCEL -> intent.getStringExtra(EXTRA_MESSAGE_ID)?.toLongOrNull()?.let { id ->
-                AprsRepository.setRetry(id, 0, null)
-                AprsRepository.setStatus(id, InternalText.MSG_CANCELLED)
-            }
+            ACTION_MSG_CANCEL -> intent.getStringExtra(EXTRA_MESSAGE_ID)?.toLongOrNull()?.let { id -> giveUpAck(id) }
             ACTION_MSG_RESEND -> intent.getStringExtra(EXTRA_MESSAGE_ID)?.toLongOrNull()?.let { id ->
                 val local = AprsRepository.message(id)
                 if (local != null && local.outgoing && !settings.rxOnly) {
+                    val generation = retryGeneration.merge(id, 1) { a, b -> a + b } ?: 0
                     AprsRepository.setStatus(id, InternalText.MSG_SENDING)
-                    txWorker.execute { runCatching { sendWithRetry(local, local.to, local.text, local.msgId, 0) } }
+                    txWorker.execute { runCatching { sendWithRetry(local, local.to, local.text, local.msgId, 0, generation) } }
+                }
+            }
+            // #105: desiste do ACK desta mensagem e manda o mesmo texto como mensagem nova (novo número e novo ciclo).
+            ACTION_MSG_GIVE_UP_RESEND -> intent.getStringExtra(EXTRA_MESSAGE_ID)?.toLongOrNull()?.let { id ->
+                val local = AprsRepository.message(id)
+                if (local != null && local.outgoing && !settings.rxOnly) {
+                    if (isPendingStatus(local.status)) giveUpAck(id)
+                    txWorker.execute { runCatching { sendMessage(local.to, local.text) } }
                 }
             }
             ACTION_OBJECT_SEND -> intent.getStringExtra(EXTRA_OBJECT_ID)?.toLongOrNull()?.let { id ->
@@ -811,7 +819,10 @@ class AprsService : Service(), LocationListener {
 
     /** true means written to at least one authorized transport, not remotely delivered. */
     /** #47: tentativas e intervalo base configuráveis (padrão 5 / 30 s × n); cancelar interrompe os reenvios. */
-    private fun sendWithRetry(local: ChatMessage, dest: String, text: String, msgId: String?, attempt: Int): Boolean {
+    private fun sendWithRetry(local: ChatMessage, dest: String, text: String, msgId: String?, attempt: Int,
+                              generation: Int = retryGeneration[local.id] ?: 0): Boolean {
+        // #105: cancelar/reenviar troca a geração; a cadeia antiga de retentativas para sozinha.
+        if ((retryGeneration[local.id] ?: 0) != generation) return true
         if (!AprsRepository.containsMessage(local.id) || AprsRepository.isAcked(local.id)) {
             AprsRepository.setRetry(local.id, 0, null)
             return true
@@ -821,6 +832,8 @@ class AprsService : Service(), LocationListener {
         val medium = if (msgId != null) transmitPrivateMessage(frameInfo) else transmit(frameInfo)
         when {
             medium == null -> { AprsRepository.setRetry(local.id, 0, null); AprsRepository.setStatus(local.id, InternalText.MSG_NO_CONNECTION) }
+            // #101: o ACK pode chegar antes desta linha (APRS-IS rápido); não sobrescrever o ✓✓.
+            AprsRepository.isAcked(local.id) -> AprsRepository.setRetry(local.id, 0, null)
             msgId == null -> AprsRepository.setStatus(local.id, InternalText.sent(medium.label))
             attempt >= retries - 1 -> {
                 AprsRepository.setRetry(local.id, 0, null)
@@ -828,7 +841,8 @@ class AprsService : Service(), LocationListener {
                 val delay = settings.msgRetryBaseSec * 1000L * (attempt + 1)
                 AprsRepository.setStatus(local.id, InternalText.retry(attempt + 1))
                 handler.postDelayed({
-                    if (AprsRepository.containsMessage(local.id) && !AprsRepository.isAcked(local.id))
+                    if ((retryGeneration[local.id] ?: 0) == generation &&
+                        AprsRepository.containsMessage(local.id) && !AprsRepository.isAcked(local.id))
                         AprsRepository.setStatus(local.id, InternalText.noAck(retries))
                 }, delay)
             }
@@ -839,7 +853,7 @@ class AprsService : Service(), LocationListener {
                 AprsRepository.setRetry(local.id, attempt + 1, System.currentTimeMillis() + delay)
                 handler.postDelayed({
                     if (!txWorker.isShutdown) txWorker.execute {
-                        sendWithRetry(local, dest, text, msgId, attempt + 1)
+                        sendWithRetry(local, dest, text, msgId, attempt + 1, generation)
                     }
                 }, delay)
             }
@@ -858,6 +872,29 @@ class AprsService : Service(), LocationListener {
                 UiText.text(if (s.aprsIsConnected) R.string.tx_aprs_unverified else R.string.tx_aprs_unavailable)
             else -> UiText.text(R.string.tx_send_failed)
         }
+    }
+
+    /**
+     * #101: a mesma cópia pode chegar várias vezes em segundos (direto e por cada digi). Um ACK por remetente/número a
+     * cada 20 s basta; a próxima retentativa do remetente (30 s ou mais) recebe ACK de novo.
+     */
+    private val lastAckAt = HashMap<String, Long>()
+
+    private fun shouldAck(from: String, msgId: String): Boolean = synchronized(lastAckAt) {
+        val now = System.currentTimeMillis()
+        lastAckAt.entries.removeAll { now - it.value > 600_000L }
+        val key = "$from|$msgId"
+        val last = lastAckAt[key]
+        if (last != null && now - last < 20_000L) false else { lastAckAt[key] = now; true }
+    }
+
+    /** #105: geração da cadeia de retentativas de cada mensagem; trocar a geração encerra a cadeia antiga. */
+    private val retryGeneration = java.util.concurrent.ConcurrentHashMap<Long, Int>()
+
+    private fun giveUpAck(id: Long) {
+        retryGeneration.merge(id, 1) { a, b -> a + b }
+        AprsRepository.setRetry(id, 0, null)
+        AprsRepository.setStatus(id, InternalText.MSG_CANCELLED)
     }
 
     private fun nextMsgId(): String {
@@ -997,25 +1034,37 @@ class AprsService : Service(), LocationListener {
         if (settings.monitorEnabled) AprsRepository.monitorLine("RX ${medium.label} ${decodeAprsText(line.take(300))}")
         val previous = AprsRepository.stations.value[packet.source]
         val eventsBefore = AprsRepository.rfEvents.value.size
-        val forUs = AprsRepository.ingest(packet, medium, settings.fullCall)
+        val incoming = AprsRepository.ingest(packet, medium, settings.fullCall)
         runCatching { checkAlerts(packet, medium, previous, eventsBefore) }
         if (settings.apiEnabled) runCatching { broadcastPacket(packet, medium) }
-        if (forUs == null) return
+        if (incoming == null) return
+        val forUs = incoming.message
+        // #106: boletins e mensagens gerais só avisam (nunca ACK), cada tipo no seu canal.
+        if (!incoming.forUs) {
+            if (incoming.duplicate) return
+            val type = if (forUs.kind == AprsMessage.Kind.BULLETIN) NotificationType.BULLETIN else NotificationType.GROUP
+            val enabled = if (type == NotificationType.BULLETIN) settings.notifyBulletins else settings.notifyGroup
+            if (enabled) notifyMessage(forUs, type)
+            return
+        }
         // Send ACK through an authorized transport on the IO worker, not the APRS-IS reader.
-        forUs.msgId?.takeIf { !settings.rxOnly }?.let { id ->
+        // #101: toda cópia recebida é confirmada (também as repetidas) e o ACK sai do endereço que o remetente usou.
+        forUs.msgId?.takeIf { !settings.rxOnly && shouldAck(forUs.from, it) }?.let { id ->
             val info = ackInfo(forUs.from, id)
+            val source = ackSourceFor(forUs.to, settings.fullCall)
             if (!txWorker.isShutdown) txWorker.execute {
                 if (medium == Medium.RF && settings.txViaRf && tncConnected()) {
                     val path = settings.rfPath.split(',').map { it.trim() }.filter { it.isNotEmpty() }
-                    val ack = "${settings.fullCall}>$TOCALL" +
+                    val ack = "$source>$TOCALL" +
                         (if (path.isEmpty()) "" else "," + path.joinToString(",")) + ":$info"
                     if (tncSend(ack)) AprsRepository.logPacket("TX", Medium.RF, ack)
                 } else if (settings.txViaInternet && AprsRepository.status.value.aprsIsVerified) {
-                    val ack = "${settings.fullCall}>$TOCALL,TCPIP*:$info"
+                    val ack = "$source>$TOCALL,TCPIP*:$info"
                     if (aprsIs.send(ack)) AprsRepository.logPacket("TX", Medium.INTERNET, ack)
                 }
             }
         }
+        if (incoming.duplicate) return
         if (settings.notifyMessages) notifyMessage(forUs)
     }
 
@@ -1065,7 +1114,7 @@ class AprsService : Service(), LocationListener {
             alertCooldown[key] = now
         }
         if (!canNotify()) return
-        val n = NotificationCompat.Builder(this, CH_ALERTS)
+        val n = NotificationCompat.Builder(this, NotificationTypes.channelId(this, NotificationType.ALERTS))
             .setSmallIcon(R.drawable.ic_stat_aprs)
             .setContentTitle(title)
             .setContentText(body)
@@ -1110,11 +1159,8 @@ class AprsService : Service(), LocationListener {
     private fun createChannels() {
         val nm = getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(NotificationChannel(CH_SERVICE, UiText.text(R.string.connection_channel), NotificationManager.IMPORTANCE_LOW))
-        nm.createNotificationChannel(NotificationChannel(CH_MESSAGES, UiText.text(R.string.messages_channel), NotificationManager.IMPORTANCE_HIGH))
-        nm.createNotificationChannel(NotificationChannel(CH_ALERTS, UiText.text(R.string.alerts_channel), NotificationManager.IMPORTANCE_DEFAULT))
-        // #90: um canal por som, para o usuário trocar ou silenciar cada um nas configurações do Android.
-        nm.createNotificationChannel(NotificationChannel(CH_SOUND_ACK, UiText.text(R.string.sound_ack_channel), NotificationManager.IMPORTANCE_DEFAULT))
-        nm.createNotificationChannel(NotificationChannel(CH_SOUND_DIGI, UiText.text(R.string.sound_digi_channel), NotificationManager.IMPORTANCE_DEFAULT))
+        // #90/#106: um canal por tipo de aviso, com o som escolhido em Configurações → Notificações.
+        NotificationTypes.ensureChannels(this)
     }
 
     /**
@@ -1123,8 +1169,10 @@ class AprsService : Service(), LocationListener {
      */
     private fun playSoundEvent(event: AprsRepository.SoundEvent, call: String) {
         val (enabled, channel, text) = when (event) {
-            AprsRepository.SoundEvent.ACK -> Triple(settings.soundAck, CH_SOUND_ACK, UiText.text(R.string.sound_ack_body, call))
-            AprsRepository.SoundEvent.DIGI_ECHO -> Triple(settings.soundDigiEcho, CH_SOUND_DIGI, UiText.text(R.string.sound_digi_body, call))
+            AprsRepository.SoundEvent.ACK -> Triple(settings.soundAck, NotificationTypes.channelId(this, NotificationType.ACK),
+                UiText.text(R.string.sound_ack_body, call))
+            AprsRepository.SoundEvent.DIGI_ECHO -> Triple(settings.soundDigiEcho, NotificationTypes.channelId(this, NotificationType.DIGI),
+                UiText.text(R.string.sound_digi_body, call))
         }
         if (!enabled || !canNotify()) return
         val n = NotificationCompat.Builder(this, channel)
@@ -1135,7 +1183,7 @@ class AprsService : Service(), LocationListener {
             .setTimeoutAfter(8_000L)
             .setContentIntent(openAppIntent())
             .build()
-        runCatching { getSystemService(NotificationManager::class.java).notify(channel.hashCode(), n) }
+        runCatching { getSystemService(NotificationManager::class.java).notify(event.name.hashCode(), n) }
     }
 
     private fun openAppIntent(): PendingIntent = PendingIntent.getActivity(this, 0,
@@ -1167,11 +1215,16 @@ class AprsService : Service(), LocationListener {
         runCatching { getSystemService(NotificationManager::class.java).notify(NOTIF_SERVICE, buildNotification()) }
     }
 
-    private fun notifyMessage(m: ChatMessage) {
+    private fun notifyMessage(m: ChatMessage, type: NotificationType = NotificationType.PERSONAL) {
         if (!canNotify()) return
-        val n = NotificationCompat.Builder(this, CH_MESSAGES)
+        val title = when (type) {
+            NotificationType.BULLETIN -> UiText.text(R.string.notif_bulletin_from, m.to, m.from)
+            NotificationType.GROUP -> UiText.text(R.string.notif_group_from, m.to, m.from)
+            else -> UiText.text(R.string.message_from, m.from)
+        }
+        val n = NotificationCompat.Builder(this, NotificationTypes.channelId(this, type))
             .setSmallIcon(R.drawable.ic_stat_aprs)
-            .setContentTitle(UiText.text(R.string.message_from, m.from))
+            .setContentTitle(title)
             .setContentText(m.text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(m.text))
             .setAutoCancel(true)
@@ -1213,10 +1266,6 @@ class AprsService : Service(), LocationListener {
     companion object {
         const val TOCALL = "APZVHF"
         private const val CH_SERVICE = "service"
-        private const val CH_MESSAGES = "messages"
-        private const val CH_ALERTS = "alerts"
-        private const val CH_SOUND_ACK = "sound_ack"
-        private const val CH_SOUND_DIGI = "sound_digi"
         /** true while the foreground service is alive; the API receiver only forwards then. */
         @Volatile var running = false
         private const val NOTIF_SERVICE = 1
@@ -1240,6 +1289,7 @@ class AprsService : Service(), LocationListener {
         const val ACTION_AUDIO_TEST = "audio_test"
         const val ACTION_MSG_RESEND = "msg_resend"
         const val ACTION_MSG_CANCEL = "msg_cancel"
+        const val ACTION_MSG_GIVE_UP_RESEND = "msg_give_up_resend"
         const val ACTION_OBJECT_SEND = "object_send"
         const val ACTION_OBJECT_KILL = "object_kill"
         const val EXTRA_MESSAGE_ID = "message_id"

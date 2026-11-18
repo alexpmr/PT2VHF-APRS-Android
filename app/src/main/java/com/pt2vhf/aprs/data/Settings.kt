@@ -60,6 +60,9 @@ data class Settings(
     val soundAck: Boolean = true,
     /** #90: som ao ouvir (pelo TNC) meu pacote repetido por um digipeater. */
     val soundDigiEcho: Boolean = false,
+    /** #106: avisar boletins (BLN*) e mensagens gerais (CQ, ALL, grupos); padrão desligado. */
+    val notifyBulletins: Boolean = false,
+    val notifyGroup: Boolean = false,
     val alertReturnMinutes: Int = 60,
     val quietHours: Boolean = false,
     val quietStart: Int = 22,
@@ -215,6 +218,8 @@ data class Settings(
                 alertMyDigi = b("alert_my_digi", d.alertMyDigi),
                 soundAck = b("sound_ack", d.soundAck),
                 soundDigiEcho = b("sound_digi_echo", d.soundDigiEcho),
+                notifyBulletins = b("notify_bulletins", d.notifyBulletins),
+                notifyGroup = b("notify_group", d.notifyGroup),
                 alertReturnMinutes = i("alert_return_min", d.alertReturnMinutes).coerceIn(5, 1440),
                 quietHours = b("quiet_hours", d.quietHours),
                 quietStart = i("quiet_start", d.quietStart).coerceIn(0, 23),
@@ -319,6 +324,8 @@ data class Settings(
                 .putBoolean("alert_my_digi", s.alertMyDigi)
                 .putBoolean("sound_ack", s.soundAck)
                 .putBoolean("sound_digi_echo", s.soundDigiEcho)
+                .putBoolean("notify_bulletins", s.notifyBulletins)
+                .putBoolean("notify_group", s.notifyGroup)
                 .putInt("alert_return_min", s.alertReturnMinutes.coerceIn(5, 1440))
                 .putBoolean("quiet_hours", s.quietHours)
                 .putInt("quiet_start", s.quietStart.coerceIn(0, 23))

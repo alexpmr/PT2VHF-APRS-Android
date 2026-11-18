@@ -6,20 +6,32 @@ ou pelo próprio áudio do celular (modem AFSK 1200).
 
 **Download oficial:** https://www.pt2vhf.com/android
 
-## Recursos da versão 1.3
+## Recursos da versão 1.4
 
 - APRS-IS com servidor à escolha (padrão `soam.aprs2.net:14580`, lista de servidores ou "Outro…"),
   passcode calculado automaticamente a partir do indicativo e filtro editável (padrão `r/4000`).
 - Reconexão automática ao trocar entre Wi-Fi e dados móveis.
 - Mapa (OpenStreetMap) com estações e enlaces RF comprovados; internet e redes digitais (DMR, D-STAR…)
   não contam como RF. Tipos de mapa: Padrão, Escuro, Cinza claro, Topográfico (OpenTopoMap) e Automático.
-- Mensagens: conversas, canal geral (CQ) e boletins; ACK, novas tentativas e notificações.
+- Mensagens: conversas, canal geral (CQ) e boletins; ACK, novas tentativas, "Desistir do ACK e reenviar" e
+  notificações por tipo com som próprio (pessoais, boletins, CQ, ACK, digi e alertas).
 - Botão **Enviar beacon** e **modo tracker** (SmartBeaconing) com notificação fixa.
 - TNC KISS por Bluetooth (Mobilinkd, BTECH UV-Pro, Radtel RT-950 Pro, ICOM ID-5200 e similares) com monitor ao vivo.
 - TNC KISS por **Bluetooth LE** (serviço KISS BLE ou Nordic UART) e, no modo AFSK, **PTT por RTS/DTR ou CAT** por
   adaptador USB-serial.
 - **iGate** (RF ↔ APRS-IS) e **digipeater inteligente** no próprio celular, ligados pelo TNC (padrão desligado).
 - Aviso de nova versão pelo site www.pt2vhf.com (o aviso de "Downloads no site oficial" na abertura saiu na 0.1.8).
+
+## Novidades da 1.4
+
+- **ACK de mensagens corrigido**: mensagens repetidas são confirmadas de novo e ACK de `INDICATIVO-7` vale para
+  mensagem enviada a `INDICATIVO` (relatado pelo mantenedor e por PT2ATC; não testado em campo).
+- Manter pressionada a mensagem enviada: **Desistir do ACK e reenviar** em um toque.
+- Nova aba **Notificações**: cada tipo (pessoais, boletins, CQ, ACK, digi, alertas) com ligar/desligar, som próprio
+  e botão Testar (sugestão de PU2PYC).
+- Tracker: **Iniciar/Parar** e **Modo carro** no topo, informações no fim (sugestões de PU2MUS).
+- Mapa: **◎ Você** passa a seguir a minha estação até arrastar o mapa (sugestão de PU2MUS).
+- Campo do servidor sempre em minúsculo (PU2PYC) e chip do TNC com o nome completo do rádio.
 
 ## Novidades da 1.3
 

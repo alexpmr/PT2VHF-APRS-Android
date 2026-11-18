@@ -188,6 +188,9 @@ fun MapScreen(settings: Settings, onStation: (String) -> Unit, onSettingsChanged
     val activeFollow by androidx.compose.runtime.rememberUpdatedState(followedCall)
     var followPaused by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(followedCall) { followPaused = false }
+    // #104: "Você" segue a minha estação até arrastar o mapa ou seguir outra estação.
+    var followMe by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(followedCall) { if (followedCall != null) followMe = false }
     val savedLat = remember { Settings.readOption(context, "map_view_lat", "").toDoubleOrNull() }
     val savedLon = remember { Settings.readOption(context, "map_view_lon", "").toDoubleOrNull() }
     val savedZoom = remember { Settings.readOption(context, "map_view_zoom", "").toDoubleOrNull() }
@@ -245,6 +248,7 @@ fun MapScreen(settings: Settings, onStation: (String) -> Unit, onSettingsChanged
                 setOnTouchListener { view, event ->
                     if (activeFollow != null && event.actionMasked == android.view.MotionEvent.ACTION_MOVE)
                         followPaused = true
+                    if (followMe && event.actionMasked == android.view.MotionEvent.ACTION_MOVE) followMe = false
                     if (event.actionMasked == android.view.MotionEvent.ACTION_UP) {
                         // Persist after osmdroid has finished the gesture / kinetic movement.
                         (view as? MapView)?.postDelayed({
@@ -395,6 +399,7 @@ fun MapScreen(settings: Settings, onStation: (String) -> Unit, onSettingsChanged
                 if (!centered && followedCall == null) {
                     map.controller.setCenter(GeoPoint(myLat, myLon)); centered = true
                 }
+                if (followMe && followedCall == null) map.controller.setCenter(GeoPoint(myLat, myLon))
             }
             // Meus objetos/itens (#48).
             myObjects.forEach { o ->
@@ -462,7 +467,7 @@ fun MapScreen(settings: Settings, onStation: (String) -> Unit, onSettingsChanged
             .semantics { contentDescription = UiText.text(R.string.map_brightness) },
             onClick = { brightnessOpen = !brightnessOpen }) { Text("☀") }
         TextButton(
-            modifier = Modifier.background(Pal.bar, RoundedCornerShape(10.dp)),
+            modifier = Modifier.background(if (followMe) Pal.accent else Pal.bar, RoundedCornerShape(10.dp)),
             onClick = {
                 val lat = status.lat
                 val lon = status.lon
@@ -470,13 +475,14 @@ fun MapScreen(settings: Settings, onStation: (String) -> Unit, onSettingsChanged
                 if (map != null && lat != null && lon != null) {
                     AprsRepository.followStation(null)
                     centered = true
+                    followMe = true
                     map.controller.setCenter(GeoPoint(lat, lon))
                     Settings.saveOption(context, "map_view_lat", lat.toString())
                     Settings.saveOption(context, "map_view_lon", lon.toString())
                     Settings.saveOption(context, "map_view_zoom", map.zoomLevelDouble.toString())
                 }
             },
-        ) { Text("◎ " + UiText.text(R.string.me)) }
+        ) { Text("◎ " + UiText.text(R.string.me), color = if (followMe) Pal.ground else Color.Unspecified) }
     }
     if (brightnessOpen) {
         Column(Modifier.align(Alignment.TopCenter).padding(top = 56.dp, start = 12.dp, end = 12.dp)
@@ -913,6 +919,25 @@ fun TrackerScreen(settings: Settings, onSettingsChanged: (Settings) -> Unit, onC
                 }
             }
         }
+        // #102: Iniciar/Parar tracker e Modo carro no topo, visíveis sem rolar.
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (status.trackerOn) {
+                OutlinedButton(onClick = { AprsService.send(context, AprsService.ACTION_TRACKER_OFF) },
+                    modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                    border = androidx.compose.foundation.BorderStroke(2.dp, Pal.orange)) {
+                    Text(UiText.text(R.string.stop_tracker), color = Pal.orange, textAlign = TextAlign.Center)
+                }
+            } else {
+                Button(onClick = { AprsService.send(context, AprsService.ACTION_TRACKER_ON) },
+                    modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                    enabled = settings.configured && status.lat != null) {
+                    Text(UiText.text(R.string.start_tracker), textAlign = TextAlign.Center)
+                }
+            }
+            OutlinedButton(onClick = onCarMode, modifier = Modifier.weight(1f).heightIn(min = 52.dp)) {
+                Text("🚗 " + UiText.text(R.string.car_mode), textAlign = TextAlign.Center)
+            }
+        }
         // #10: troca rápida de perfil, com confirmação porque altera a transmissão.
         SectionCard(UiText.text(R.string.profile_section)) {
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
@@ -922,28 +947,6 @@ fun TrackerScreen(settings: Settings, onSettingsChanged: (Settings) -> Unit, onC
             }
             if (settings.rxOnly) Text(UiText.text(R.string.profile_rx_notice), color = Pal.orange, fontSize = 12.sp)
         }
-        SectionCard(UiText.text(R.string.configuration)) {
-            KeyValue(UiText.text(R.string.callsign), settings.fullCall)
-            KeyValue(UiText.text(R.string.symbol), "${settings.symbolTable}${settings.symbol}")
-            KeyValue(UiText.text(R.string.send_via), if (settings.rxOnly) UiText.text(R.string.profile_rx)
-                else listOfNotNull("RF".takeIf { settings.txViaRf }, "APRS-IS".takeIf { settings.txViaInternet }).joinToString(" + "))
-            KeyValue(UiText.text(R.string.rf_path), settings.rfPath)
-            if (settings.ambiguity > 0) KeyValue(UiText.text(R.string.privacy_section), UiText.text(R.string.ambiguity_short, settings.ambiguity))
-            Text(settings.comment, color = Pal.muted, fontSize = 13.sp)
-        }
-        if (status.trackerOn) {
-            OutlinedButton(onClick = { AprsService.send(context, AprsService.ACTION_TRACKER_OFF) }, modifier = Modifier.fillMaxWidth().height(52.dp),
-                border = androidx.compose.foundation.BorderStroke(2.dp, Pal.orange)) { Text(UiText.text(R.string.stop_tracker), color = Pal.orange) }
-        } else {
-            Button(onClick = { AprsService.send(context, AprsService.ACTION_TRACKER_ON) }, modifier = Modifier.fillMaxWidth().height(52.dp),
-                enabled = settings.configured && status.lat != null) { Text(UiText.text(R.string.start_tracker)) }
-        }
-        Text(UiText.text(R.string.tracker_notice), color = Pal.muted, fontSize = 12.sp)
-        OutlinedButton(onClick = onCarMode, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-            Text("🚗 " + UiText.text(R.string.car_mode))
-        }
-        if (settings.manualPosition) Text(UiText.text(R.string.position_source_manual) + ": %.5f, %.5f".format(
-            java.util.Locale.ROOT, settings.manualLat, settings.manualLon), color = Pal.orange, fontSize = 12.sp)
         MyObjectsCard(settings)
         RoutesCard()
         BatteryCard(settings)
@@ -1000,6 +1003,19 @@ fun TrackerScreen(settings: Settings, onSettingsChanged: (Settings) -> Unit, onC
             }
             exportResult?.let { Text(it, color = Pal.muted, fontSize = 12.sp) }
         }
+        // #103: a parte informativa da configuração fica no fim da tela.
+        SectionCard(UiText.text(R.string.configuration)) {
+            KeyValue(UiText.text(R.string.callsign), settings.fullCall)
+            KeyValue(UiText.text(R.string.symbol), "${settings.symbolTable}${settings.symbol}")
+            KeyValue(UiText.text(R.string.send_via), if (settings.rxOnly) UiText.text(R.string.profile_rx)
+                else listOfNotNull("RF".takeIf { settings.txViaRf }, "APRS-IS".takeIf { settings.txViaInternet }).joinToString(" + "))
+            KeyValue(UiText.text(R.string.rf_path), settings.rfPath)
+            if (settings.ambiguity > 0) KeyValue(UiText.text(R.string.privacy_section), UiText.text(R.string.ambiguity_short, settings.ambiguity))
+            Text(settings.comment, color = Pal.muted, fontSize = 13.sp)
+        }
+        Text(UiText.text(R.string.tracker_notice), color = Pal.muted, fontSize = 12.sp)
+        if (settings.manualPosition) Text(UiText.text(R.string.position_source_manual) + ": %.5f, %.5f".format(
+            java.util.Locale.ROOT, settings.manualLat, settings.manualLon), color = Pal.orange, fontSize = 12.sp)
     }
     pendingProfile?.let { target ->
         AlertDialog(
