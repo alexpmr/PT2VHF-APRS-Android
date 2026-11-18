@@ -122,22 +122,6 @@ jobs:
           name: google-play-aab
           path: dist/
           retention-days: 30
-      # Pré-release só para transferir o .aab até a Play Console (não aparece como "latest" e não é usada pelo site).
-      - name: Publish AAB as GitHub pre-release (Play Console transfer)
-        if: ${{ github.event_name == 'pull_request' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          version=$(grep -oP 'val appVersionName = "\K[^"]+' app/build.gradle.kts)
-          tag="play-v${version}"
-          if gh release view "$tag" >/dev/null 2>&1; then
-            gh release upload "$tag" dist/*.aab dist/SHA256SUMS.txt --clobber
-          else
-            gh release create "$tag" dist/*.aab dist/SHA256SUMS.txt --prerelease --latest=false --target "$GITHUB_HEAD_REF" \
-              --title "Google Play bundle $tag (não instalar)" \
-              --notes "Arquivo .aab assinado para envio manual à Play Console. Não é instalável; downloads oficiais em https://www.pt2vhf.com/aprs-android"
-          fi
 
   release:
     needs: build
