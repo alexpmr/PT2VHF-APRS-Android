@@ -10,6 +10,8 @@ Itens registrados para as próximas versões. Não implementar até o pedido de 
   toque (hoje são dois passos: Cancelar tentativas e depois Reenviar). Não implementado.
 - **Backlog novo (18/11/2026, sugestão de PU2PYC):** #106 escolher o som de cada notificação (mensagem, ACK, digi).
   Não implementado.
+- **Backlog novo (18/11/2026, sugestão de PU2PYC):** #107 campo do servidor APRS-IS sempre em minúsculo ao digitar.
+  Não implementado.
 
 - **Validados pelo mantenedor em 17/11/2026 (Alex):** #25, #37, #54, #60, #62 e #68 (Android Auto) funcionam no
   teste real e estão **encerrados**. Ainda sem teste real: #52 e #95 (lançados na 1.3).
@@ -3702,5 +3704,27 @@ continua valendo depois de fechar o app e reiniciar o celular; "silencioso" não
 perturbe do Android continua sendo respeitado.
 
 **Relacionados:** #90 (som de ACK e de digi), #55 (notificações), #105 e #101 (ACK).
+
+**Status:** registrado no backlog, **não implementado**.
+
+### 107. Servidor APRS-IS: digitar tudo em minúsculo (sem maiúscula automática)
+_Sugestão de PU2PYC, registrada pelo mantenedor em 18/11/2026 ("Backlog: pu2pyc: ao escrever o servidor aprs-is, manter
+tudo em minúsculo ao digitar.")._
+
+**Hoje (conferido no código, `ui/SettingsUi.kt`):** ao escolher servidor personalizado, o campo **Servidor**
+(`OutlinedTextField`, `R.string.server`) usa o teclado padrão, que coloca a primeira letra em maiúscula
+(ex.: "Rotate.aprs2.net") e pode sugerir/corrigir palavras. Endereço de servidor deve ficar em minúsculo.
+
+**Pedido:** ao digitar o endereço do servidor APRS-IS, manter tudo em **minúsculo**.
+
+**Sugestão de implementação:** `keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None,
+autoCorrect = false, keyboardType = KeyboardType.Uri)` no campo e normalizar com `lowercase()` no `onValueChange`
+(junto do `trim()` que já existe). Conferir outros campos do mesmo tipo (porta, endereços de TNC TCP/KISS, filtro) para
+não ter maiúscula automática onde não faz sentido.
+
+**Critérios de aceite:** ao digitar no campo Servidor, o teclado não liga a maiúscula na primeira letra, não corrige a
+palavra, e o texto salvo fica todo em minúsculo mesmo se o usuário digitar maiúsculas; a conexão continua funcionando.
+
+**Relacionados:** #74 (Configurações em abas), #76 (traduções).
 
 **Status:** registrado no backlog, **não implementado**.
