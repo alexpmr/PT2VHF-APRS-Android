@@ -6,6 +6,8 @@ Itens registrados para as próximas versões. Não implementar até o pedido de 
 
 - **Backlog novo (18/11/2026, sugestões de PU2MUS):** #102 botão Iniciar/Parar tracker no topo junto do Modo carro,
   #103 parte informativa do Tracker no fim da tela, #104 botão Você do mapa seguindo a minha estação. Não implementados.
+- **Backlog novo (18/11/2026, mantenedor):** #105 manter pressionada a mensagem para desistir do ACK e reenviar em um
+  toque (hoje são dois passos: Cancelar tentativas e depois Reenviar). Não implementado.
 
 - **Validados pelo mantenedor em 17/11/2026 (Alex):** #25, #37, #54, #60, #62 e #68 (Android Auto) funcionam no
   teste real e estão **encerrados**. Ainda sem teste real: #52 e #95 (lançados na 1.3).
@@ -3614,5 +3616,39 @@ visível na tela; ao arrastar o mapa, o acompanhamento pausa; tocar Você retoma
 "seguindo eu".
 
 **Relacionados:** #11 (seguir estação), modo carro.
+
+**Status:** registrado no backlog, **não implementado**.
+
+### 105. Mensagens: manter pressionada para desistir do ACK e reenviar
+_Pedido do mantenedor em 18/11/2026 ("backlog: adicione um recurso que ao manter pressionada uma mensagem, poder
+desistir do ack e reenviar a mensagem.")._
+
+**Hoje (conferido no código, `ui/MessagesUi.kt`):** já existe um menu ao manter pressionado o balão de mensagem
+enviada, mas em **dois passos** e com condições:
+- **Cancelar tentativas** (`msg_cancel_retries`) só aparece enquanto a mensagem está "Aguardando…" ou "Enviando"
+  (`canCancel`);
+- **Reenviar** (`msg_resend`) só aparece depois que a mensagem ficou sem ACK, foi rejeitada, cancelada, interrompida ou
+  sem conexão (`canResend`), e só se ela tem número de mensagem (`msgId`) e o perfil não é só RX.
+Ou seja, para desistir do ACK e reenviar é preciso cancelar, abrir o menu de novo e reenviar; e uma mensagem já
+entregue ou ainda aguardando não pode ser reenviada direto.
+
+**Pedido:** ao manter pressionada uma mensagem enviada, ter uma opção direta **"Desistir do ACK e reenviar"** (um toque
+só) que para as retransmissões atuais e manda a mensagem de novo como um envio novo, com novo ciclo de ACK. Manter
+também **Desistir do ACK** sozinho (o "Cancelar tentativas" de hoje, talvez com esse nome mais claro).
+
+**Pontos a decidir na implementação:**
+- Reenvio com **novo número de mensagem** (msgId) ou o mesmo: com o mesmo, um ACK atrasado da tentativa antiga ainda
+  vale; com novo, a outra estação pode mostrar a mensagem duplicada. Sugestão: novo msgId, balão novo na conversa e o
+  antigo marcado como "cancelada".
+- Permitir também em mensagem **sem msgId** (mensagem sem pedido de ACK) e em mensagem **já entregue** (reenviar
+  igual).
+- Texto novo traduzido (#76).
+
+**Critérios de aceite:** com uma mensagem "Aguardando ACK", manter pressionado → "Desistir do ACK e reenviar" para as
+tentativas antigas na hora (Logs não mostram mais retransmissões dela) e envia de novo, com o contador de tentativas
+reiniciado; funciona em APRS-IS e em RF; não fica tentando sem parar (#60).
+
+**Relacionados:** #101 (ACK não funcionando na 1.3; este item é um contorno para o usuário, não a correção),
+#47 (estado ACK/REJ), #57 (checks), #60 (reenvio sem fim).
 
 **Status:** registrado no backlog, **não implementado**.
