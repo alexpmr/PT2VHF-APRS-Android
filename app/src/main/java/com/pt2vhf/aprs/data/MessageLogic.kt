@@ -229,3 +229,34 @@ fun retentionVictims(messages: List<ChatMessage>, policy: RetentionPolicy, now: 
     }
     return victims
 }
+
+// ---------- ACK de mensagens (#101) ----------
+
+/**
+ * #101: o ACK vindo de [ackFrom] confirma uma mensagem enviada para [dest]? Igual, ou mesmo indicativo base quando
+ * um dos lados está sem SSID (mensagem para `PT2ATC` respondida por `PT2ATC-7`, ou o contrário).
+ */
+fun ackMatchesDestination(dest: String, ackFrom: String): Boolean {
+    val d = dest.trim().uppercase(Locale.ROOT)
+    val f = ackFrom.trim().uppercase(Locale.ROOT)
+    if (d == f) return true
+    val dBase = d.substringBefore('-')
+    val fBase = f.substringBefore('-')
+    return dBase == fBase && dBase.isNotEmpty() && (!d.contains('-') || !f.contains('-'))
+}
+
+/**
+ * #101: indicativo de origem do nosso ACK. Quem enviou espera o ACK exatamente do endereço que digitou: mensagem
+ * para o indicativo base (`PT2VHF`) recebida por `PT2VHF-9` é confirmada como `PT2VHF`; caso contrário, o completo.
+ */
+fun ackSourceFor(addressee: String, ownCall: String): String {
+    val a = addressee.trim().uppercase(Locale.ROOT)
+    val own = ownCall.trim().uppercase(Locale.ROOT)
+    return if (a != own && a == own.substringBefore('-') && a.isNotEmpty()) a else own
+}
+
+/**
+ * #101: mensagem recebida que interessa ao serviço. [forUs] = endereçada a nós (pede ACK); falso = boletim ou mensagem
+ * geral (#106, só aviso). [duplicate] = cópia repetida: confirmar de novo, mas sem guardar nem avisar.
+ */
+data class IncomingMessage(val message: ChatMessage, val duplicate: Boolean, val forUs: Boolean = true)

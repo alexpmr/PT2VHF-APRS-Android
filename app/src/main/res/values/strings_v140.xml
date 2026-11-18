@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- v1.4: #105 desistir do ACK e reenviar, #106 notificações por tipo. -->
+<resources>
+    <string name="msg_give_up_ack">Give up ACK</string>
+    <string name="msg_give_up_resend">Give up ACK and resend</string>
+    <string name="msg_resend_as_new">Resend as new message</string>
+    <string name="notifications_tab">Notifications</string>
+    <string name="notif_section_hint">Each type has its own sound. A chosen sound applies right away; on/off applies on Save. Vibration and pop-up are under \"Android\".</string>
+    <string name="notify_bulletins">Notify bulletins (BLN)</string>
+    <string name="notify_group">Notify general messages (CQ)</string>
+    <string name="notif_type_personal">Personal messages</string>
+    <string name="notif_type_bulletin">Bulletins</string>
+    <string name="notif_type_group">General messages (CQ)</string>
+    <string name="notif_sound_current">Sound: %1$s</string>
+    <string name="notif_sound_default">System default</string>
+    <string name="notif_sound_silent">Silent</string>
+    <string name="notif_sound_custom">Device sound</string>
+    <string name="notif_sound_choose">Choose sound</string>
+    <string name="notif_test">Test</string>
+    <string name="notif_android_settings">Android</string>
+    <string name="notif_test_body">PT2VHF APRS sample notification</string>
+    <string name="notif_bulletin_from">Bulletin %1$s from %2$s</string>
+    <string name="notif_group_from">%1$s from %2$s</string>
+</resources>

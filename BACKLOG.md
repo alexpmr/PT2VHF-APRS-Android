@@ -2,7 +2,12 @@
 
 Itens registrados para as próximas versões. Não implementar até o pedido de versão nova.
 
-## Onde estamos (17/11/2026)
+## Onde estamos (18/11/2026)
+
+- **v1.4** (18/11/2026, versionCode 20, autorizada pelo mantenedor: "Gere novo apk e suba no site"): #101 correção do
+  ACK, #102/#103 tracker, #104 Você segue a minha estação, #105 desistir do ACK e reenviar, #106 aba Notificações
+  por tipo com som próprio, #107 servidor em minúsculo, #108 chip do TNC com nome completo. **Nada disso foi testado
+  em aparelho**; #101 precisa de teste em campo (RF ↔ APRS-IS).
 
 - **Backlog novo (18/11/2026, sugestões de PU2MUS):** #102 botão Iniciar/Parar tracker no topo junto do Modo carro,
   #103 parte informativa do Tracker no fim da tela, #104 botão Você do mapa seguindo a minha estação. Não implementados.
@@ -3576,7 +3581,7 @@ o ACK outra vez**; (b) reconhecer, no `markAck`, ACK vindo do mesmo indicativo b
 mensagem enviada a `CALL`, ACK por RF terceiros (iGate) e por APRS-IS. Validar em campo com PT2ATC (RF) ↔ mantenedor
 (APRS-IS).
 
-**Status:** registrado no backlog com causa provável identificada, **não implementado**. Nenhum APK novo gerado.
+**Status (18/11/2026):** correção (a), (b) e (c) implementada e lançada na **v1.4** (versionCode 20), mais: ACK com espaço no fim ou `}` vazio reconhecido, ACK rápido não é sobrescrito por "Aguardando", e o mesmo msgId só é repetição dentro de 1 h. Aguarda validação em campo (PT2ATC por RF ↔ mantenedor por APRS-IS).
 
 ### 102. Tracker: botão "Iniciar/Parar tracker" no topo, junto do "Modo carro"
 _Sugestão de PU2MUS, registrada pelo mantenedor em 18/11/2026 ("o botão iniciar o tracker deveria estar na parte
@@ -3599,7 +3604,7 @@ tela pequena; o comportamento dos botões não muda.
 
 **Relacionados:** #103 (mesma tela, mesma sugestão), #68 (Android Auto).
 
-**Status:** registrado no backlog, **não implementado**.
+**Status (18/11/2026):** implementado e lançado na **v1.4** (versionCode 20). Aguarda teste em aparelho.
 
 ### 103. Tracker: parte informativa da configuração vai para o fim da tela
 _Sugestão de PU2MUS, registrada pelo mantenedor em 18/11/2026 ("a parte informativa da configuração poderia ficar em
@@ -3620,7 +3625,7 @@ nenhuma informação some.
 
 **Relacionados:** #102.
 
-**Status:** registrado no backlog, **não implementado**.
+**Status (18/11/2026):** implementado e lançado na **v1.4** (versionCode 20). Aguarda teste em aparelho.
 
 ### 104. Mapa: botão "Você" deve seguir a minha estação continuamente
 _Sugestão de PU2MUS, registrada pelo mantenedor em 18/11/2026 ("o Mapa ainda acho que quando teclar Você ele devia
@@ -3644,7 +3649,7 @@ visível na tela; ao arrastar o mapa, o acompanhamento pausa; tocar Você retoma
 
 **Relacionados:** #11 (seguir estação), modo carro.
 
-**Status:** registrado no backlog, **não implementado**.
+**Status (18/11/2026):** implementado e lançado na **v1.4** (versionCode 20). Aguarda teste em aparelho.
 
 ### 105. Mensagens: manter pressionada para desistir do ACK e reenviar
 _Pedido do mantenedor em 18/11/2026 ("backlog: adicione um recurso que ao manter pressionada uma mensagem, poder
@@ -3678,7 +3683,7 @@ reiniciado; funciona em APRS-IS e em RF; não fica tentando sem parar (#60).
 **Relacionados:** #101 (ACK não funcionando na 1.3; este item é um contorno para o usuário, não a correção),
 #47 (estado ACK/REJ), #57 (checks), #60 (reenvio sem fim).
 
-**Status:** registrado no backlog, **não implementado**.
+**Status (18/11/2026):** implementado e lançado na **v1.4** (versionCode 20). Aguarda teste em aparelho.
 
 ### 106. Notificações personalizadas por tipo (som e aviso), em seção própria nas Configurações
 _Sugestão de PU2PYC, registrada pelo mantenedor em 18/11/2026 ("Backlog: pu2pyc: notificação sonora personalizada.")._
@@ -3715,7 +3720,7 @@ perturbe do Android continua sendo respeitado.
 
 **Relacionados:** #90 (som de ACK e de digi), #55 (notificações), #105 e #101 (ACK).
 
-**Status:** registrado no backlog, **não implementado**.
+**Status (18/11/2026):** implementado e lançado na **v1.4** (versionCode 20). Aguarda teste em aparelho.
 
 ### 107. Servidor APRS-IS: digitar tudo em minúsculo (sem maiúscula automática)
 _Sugestão de PU2PYC, registrada pelo mantenedor em 18/11/2026 ("Backlog: pu2pyc: ao escrever o servidor aprs-is, manter
@@ -3737,7 +3742,7 @@ palavra, e o texto salvo fica todo em minúsculo mesmo se o usuário digitar mai
 
 **Relacionados:** #74 (Configurações em abas), #76 (traduções).
 
-**Status:** registrado no backlog, **não implementado**.
+**Status (18/11/2026):** implementado e lançado na **v1.4** (versionCode 20). Aguarda teste em aparelho.
 
 ### 108. Chip do TNC no topo: nome completo do aparelho, sem abreviar
 _Pedido do mantenedor em 18/11/2026 ("Botão de conexão com tnc, mostrar o nome completo do dispositivo e não abreviado
@@ -3759,4 +3764,4 @@ num chip pequeno; os chips APRS-IS/GPS continuam visíveis em celular comum.
 
 **Relacionados:** #98 (nome do rádio no chip), #74.
 
-**Status:** registrado no backlog, **não implementado**.
+**Status (18/11/2026):** implementado e lançado na **v1.4** (versionCode 20). Aguarda teste em aparelho.

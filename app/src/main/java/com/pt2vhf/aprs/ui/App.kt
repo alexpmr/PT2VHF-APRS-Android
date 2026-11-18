@@ -84,6 +84,7 @@ import com.pt2vhf.aprs.data.UpdateInfo
 import com.pt2vhf.aprs.data.LinkStatus
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.horizontalScroll
 import com.pt2vhf.aprs.service.AprsService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -357,7 +358,9 @@ private fun TopBar(settings: Settings, onSettings: () -> Unit, onRadio: () -> Un
             }
             IconButton(onClick = onSettings) { Icon(Icons.Filled.Settings, contentDescription = UiText.text(R.string.settings), tint = Pal.text) }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        // #108: com nome de rádio longo a linha rola na horizontal em vez de cortar ou empurrar os chips.
+        Row(Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Chip("APRS-IS", status.aprsIsVerified, onClick = {
                 AprsService.send(context, if (status.aprsIsConnected)
                     AprsService.ACTION_APRS_DISCONNECT else AprsService.ACTION_APRS_CONNECT)
@@ -391,7 +394,7 @@ fun Chip(text: String, ok: Boolean, onClick: (() -> Unit)? = null) {
         Box(Modifier.size(8.dp).background(if (ok) Color(0xFF3CCF7C) else Color(0xFFF26F70), CircleShape))
         Spacer(Modifier.size(6.dp))
         Text(text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = if (ok) Pal.green else Color(0xFFF26F70),
-            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 120.dp))
+            maxLines = 1, softWrap = false) // #108: nome completo, chip do tamanho exato do conteúdo.
     }
 }
 

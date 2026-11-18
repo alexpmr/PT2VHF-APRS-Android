@@ -490,7 +490,7 @@ object AprsRepository {
     }
 
     /** Processa um pacote recebido; devolve a mensagem endereçada a nós, se houver. */
-    fun ingest(packet: AprsPacket, medium: Medium, ownCall: String, now: Long = System.currentTimeMillis()): ChatMessage? {
+    fun ingest(packet: AprsPacket, medium: Medium, ownCall: String, now: Long = System.currentTimeMillis()): IncomingMessage? {
         _status.update { it.copy(rxPackets = it.rxPackets + 1) }
         val digis = packet.rfDigipeaters
         // A trilha de um pacote APRS-IS descreve um caminho anunciado, não uma recepção RF
@@ -603,17 +603,29 @@ object AprsRepository {
                 else "APRS-IS"
                 // Display text only (#27): IDs/ACK and the raw packet keep the original bytes.
                 val text = decodeAprsText(msg.text)
-                val duplicate = _messages.value.any {
-                    !it.outgoing && it.from == packet.source && it.msgId != null && it.msgId == msg.id && it.text == text
-                } || (thirdParty && msg.id == null && _messages.value.any {
+                val earlier = _messages.value.lastOrNull {
+                    !it.outgoing && it.from == packet.source && it.msgId != null && it.msgId == msg.id && it.text == text &&
+                        now - it.time < 60 * 60_000L // IDs se repetem entre sessões; depois de 1 h é mensagem nova.
+                }
+                // #101: cópia repetida para nós ainda precisa de ACK (o primeiro pode ter se perdido no caminho).
+                if (earlier != null) return if (forUs) IncomingMessage(earlier, duplicate = true) else null
+                val duplicate = (thirdParty && msg.id == null && _messages.value.any {
                     !it.outgoing && it.from == packet.source && it.to == msg.addressee && it.text == text &&
                         now - it.time < 10 * 60_000L
+                }) || (general && _messages.value.any {
+                    // #106: boletins se repetem a cada poucos minutos; o mesmo texto em 24 h não é guardado nem avisado.
+                    !it.outgoing && it.from == packet.source && it.to == msg.addressee && it.text == text &&
+                        now - it.time < 24 * 3_600_000L
                 })
                 if (duplicate) return null
                 val chat = ChatMessage(nextId++, packet.source, msg.addressee, text, now, false, medium, via, msg.id,
                     InternalText.MSG_RECEIVED, msg.kind)
                 add(chat)
-                if (forUs) chat else null
+                when {
+                    forUs -> IncomingMessage(chat, duplicate = false)
+                    general && packet.source != ownCall -> IncomingMessage(chat, duplicate = false, forUs = false)
+                    else -> null
+                }
             }
         }
     }
@@ -656,7 +668,7 @@ object AprsRepository {
             changed.clear()
             firstAck = false
             list.map {
-                if (it.outgoing && it.to == from && it.msgId == msgId) {
+                if (it.outgoing && it.msgId.equals(msgId, ignoreCase = true) && ackMatchesDestination(it.to, from)) {
                     if (ack && it.status != InternalText.MSG_ACKED) firstAck = true
                     it.copy(status = if (ack) InternalText.MSG_ACKED else InternalText.MSG_REJECTED).also { c -> changed += c }
                 } else it
