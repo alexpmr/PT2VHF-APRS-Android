@@ -31,8 +31,7 @@ Essa escolha não pode ser desfeita depois do primeiro envio.
 4. Enviar o `.aab` para **Teste interno** primeiro.
 5. Ficha da loja: textos em [ficha-da-loja.md](ficha-da-loja.md); ícone 512×512, imagem de destaque
    1024×500 e de 2 a 8 capturas de tela de celular (sugestão: mapa, mensagens, rádio/TNC, configurações).
-6. Política de privacidade: publicar [politica-de-privacidade.md](politica-de-privacidade.md) numa URL pública
-   (sugestão: `https://www.pt2vhf.com/privacidade`) e informar a URL.
+6. Política de privacidade: `https://www.pt2vhf.com/privacidade` (site PR #37); exclusão de dados em `#exclusao`.
 7. Segurança dos dados: respostas abaixo.
 8. Declarações de permissões e serviços em primeiro plano: textos abaixo (a Play pede um vídeo curto para cada tipo).
 9. Classificação de conteúdo (questionário IARC): ferramenta/utilitário, sem conteúdo sensível. Público-alvo: 18+
@@ -69,6 +68,6 @@ Essa escolha não pode ser desfeita depois do primeiro envio.
 - **Mensagens**: as mensagens APRS são públicas por natureza (rádio/APRS-IS); ficam guardadas só no aparelho.
 - **Áudio**: o áudio do modo AFSK é processado no aparelho e não é gravado nem enviado.
 - **Relatórios de erro**: só se o usuário tocar em "Enviar log", pelo app de e-mail/compartilhamento dele.
-- Dados criptografados em trânsito: **sim** para o site (HTTPS); a rede APRS-IS e o rádio são abertos por definição.
+- Dados criptografados em trânsito: **não** (respondido assim na Play): o site usa HTTPS, mas a APRS-IS e o rádio são abertos por definição.
 - Exclusão de dados: tudo fica no aparelho; desinstalar apaga. Para sair da lista do site, desligar a opção.
 - Sem anúncios, sem SDKs de analytics ou rastreamento.
