@@ -3549,7 +3549,28 @@ _Novo relato em 18/11/2026: **PT2ATC** também informa que o ACK não está func
 **Critérios de aceite:** definidos após os detalhes; no mínimo, ACK enviado e recebido em APRS-IS e em RF, com o
 balão passando a 2 checks e sem reenvio depois do ACK.
 
-**Status:** registrado no backlog, **não implementado**; aguarda detalhes do mantenedor. Nenhum APK novo gerado.
+**Detalhes (18/11/2026, mantenedor):** PT2ATC testou por **RF** e o mantenedor por **APRS-IS**. Os dois lados
+**recebem** as mensagens, mas a mensagem enviada fica "Aguardando ACK" e reenviando até expirar ("Sem ACK após N
+tentativas"). Ou seja, o ACK nunca é reconhecido por quem enviou.
+
+**Causas encontradas no código (análise de 18/11/2026, não é regressão da 1.3: esse trecho não mudou desde a 1.2):**
+1. **Mensagem repetida não recebe ACK de novo.** Em `AprsRepository.ingest`, uma mensagem já recebida (mesmo remetente,
+   mesmo ID e texto) é tratada como duplicata e devolve `null`; com isso `AprsService.handleLine` não manda ACK. O ACK
+   só sai na primeira cópia. Se esse único ACK se perde (comum em RF e no caminho RF ↔ iGate ↔ APRS-IS), cada reenvio
+   do remetente chega, é descartado em silêncio e nunca é confirmado. Pela especificação APRS, **toda cópia recebida
+   deve ser confirmada**, mesmo que não seja mostrada de novo. Bate com o sintoma relatado.
+2. **SSID diferente entre o destino digitado e a estação que responde.** Mensagem enviada para `PT2ATC` (sem SSID) é
+   aceita por `PT2ATC-7` (aceitamos o indicativo base), mas o ACK sai **de** `PT2ATC-7`. Do lado de quem enviou,
+   `markAck` exige `destino == origem do ACK` exatamente, então `PT2ATC` ≠ `PT2ATC-7` e o ACK é ignorado. O mesmo
+   problema acontece com outros apps (APRSdroid etc.), que esperam o ACK vindo exatamente do endereço da mensagem.
+
+**Correção proposta (não implementada):** (a) em duplicata para nós, não guardar nem notificar de novo, mas **enviar
+o ACK outra vez**; (b) reconhecer, no `markAck`, ACK vindo do mesmo indicativo base quando o destino foi digitado sem SSID
+(`PT2ATC` aceita ACK de `PT2ATC-7`); o ACK que nós enviamos continua saindo do nosso indicativo completo; (c) testes de unidade para: ACK na 2ª cópia, ACK de `CALL-7` para
+mensagem enviada a `CALL`, ACK por RF terceiros (iGate) e por APRS-IS. Validar em campo com PT2ATC (RF) ↔ mantenedor
+(APRS-IS).
+
+**Status:** registrado no backlog com causa provável identificada, **não implementado**. Nenhum APK novo gerado.
 
 ### 102. Tracker: botão "Iniciar/Parar tracker" no topo, junto do "Modo carro"
 _Sugestão de PU2MUS, registrada pelo mantenedor em 18/11/2026 ("o botão iniciar o tracker deveria estar na parte
