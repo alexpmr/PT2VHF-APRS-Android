@@ -12,6 +12,8 @@ Itens registrados para as próximas versões. Não implementar até o pedido de 
   Não implementado.
 - **Backlog novo (18/11/2026, sugestão de PU2PYC):** #107 campo do servidor APRS-IS sempre em minúsculo ao digitar.
   Não implementado.
+- **Backlog (18/11/2026, mantenedor):** #106 ampliado (notificações por tipo: pessoal, boletim, genérica etc., em
+  seção própria nas Configurações); #108 chip do TNC com o nome completo do aparelho, sem abreviar. Não implementados.
 
 - **Validados pelo mantenedor em 17/11/2026 (Alex):** #25, #37, #54, #60, #62 e #68 (Android Auto) funcionam no
   teste real e estão **encerrados**. Ainda sem teste real: #52 e #95 (lançados na 1.3).
@@ -3678,7 +3680,7 @@ reiniciado; funciona em APRS-IS e em RF; não fica tentando sem parar (#60).
 
 **Status:** registrado no backlog, **não implementado**.
 
-### 106. Notificação sonora personalizada (escolher o som)
+### 106. Notificações personalizadas por tipo (som e aviso), em seção própria nas Configurações
 _Sugestão de PU2PYC, registrada pelo mantenedor em 18/11/2026 ("Backlog: pu2pyc: notificação sonora personalizada.")._
 
 **Pedido (vago, interpretação registrada):** permitir **escolher o som** de cada aviso do app, em vez do som padrão do
@@ -3699,7 +3701,15 @@ nas configurações de notificação do Android, mas o app não mostra esse cami
   configurações de som" que leva direto ao canal no Android (`Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS`).
 - Botão "Testar" ao lado de cada som. Textos novos traduzidos (#76).
 
-**Critérios de aceite:** dá para escolher e testar um som diferente para mensagem recebida, ACK e digi; a escolha
+**Ampliação pedida pelo mantenedor em 18/11/2026** ("as notificações poderiam ser customizadas para mensagens
+pessoais, boletins, mensagens genéricas, etc.. Em uma sessão dedicada, configurações."):
+- Notificações customizáveis **por tipo**: **mensagens pessoais** (para o meu indicativo), **boletins** (BLN*),
+  **mensagens genéricas/de grupo** (CQ, ALL, grupos), ACK, digi (#90), alertas e outros que fizerem sentido.
+- Para cada tipo: ligar/desligar a notificação, escolher o som (ou silencioso), vibração e se aparece na tela
+  (prioridade). Um canal de notificação do Android por tipo, para o usuário também poder ajustar pelo sistema.
+- Tudo numa **seção dedicada "Notificações" nas Configurações** (nova aba ou bloco próprio, seguindo #74).
+
+**Critérios de aceite:** dá para escolher e testar um som diferente para mensagem pessoal, boletim, mensagem genérica, ACK e digi, e desligar cada tipo separadamente, na seção Notificações; a escolha
 continua valendo depois de fechar o app e reiniciar o celular; "silencioso" não toca nada; o modo silencioso/não
 perturbe do Android continua sendo respeitado.
 
@@ -3726,5 +3736,27 @@ não ter maiúscula automática onde não faz sentido.
 palavra, e o texto salvo fica todo em minúsculo mesmo se o usuário digitar maiúsculas; a conexão continua funcionando.
 
 **Relacionados:** #74 (Configurações em abas), #76 (traduções).
+
+**Status:** registrado no backlog, **não implementado**.
+
+### 108. Chip do TNC no topo: nome completo do aparelho, sem abreviar
+_Pedido do mantenedor em 18/11/2026 ("Botão de conexão com tnc, mostrar o nome completo do dispositivo e não abreviado
+como ficou. Sempre do tamanho exato do conteúdo, ou TNC ou o dispositivo.")._
+
+**Hoje (conferido no código, `ui/App.kt`):** desde o #98, com o TNC conectado o chip do topo mostra o nome do aparelho
+(`tncChipLabel`), mas o `Chip` limita o texto a **120 dp** (`widthIn(max = 120.dp)`) com reticências
+(`TextOverflow.Ellipsis`), então nomes longos aparecem cortados ("TH-D75 Blue…").
+
+**Pedido:** o chip mostra o **nome completo** do dispositivo, sem abreviar, e a largura é **sempre exatamente a do
+conteúdo**: "TNC" quando desconectado, o nome do aparelho quando conectado.
+
+**Sugestão de implementação:** tirar o `widthIn(max = 120.dp)`/`Ellipsis` do chip do TNC (os outros chips podem seguir
+como estão); deixar a linha de chips rolar na horizontal ou quebrar para a linha de baixo se não couber em tela
+estreita, para não empurrar os outros chips para fora.
+
+**Critérios de aceite:** conectado a um rádio com nome longo, o chip mostra o nome inteiro; desconectado mostra "TNC"
+num chip pequeno; os chips APRS-IS/GPS continuam visíveis em celular comum.
+
+**Relacionados:** #98 (nome do rádio no chip), #74.
 
 **Status:** registrado no backlog, **não implementado**.
