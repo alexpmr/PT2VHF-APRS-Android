@@ -4,6 +4,9 @@ Itens registrados para as próximas versões. Não implementar até o pedido de 
 
 ## Onde estamos (17/11/2026)
 
+- **Backlog novo (18/11/2026, sugestões de PU2MUS):** #102 botão Iniciar/Parar tracker no topo junto do Modo carro,
+  #103 parte informativa do Tracker no fim da tela, #104 botão Você do mapa seguindo a minha estação. Não implementados.
+
 - **Validados pelo mantenedor em 17/11/2026 (Alex):** #25, #37, #54, #60, #62 e #68 (Android Auto) funcionam no
   teste real e estão **encerrados**. Ainda sem teste real: #52 e #95 (lançados na 1.3).
 - **v1.3** (17/11/2026, versionCode 19, autorizada pelo mantenedor: "Gere nova versão android e atualize o site,
@@ -3545,3 +3548,71 @@ _Novo relato em 18/11/2026: **PT2ATC** também informa que o ACK não está func
 balão passando a 2 checks e sem reenvio depois do ACK.
 
 **Status:** registrado no backlog, **não implementado**; aguarda detalhes do mantenedor. Nenhum APK novo gerado.
+
+### 102. Tracker: botão "Iniciar/Parar tracker" no topo, junto do "Modo carro"
+_Sugestão de PU2MUS, registrada pelo mantenedor em 18/11/2026 ("o botão iniciar o tracker deveria estar na parte
+superior da tela tracker junto com o Modo Carro não sendo necessário ter que puxar a tela para baixo para clicar")._
+
+**Hoje:** na aba **Tracker** (`TrackerScreen`, `ui/Screens.kt`), o botão **Iniciar tracker** / **Parar tracker** fica
+dentro do cartão **Configuração**, depois do cartão de status e do cartão de perfil; em telas menores é preciso rolar
+para baixo para tocar nele. O botão **🚗 Modo carro** vem logo depois.
+
+**Pedido:** colocar **Iniciar/Parar tracker** no **topo da tela**, junto do **Modo carro** (por exemplo, os dois lado a
+lado na mesma linha, ou um embaixo do outro logo abaixo do status), visível sem rolar.
+
+**Sugestão de implementação:** mover o `Button`/`OutlinedButton` (`ACTION_TRACKER_ON`/`ACTION_TRACKER_OFF`) e o botão
+de Modo carro para uma `Row` no início da coluna, mantendo as mesmas regras (`enabled = settings.configured &&
+status.lat != null`, cor laranja para Parar). Sem texto novo; se faltar espaço em tela estreita, quebrar em duas
+linhas sem cortar o texto.
+
+**Critérios de aceite:** ao abrir a aba Tracker, Iniciar/Parar e Modo carro aparecem sem rolar, em celular comum e em
+tela pequena; o comportamento dos botões não muda.
+
+**Relacionados:** #103 (mesma tela, mesma sugestão), #68 (Android Auto).
+
+**Status:** registrado no backlog, **não implementado**.
+
+### 103. Tracker: parte informativa da configuração vai para o fim da tela
+_Sugestão de PU2MUS, registrada pelo mantenedor em 18/11/2026 ("a parte informativa da configuração poderia ficar em
+baixo de tudo")._
+
+**Hoje:** na aba **Tracker**, os textos informativos (aviso do tracker `tracker_notice`, posição manual, dados do
+cartão **Configuração**) ficam no alto, antes dos controles e dos cartões de uso (objetos, rotas, bateria, rastro).
+
+**Pedido:** deixar no topo só o que se usa (status e os botões do #102) e levar a **parte informativa da
+configuração** para **o fim da tela**, depois de todos os outros cartões.
+
+**Sugestão de implementação:** reordenar os blocos de `TrackerScreen`; nenhuma regra muda. Confirmar com o
+mantenedor/PU2MUS o que conta como "informativo" se houver dúvida (ex.: o cartão de perfil continua no alto por ser
+uma escolha, não informação).
+
+**Critérios de aceite:** a aba Tracker abre com status e botões no alto; os textos informativos aparecem por último;
+nenhuma informação some.
+
+**Relacionados:** #102.
+
+**Status:** registrado no backlog, **não implementado**.
+
+### 104. Mapa: botão "Você" deve seguir a minha estação continuamente
+_Sugestão de PU2MUS, registrada pelo mantenedor em 18/11/2026 ("o Mapa ainda acho que quando teclar Você ele devia
+fazer o acompanhamento da estação que some no mapa quando o percurso é longo")._
+
+**Hoje:** o botão **◎ Você** do mapa (`ui/Screens.kt`) centraliza o mapa **uma vez** na minha posição e cancela o
+acompanhamento de outra estação (`followStation(null)`). Depois disso o mapa fica parado; num percurso longo minha
+estação anda e sai da tela.
+
+**Pedido:** ao tocar **Você**, o mapa passa a **acompanhar a minha estação** continuamente (como já faz o
+acompanhamento de outra estação, #11), recentrando a cada nova posição, até o usuário arrastar o mapa ou escolher
+outra estação.
+
+**Sugestão de implementação:** um estado "seguindo eu" (equivalente a `followedCall`, com pausa ao arrastar como
+`followPaused`) que recentra em `myLat/myLon` a cada atualização; tocar **Você** de novo retoma. Indicar visualmente
+que está seguindo (botão destacado). Manter o zoom escolhido pelo usuário.
+
+**Critérios de aceite:** com o tracker ligado e em movimento, depois de tocar Você o ícone da minha estação fica sempre
+visível na tela; ao arrastar o mapa, o acompanhamento pausa; tocar Você retoma; seguir outra estação desliga o
+"seguindo eu".
+
+**Relacionados:** #11 (seguir estação), modo carro.
+
+**Status:** registrado no backlog, **não implementado**.
