@@ -3527,6 +3527,8 @@ nada mais muda no comportamento.
 
 ### 101. Mensagens: ACK não está funcionando (v1.3)
 _Relato do mantenedor em 17/11/2026 ("Backlog: problema com ACK, não funcionando."), com a v1.3 já publicada._
+_Novo relato em 18/11/2026: **PT2ATC** também informa que o ACK não está funcionando (repassado pelo mantenedor:
+"Backlog: PT2ATC: ack não está funcionando."). Relatores: mantenedor e PT2ATC. Ainda sem detalhe de meio/sentido._
 
 **Relato:** a confirmação (ACK) de mensagens não funciona. O relato ainda é **vago** e falta definir:
 - **Sentido:** a mensagem que eu envio não recebe/mostra o ACK da outra estação, ou o app não manda ACK para as
