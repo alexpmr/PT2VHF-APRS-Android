@@ -8,6 +8,8 @@ Itens registrados para as próximas versões. Não implementar até o pedido de 
   #103 parte informativa do Tracker no fim da tela, #104 botão Você do mapa seguindo a minha estação. Não implementados.
 - **Backlog novo (18/11/2026, mantenedor):** #105 manter pressionada a mensagem para desistir do ACK e reenviar em um
   toque (hoje são dois passos: Cancelar tentativas e depois Reenviar). Não implementado.
+- **Backlog novo (18/11/2026, sugestão de PU2PYC):** #106 escolher o som de cada notificação (mensagem, ACK, digi).
+  Não implementado.
 
 - **Validados pelo mantenedor em 17/11/2026 (Alex):** #25, #37, #54, #60, #62 e #68 (Android Auto) funcionam no
   teste real e estão **encerrados**. Ainda sem teste real: #52 e #95 (lançados na 1.3).
@@ -3671,5 +3673,34 @@ reiniciado; funciona em APRS-IS e em RF; não fica tentando sem parar (#60).
 
 **Relacionados:** #101 (ACK não funcionando na 1.3; este item é um contorno para o usuário, não a correção),
 #47 (estado ACK/REJ), #57 (checks), #60 (reenvio sem fim).
+
+**Status:** registrado no backlog, **não implementado**.
+
+### 106. Notificação sonora personalizada (escolher o som)
+_Sugestão de PU2PYC, registrada pelo mantenedor em 18/11/2026 ("Backlog: pu2pyc: notificação sonora personalizada.")._
+
+**Pedido (vago, interpretação registrada):** permitir **escolher o som** de cada aviso do app, em vez do som padrão do
+Android, por exemplo um som para **mensagem recebida**, outro para **ACK recebido** e outro para **meu pacote repetido
+por digipeater** (#90). Confirmar com PU2PYC se a ideia era essa ou outra (ex.: som por estação/indicativo, som
+diferente para boletins, ou um som "de rádio" próprio do app).
+
+**Hoje (conferido no código, `service/AprsService.kt`):** os avisos usam canais de notificação (`messages`,
+`alerts`, `sound_ack`, `sound_digi`) com o **som padrão** do sistema. O usuário já consegue trocar o som de cada canal
+nas configurações de notificação do Android, mas o app não mostra esse caminho nem tem sons próprios.
+
+**Sugestão de implementação:**
+- Em Configurações, uma linha por evento (mensagem recebida, ACK, digi, alertas) com o som atual e um seletor: padrão
+  do sistema, silencioso, sons do aparelho (`RingtoneManager.ACTION_RINGTONE_PICKER`) e alguns sons curtos próprios
+  do app (bipe, "roger beep", morse "R").
+- Como o Android não deixa mudar o som de um canal depois de criado, ou recriar o canal com novo id ao trocar o som,
+  ou tocar o som pelo próprio app (`MediaPlayer`/`Ringtone`) com o canal silencioso. Alternativa mínima: botão "Abrir
+  configurações de som" que leva direto ao canal no Android (`Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS`).
+- Botão "Testar" ao lado de cada som. Textos novos traduzidos (#76).
+
+**Critérios de aceite:** dá para escolher e testar um som diferente para mensagem recebida, ACK e digi; a escolha
+continua valendo depois de fechar o app e reiniciar o celular; "silencioso" não toca nada; o modo silencioso/não
+perturbe do Android continua sendo respeitado.
+
+**Relacionados:** #90 (som de ACK e de digi), #55 (notificações), #105 e #101 (ACK).
 
 **Status:** registrado no backlog, **não implementado**.
