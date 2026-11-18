@@ -112,7 +112,8 @@ jobs:
           version=$(grep -oP 'val appVersionName = "\K[^"]+' app/build.gradle.kts)
           mkdir -p dist
           cp app/build/outputs/bundle/release/app-release.aab "dist/PT2VHF_APRS_Client_Android_v${version}_GooglePlay.aab"
-          jarsigner -verify -strict "dist/PT2VHF_APRS_Client_Android_v${version}_GooglePlay.aab" | tail -1
+          # Sem -strict: certificado autoassinado (normal no Android) faria o jarsigner sair com código 4.
+          jarsigner -verify "dist/PT2VHF_APRS_Client_Android_v${version}_GooglePlay.aab" | grep -x "jar verified."
           keytool -printcert -jarfile "dist/PT2VHF_APRS_Client_Android_v${version}_GooglePlay.aab" | grep -m1 SHA256
           sha256sum dist/*.aab > dist/SHA256SUMS.txt
           rm -f "$RUNNER_TEMP/play.jks"
