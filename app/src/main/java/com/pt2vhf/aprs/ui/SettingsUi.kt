@@ -729,7 +729,7 @@ fun SettingsDialog(current: Settings, onDismiss: () -> Unit, onSave: (Settings) 
 
                 SettingsTab.SYSTEM -> {
                 SectionTitle(UiText.text(R.string.notifications_section))
-                CheckRow(UiText.text(R.string.update_notify), updateNotify) { updateNotify = it }
+                if (BuildConfig.SELF_UPDATE) CheckRow(UiText.text(R.string.update_notify), updateNotify) { updateNotify = it }
                 CheckRow(UiText.text(R.string.share_callsign), shareCallsign) { shareCallsign = it }
                 Text(UiText.text(R.string.share_callsign_hint), color = Pal.muted, fontSize = 12.sp)
 

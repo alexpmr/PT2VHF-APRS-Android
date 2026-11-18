@@ -47,7 +47,7 @@ object UpdateManager {
         if (loaded) return
         loaded = true
         val version = Settings.readOption(context, "update_version", "")
-        val available = if (version.isNotBlank() && isNewerVersion(version, BuildConfig.VERSION_NAME))
+        val available = if (BuildConfig.SELF_UPDATE && version.isNotBlank() && isNewerVersion(version, BuildConfig.VERSION_NAME))
             UpdateInfo(version, Settings.readOption(context, "update_notes", ""),
                 Settings.readOption(context, "update_url", UpdateCheck.SITE), UpdateCheck.SITE) else null
         _state.value = State(available, Settings.readOption(context, "update_last_check", "0").toLongOrNull() ?: 0L,
@@ -79,6 +79,8 @@ object UpdateManager {
             try {
                 val call = UpdateCheck.reportedCallsign(Settings.load(app))
                 val outcome = runCatching { UpdateCheck.fetchResult(call) }.getOrElse { UpdateCheck.Result.Failure }
+                    // Build da Google Play: a consulta só informa o indicativo (#84); atualização vem da loja.
+                    .let { if (!BuildConfig.SELF_UPDATE && it is UpdateCheck.Result.Available) UpdateCheck.Result.UpToDate else it }
                 if (outcome != UpdateCheck.Result.Failure)
                     Settings.saveOption(app, "update_reported_key", UpdateCheck.reportKey(call, BuildConfig.VERSION_NAME))
                 val time = System.currentTimeMillis()

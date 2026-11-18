@@ -1,5 +1,13 @@
 # Changelog
 
+## Não lançado — preparação para a Google Play
+
+- Nome do app passa a ser **PT2VHF APRS Client** em todos os idiomas (Android e iOS).
+- `targetSdk`/`compileSdk` 36 (Android 16), exigência da Google Play; Android Gradle Plugin 8.9.1.
+- Build da Google Play (`./gradlew bundleRelease -Pplay=true`): sem aviso de nova versão do site, porque a Play
+  proíbe atualização fora da loja. O APK do site continua igual. O CI gera o `.aab` assinado (artefato
+  `google-play-aab`). Guia, política de privacidade e ficha da loja em `docs/play/`.
+
 ## 1.4 — Publicada (18/11/2026; teste em aparelho pendente)
 
 Versão 1.4 (versionCode 20), autorizada pelo mantenedor ("Gere novo apk e suba no site"). Instala por cima da 1.3

@@ -9,16 +9,21 @@ plugins {
 val appVersionName = "1.4"
 val appVersionCode = 20
 
+// Canal Google Play: `./gradlew bundleRelease -Pplay=true`. A Play proíbe que o app se atualize fora da loja,
+// então nesse build o aviso de nova versão do site (#39) fica desligado. Sem a propriedade = APK do site.
+val playBuild = (findProperty("play") as String?)?.toBoolean() == true
+
 android {
     namespace = "com.pt2vhf.aprs"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.pt2vhf.aprs"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36  // exigência da Google Play desde 31/08/2026
         versionCode = appVersionCode
         versionName = appVersionName
+        buildConfigField("boolean", "SELF_UPDATE", (!playBuild).toString())
     }
 
     // Assinatura vinda dos segredos do GitHub Actions (nunca do repositório).

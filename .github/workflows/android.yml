@@ -82,6 +82,46 @@ jobs:
           path: dist/
           retention-days: 14
 
+  play-bundle:
+    name: Signed AAB for Google Play (no upload)
+    needs: build
+    # Gera o .aab para enviar à Play Console manualmente. Nunca publica na loja.
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'release:')) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Download and verify APRS symbol sprites
+        run: bash scripts/fetch-aprs-symbols.sh
+
+      - name: Build signed Play bundle
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$ANDROID_KEYSTORE_BASE64"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | LC_ALL=C tr -cd 'A-Za-z0-9+/=' | base64 -d > "$RUNNER_TEMP/play.jks"
+          export ANDROID_KEYSTORE_FILE="$RUNNER_TEMP/play.jks"
+          ./gradlew --no-daemon bundleRelease -Pplay=true
+          version=$(grep -oP 'val appVersionName = "\K[^"]+' app/build.gradle.kts)
+          mkdir -p dist
+          cp app/build/outputs/bundle/release/app-release.aab "dist/PT2VHF_APRS_Client_Android_v${version}_GooglePlay.aab"
+          jarsigner -verify -strict "dist/PT2VHF_APRS_Client_Android_v${version}_GooglePlay.aab" | tail -1
+          keytool -printcert -jarfile "dist/PT2VHF_APRS_Client_Android_v${version}_GooglePlay.aab" | grep -m1 SHA256
+          sha256sum dist/*.aab > dist/SHA256SUMS.txt
+          rm -f "$RUNNER_TEMP/play.jks"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: google-play-aab
+          path: dist/
+          retention-days: 30
+
   release:
     needs: build
     if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'release:')) }}
