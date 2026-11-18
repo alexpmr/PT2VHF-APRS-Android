@@ -171,6 +171,7 @@ internal fun UpdateStatusSection() {
     val state by UpdateManager.state.collectAsState()
     LaunchedEffect(Unit) { UpdateManager.current(context) }
     Text(UiText.text(R.string.current_installed_version, BuildConfig.VERSION_NAME), color = Pal.text, fontSize = 13.sp)
+    if (!BuildConfig.SELF_UPDATE) return // Google Play: atualizações só pela loja
     Text(if (state.lastCheck == 0L) UiText.text(R.string.update_never) else UiText.text(R.string.update_last,
         DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT, UiText.locale()).format(Date(state.lastCheck))),
         color = Pal.muted, fontSize = 12.sp)

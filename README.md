@@ -6,6 +6,9 @@ ou pelo próprio áudio do celular (modem AFSK 1200).
 
 **Download oficial:** https://www.pt2vhf.com/android
 
+**Google Play:** em preparação. O build da loja é gerado com `./gradlew bundleRelease -Pplay=true` (sem o aviso de
+atualização do site); guia, política de privacidade e ficha da loja em [docs/play](docs/play/README.md).
+
 ## Recursos da versão 1.4
 
 - APRS-IS com servidor à escolha (padrão `soam.aprs2.net:14580`, lista de servidores ou "Outro…"),
