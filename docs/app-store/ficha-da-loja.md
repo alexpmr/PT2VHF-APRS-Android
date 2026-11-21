@@ -39,7 +39,7 @@ aprs,radioamador,radio amador,ham radio,tnc,kiss,aprs-is,rastreador,vhf,uhf,mic-
 **Descrição:**
 
 PT2VHF APRS Client é um cliente APRS para radioamadores, gratuito e sem anúncios. É o mesmo app do Android, agora
-no iPhone e no iPad.
+no iPhone e no iPad, em português, inglês, espanhol, francês e italiano.
 
 MAPA AO VIVO
 • Estações, objetos e itens APRS no Apple Mapas, com indicativo e símbolo oficial
@@ -73,10 +73,7 @@ Mais informações: www.pt2vhf.com
 Primeira versão para iPhone e iPad, com os recursos do PT2VHF APRS Client 1.4 do Android: ACK de mensagens
 revisado, desistir do ACK e reenviar, notificações por tipo, mapa escuro e TNC Bluetooth LE.
 
-## English (U.S.) – localização extra
-
-O app ainda está só em português; a ficha em inglês ajuda quem procura em inglês e avisa isso. Quando o app tiver
-tradução, tirar a última frase do primeiro parágrafo.
+## English (U.S.)
 
 **Name:** PT2VHF APRS Client
 
@@ -92,7 +89,7 @@ aprs,ham radio,amateur radio,tnc,kiss,aprs-is,tracker,vhf,uhf,mic-e,beacon,bluet
 **Description:**
 
 PT2VHF APRS Client is an APRS client for radio amateurs, free and ad-free. It is the same app as on Android, now
-on iPhone and iPad. The interface is currently in Portuguese (Brazil); English is coming soon.
+on iPhone and iPad, in English, Portuguese, Spanish, French and Italian.
 
 LIVE MAP
 • APRS stations, objects and items on Apple Maps, with callsign and official symbol
@@ -125,6 +122,156 @@ More information: www.pt2vhf.com
 **What's new (1.4):**
 First release for iPhone and iPad, with the features of PT2VHF APRS Client 1.4 for Android: reworked message ACK,
 give up ACK and resend, notifications by type, dark map and Bluetooth LE TNC.
+
+## Español (España y México)
+
+**Nombre:** PT2VHF APRS Client
+
+**Subtítulo:** APRS para radioaficionados
+
+**Texto promocional:**
+Vea estaciones APRS en el mapa, intercambie mensajes con confirmación y envíe su posición por internet o por radio
+con un TNC Bluetooth LE. Gratis y sin anuncios.
+
+**Palabras clave:**
+aprs,radioaficionado,ham radio,tnc,kiss,aprs-is,rastreador,vhf,uhf,mic-e,baliza,bluetooth
+
+**Descripción:**
+
+PT2VHF APRS Client es un cliente APRS para radioaficionados, gratis y sin anuncios. Es la misma app de Android,
+ahora en iPhone y iPad, en español, inglés, portugués, francés e italiano.
+
+MAPA EN VIVO
+• Estaciones, objetos e ítems APRS en Apple Mapas, con indicativo y símbolo oficial
+• Tipos de mapa: Estándar, Oscuro (ideal de noche y en el auto), Satélite, Híbrido y Automático
+• Ficha de cada estación: distancia, rumbo, velocidad, ruta (digipeaters) y paquete original
+
+MENSAJES
+• Conversaciones por indicativo, con confirmación de entrega (ACK) y hasta 5 reintentos automáticos
+• "Desistir del ACK y reenviar" con un toque
+• Boletines (BLN) y mensajes generales (CQ) en conversaciones aparte
+• Notificaciones por tipo: personales, boletines, generales y entrega (ACK)
+• Bloquear indicativo
+
+POSICIÓN (BALIZA)
+• "Baliza ahora" y rastreador automático por intervalo y en las curvas
+• Sigue enviando con la app en segundo plano si permite la ubicación "Siempre"
+
+INTERNET O RADIO
+• APRS-IS con reconexión automática y filtro por radio a su alrededor
+• TNC KISS por Bluetooth LE (Mobilinkd TNC3/TNC4, PicoAPRS, B.B. Link y radios con KISS BLE)
+• Lista de paquetes recibidos y enviados, decodificación Mic-E
+• Passcode de APRS-IS calculado a partir de su indicativo, sin registro y sin cuenta
+
+Sin indicativo la app solo escucha: muestra estaciones y mensajes, pero nunca transmite. Para transmitir se
+necesita licencia de radioaficionado. Los TNC Bluetooth clásico (SPP) no funcionan en el iPhone por una limitación
+de iOS; use un TNC Bluetooth LE.
+
+Más información: www.pt2vhf.com
+
+**Novedades (1.4):**
+Primera versión para iPhone y iPad, con las funciones de PT2VHF APRS Client 1.4 para Android: ACK de mensajes
+revisado, desistir del ACK y reenviar, notificaciones por tipo, mapa oscuro y TNC Bluetooth LE.
+
+## Français
+
+**Nom :** PT2VHF APRS Client
+
+**Sous-titre :** APRS pour radioamateurs
+
+**Texte promotionnel :**
+Les stations APRS sur la carte, des messages avec accusé de réception et votre position par internet ou
+par radio avec un TNC Bluetooth LE. Gratuit, sans publicité.
+
+**Mots-clés :**
+aprs,radioamateur,ham radio,tnc,kiss,aprs-is,traceur,vhf,uhf,mic-e,balise,bluetooth,indicatif
+
+**Description :**
+
+PT2VHF APRS Client est un client APRS pour radioamateurs, gratuit et sans publicité. C'est la même app que sur
+Android, désormais sur iPhone et iPad, en français, anglais, portugais, espagnol et italien.
+
+CARTE EN DIRECT
+• Stations, objets et items APRS sur Plans d'Apple, avec indicatif et symbole officiel
+• Types de carte : Standard, Sombre (idéal la nuit et en voiture), Satellite, Hybride et Automatique
+• Fiche de chaque station : distance, cap, vitesse, chemin (digipeaters) et paquet brut
+
+MESSAGES
+• Conversations par indicatif, avec accusé de réception (ACK) et jusqu'à 5 renvois automatiques
+• « Abandonner l'ACK et renvoyer » en un geste
+• Bulletins (BLN) et messages généraux (CQ) dans des conversations séparées
+• Notifications par type : personnels, bulletins, généraux et remise (ACK)
+• Bloquer un indicatif
+
+POSITION (BALISE)
+• « Balise maintenant » et traceur automatique par intervalle et dans les virages
+• Continue d'émettre avec l'app en arrière-plan si vous autorisez la localisation « Toujours »
+
+INTERNET OU RADIO
+• APRS-IS avec reconnexion automatique et filtre par rayon autour de vous
+• TNC KISS en Bluetooth LE (Mobilinkd TNC3/TNC4, PicoAPRS, B.B. Link et radios avec KISS BLE)
+• Liste des paquets reçus et envoyés, décodage Mic-E
+• Passcode APRS-IS calculé à partir de votre indicatif, sans inscription ni compte
+
+Sans indicatif, l'app ne fait qu'écouter : elle affiche stations et messages mais n'émet jamais. Une licence de
+radioamateur est nécessaire pour émettre. Les TNC Bluetooth classique (SPP) ne fonctionnent pas sur iPhone en
+raison d'une limite d'iOS ; utilisez un TNC Bluetooth LE.
+
+Plus d'informations : www.pt2vhf.com
+
+**Nouveautés (1.4) :**
+Première version pour iPhone et iPad, avec les fonctions de PT2VHF APRS Client 1.4 pour Android : ACK des messages
+revu, abandonner l'ACK et renvoyer, notifications par type, carte sombre et TNC Bluetooth LE.
+
+## Italiano
+
+**Nome:** PT2VHF APRS Client
+
+**Sottotitolo:** APRS per radioamatori
+
+**Testo promozionale:**
+Guarda le stazioni APRS sulla mappa, scambia messaggi con conferma e invia la tua posizione via internet o via
+radio con un TNC Bluetooth LE. Gratis e senza pubblicità.
+
+**Parole chiave:**
+aprs,radioamatore,radioamatori,ham radio,tnc,kiss,aprs-is,tracker,vhf,uhf,mic-e,beacon,bluetooth
+
+**Descrizione:**
+
+PT2VHF APRS Client è un client APRS per radioamatori, gratis e senza pubblicità. È la stessa app di Android, ora su
+iPhone e iPad, in italiano, inglese, portoghese, spagnolo e francese.
+
+MAPPA IN DIRETTA
+• Stazioni, oggetti e item APRS su Mappe di Apple, con nominativo e simbolo ufficiale
+• Tipi di mappa: Standard, Scuro (ottimo di notte e in auto), Satellite, Ibrido e Automatico
+• Scheda di ogni stazione: distanza, rotta, velocità, percorso (digipeater) e pacchetto originale
+
+MESSAGGI
+• Conversazioni per nominativo, con conferma di consegna (ACK) e fino a 5 tentativi automatici
+• "Rinuncia all'ACK e reinvia" con un tocco
+• Bollettini (BLN) e messaggi generali (CQ) in conversazioni separate
+• Notifiche per tipo: personali, bollettini, generali e consegna (ACK)
+• Blocca un nominativo
+
+POSIZIONE (BEACON)
+• "Beacon ora" e tracker automatico a intervalli e in curva
+• Continua a inviare con l'app in background se consenti la posizione "Sempre"
+
+INTERNET O RADIO
+• APRS-IS con riconnessione automatica e filtro per raggio intorno a te
+• TNC KISS via Bluetooth LE (Mobilinkd TNC3/TNC4, PicoAPRS, B.B. Link e radio con KISS BLE)
+• Elenco dei pacchetti ricevuti e inviati, decodifica Mic-E
+• Passcode APRS-IS calcolato dal tuo nominativo, senza registrazione e senza account
+
+Senza nominativo l'app ascolta soltanto: mostra stazioni e messaggi ma non trasmette mai. Per trasmettere serve la
+licenza di radioamatore. I TNC Bluetooth classico (SPP) non funzionano su iPhone per un limite di iOS; usa un TNC
+Bluetooth LE.
+
+Maggiori informazioni: www.pt2vhf.com
+
+**Novità (1.4):**
+Prima versione per iPhone e iPad, con le funzioni di PT2VHF APRS Client 1.4 per Android: ACK dei messaggi rivisto,
+rinuncia all'ACK e reinvia, notifiche per tipo, mappa scura e TNC Bluetooth LE.
 
 ## Privacidade do app (App Store Connect → Privacidade do app)
 
@@ -165,30 +312,33 @@ APRS is a public, open network where radio amateurs share positions and short te
 over the internet (APRS-IS servers such as rotate.aprs2.net).
 
 HOW TO REVIEW WITHOUT A LICENCE
-1. Open the app. On the welcome screen leave the callsign empty and tap "Pronto" (Done).
+1. Open the app. On the welcome screen leave the callsign empty and tap "Done".
 2. The app connects to APRS-IS in receive-only mode (login N0CALL, passcode -1). Allow location so the map
-   centers on you: stations near Cupertino appear on the map and in the "Estações" (Stations) tab within a
+   centers on you: stations near Cupertino appear on the map and in the "Stations" tab within a
    minute. Nothing is transmitted in this mode; the server rejects any transmission.
-3. Messages ("Mensagens") show bulletins and messages addressed to the user's callsign. Messages can be blocked
-   per callsign (swipe the conversation or long-press a message; list in Settings > Bloqueados).
+3. "Messages" shows bulletins and messages addressed to the user's callsign. Callsigns can be blocked (swipe
+   the conversation or long-press a message; list in Settings > Blocked).
 Transmitting (beacon, messages) requires entering a valid amateur radio callsign, which only licensed operators
 have; the APRS-IS passcode is derived from the callsign, as in every APRS client.
 
 PERMISSIONS
 - Location "When In Use": show the user's position and nearby stations, and send the APRS position beacon.
 - Location "Always" + background mode "location": only requested when the user turns on the tracker
-  (Settings > Beacon > "Rastreador ligado"), so the position keeps being beaconed while driving with the screen
+  (Settings > Beacon > "Tracker on"), so the position keeps being beaconed while driving with the screen
   off. This is the core use of APRS trackers.
 - Bluetooth + background mode "bluetooth-central": connection to a Bluetooth LE KISS TNC (radio modem). Hardware
   is not needed to review; without it the app works over the internet.
 
-The interface is in Portuguese (Brazil). No account, no ads, no analytics, no in-app purchases.
+The app follows the device language (English, Portuguese, Spanish, French, Italian). No account, no ads, no analytics, no in-app purchases.
 ```
 
 ## Capturas de tela (plano)
 
 Exigidas: **iPhone 6,9"** (1320 × 2868) e, como o app roda no iPad, **iPad 13"** (2064 × 2752). A Apple reduz
 sozinha para os tamanhos menores. Até 10 por tamanho; usar 6.
+
+As capturas saem em português; a Apple usa o mesmo conjunto em todos os idiomas, a menos que se suba um por
+idioma (dá para gerar as outras línguas trocando `-AppleLanguages` no workflow).
 
 Geradas sem Mac pelo GitHub Actions: **iOS build → Run workflow → "Gerar as capturas de tela"**. O app abre no
 simulador em modo demonstração (`-demo`): estações e mensagens fictícias em volta de São Paulo, relógio 9:41,
