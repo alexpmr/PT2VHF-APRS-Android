@@ -24,6 +24,8 @@ que o iPhone permite.
   estações e mensagens e não transmite nada. É o que permite a revisão da Apple usar o app sem licença.
 - **Bloquear indicativo** (exigência da App Store para apps com mensagens): deslizar a conversa ou manter
   pressionada a mensagem; a lista fica em Ajustes → Bloqueados.
+- **Idiomas:** português, inglês, espanhol, francês e italiano (os mesmos do Android), em
+  `Localizable.xcstrings` e `InfoPlist.xcstrings` (textos das permissões). O app segue o idioma do iPhone.
 - Manifesto de privacidade (`PrivacyInfo.xcprivacy`) com as mesmas respostas do Google Play.
 
 ## Limitações do iOS
