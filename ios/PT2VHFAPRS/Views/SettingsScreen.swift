@@ -1,10 +1,12 @@
 import SwiftUI
 
 struct SettingsScreen: View {
+    @EnvironmentObject var model: AppModel
     var body: some View {
         NavigationStack {
             SettingsForm().navigationTitle("Ajustes")
         }
+        .onDisappear { model.reconnectIfIdentityChanged() }
     }
 }
 
@@ -71,6 +73,8 @@ struct SettingsForm: View {
             } footer: {
                 if model.hasValidCall {
                     Text("Você transmite como \(model.fullCall). O passcode APRS-IS é calculado automaticamente.")
+                } else {
+                    Text("Sem indicativo o app só ouve: mostra estações e mensagens, mas não transmite.")
                 }
             }
 
@@ -99,6 +103,39 @@ struct SettingsForm: View {
                 Toggle("Remover acentos ao enviar", isOn: $model.stripAccents)
             }
 
+            Section {
+                Toggle("Mensagens pessoais", isOn: $model.notifyPersonal)
+                Toggle("Boletins (BLN)", isOn: $model.notifyBulletins)
+                Toggle("Mensagens gerais (CQ, ALL, QST)", isOn: $model.notifyGroup)
+                Toggle("Mensagem entregue (ACK)", isOn: $model.notifyAck)
+                Button("Testar notificação") { model.testNotification() }
+                Button("Som e estilo nos Ajustes do iPhone") {
+                    if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                }
+            } header: {
+                Text("Notificações")
+            } footer: {
+                Text("Boletim repetido em 24 horas não avisa de novo. O som e o estilo dos avisos são escolhidos nos Ajustes do iPhone.")
+            }
+
+            Section {
+                if model.blocked.isEmpty {
+                    Text("Nenhum indicativo bloqueado.").foregroundStyle(.secondary)
+                }
+                ForEach(model.blocked, id: \.self) { call in
+                    Text(call).font(.body.monospaced())
+                        .swipeActions {
+                            Button("Desbloquear") { model.unblock(call) }.tint(.green)
+                        }
+                }
+            } header: {
+                Text("Bloqueados")
+            } footer: {
+                Text("Para bloquear, deslize a conversa ou mantenha pressionada a mensagem. Pacotes, estações e mensagens do indicativo bloqueado deixam de aparecer.")
+            }
+
             Section("Mapa") {
                 Picker("Tipo de mapa", selection: $model.mapKind) {
                     ForEach(MapKind.allCases) { Text($0.label).tag($0) }
@@ -108,7 +145,8 @@ struct SettingsForm: View {
             Section("Sobre") {
                 LabeledContent("Versão", value: AppModel.version)
                 Link("www.PT2VHF.com", destination: URL(string: "https://www.pt2vhf.com/aprs-android")!)
-                LabeledContent("Colaboradores", value: "PU2PYC, PP5AU, PU2MUS, PP5PK")
+                LabeledContent("Colaboradores", value: "PU2PYC, PP5AU, PU2MUS, PP5PK, PY6TL")
+                Link("Política de privacidade", destination: URL(string: "https://www.pt2vhf.com/privacidade")!)
                 Text("Gratuito, sem anúncios. Mesmo protocolo e TOCALL (APZVHF) do app Android.")
                     .font(.caption).foregroundStyle(.secondary)
             }

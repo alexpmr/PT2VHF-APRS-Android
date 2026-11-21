@@ -130,13 +130,13 @@ extension BleTnc: CBCentralManagerDelegate {
     }
 
     func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
-        status = .failed(error?.localizedDescription ?? "falha ao conectar")
+        status = .failed(error?.localizedDescription ?? String(localized: "falha ao conectar"))
     }
 
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
         writeChar = nil
         guard current?.identifier == peripheral.identifier else { return }
-        status = .failed(error?.localizedDescription ?? "desconectado")
+        status = .failed(error?.localizedDescription ?? String(localized: "desconectado"))
         // Reconecta sozinho quando o TNC voltar ao alcance.
         central.connect(peripheral, options: nil)
     }

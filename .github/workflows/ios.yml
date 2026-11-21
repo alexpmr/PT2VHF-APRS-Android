@@ -12,6 +12,10 @@ on:
         description: 'Enviar para o TestFlight (precisa dos segredos da conta Apple)'
         type: boolean
         default: false
+      screenshots:
+        description: 'Gerar as capturas de tela da App Store no simulador (iPhone 6,9" e iPad 13")'
+        type: boolean
+        default: false
 
 concurrency:
   group: ios-${{ github.event.pull_request.number || github.ref }}
@@ -47,7 +51,17 @@ jobs:
         run: |
           set -o pipefail
           xcodebuild build -project PT2VHFAPRS.xcodeproj -scheme PT2VHFAPRS -configuration Release \
-            -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO | tail -n 40
+            -destination 'generic/platform=iOS' -derivedDataPath build/dd CODE_SIGNING_ALLOWED=NO | tail -n 40
+
+      - name: Conferir traduções (pt-BR, en, es, fr, it)
+        run: |
+          APP=build/dd/Build/Products/Release-iphoneos/PT2VHFAPRS.app
+          ls -d "$APP"/*.lproj
+          for l in en es fr it; do
+            test -f "$APP/$l.lproj/Localizable.strings" || { echo "::error::Falta $l.lproj/Localizable.strings"; exit 1; }
+            test -f "$APP/$l.lproj/InfoPlist.strings" || { echo "::error::Falta $l.lproj/InfoPlist.strings"; exit 1; }
+          done
+          plutil -p "$APP/en.lproj/Localizable.strings" | head -n 5
 
   testflight:
     name: TestFlight
@@ -97,3 +111,72 @@ jobs:
           PLIST
           xcodebuild -exportArchive -archivePath build/PT2VHFAPRS.xcarchive \
             -exportOptionsPlist build/ExportOptions.plist -exportPath build/export $AUTH | tail -n 40
+          VER=$(/usr/libexec/PlistBuddy -c 'Print :ApplicationProperties:CFBundleShortVersionString' build/PT2VHFAPRS.xcarchive/Info.plist)
+          echo "::notice::Enviado ao App Store Connect: versão $VER, build ${{ github.run_number }}. Aparece no TestFlight depois do processamento da Apple (5 a 30 min)."
+
+  screenshots:
+    name: Capturas de tela (App Store)
+    needs: build
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.screenshots }}
+    runs-on: macos-15
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: ios
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build para o simulador
+        run: |
+          set -o pipefail
+          sudo xcode-select -s /Applications/Xcode_16.4.app || sudo xcode-select -s /Applications/Xcode.app
+          brew install xcodegen
+          xcodegen generate
+          xcodebuild build -project PT2VHFAPRS.xcodeproj -scheme PT2VHFAPRS -configuration Release \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build/dd \
+            CODE_SIGNING_ALLOWED=NO | tail -n 20
+      - name: Capturar (modo demonstração, dados fictícios)
+        run: |
+          APP=build/dd/Build/Products/Release-iphonesimulator/PT2VHFAPRS.app
+          mkdir -p build/telas
+          # Tamanhos exigidos: iPhone 6,9" (1320x2868) e iPad 13" (2064x2752).
+          for DEV in "iPhone 16 Pro Max" "iPad Pro 13-inch (M4)"; do
+            UDID=$(xcrun simctl list devices available -j | python3 -c "import json,sys; n=sys.argv[1]; d=json.load(sys.stdin)['devices']; print(next(x['udid'] for k,v in d.items() if 'iOS' in k for x in v if x['name']==n))" "$DEV")
+            TAG=$(echo "$DEV" | tr -cd '[:alnum:]')
+            xcrun simctl boot "$UDID" || true
+            xcrun simctl bootstatus "$UDID" -b
+            xcrun simctl status_bar "$UDID" override --time 9:41 --dataNetwork wifi --wifiBars 3 \
+              --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100
+            xcrun simctl install "$UDID" "$APP"
+            n=0
+            for ARGS in "-tab 0" "-tab 1" "-tab 2" "-tab 2 -chat" "-tab 3" "-tab 4"; do
+              n=$((n+1))
+              xcrun simctl launch --terminate-running-process "$UDID" com.pt2vhf.aprs -demo $ARGS \
+                -AppleLanguages "(pt-BR)" -AppleLocale pt_BR
+              # O mapa precisa de alguns segundos para baixar os tiles.
+              if [ $n -eq 1 ]; then sleep 20; else sleep 6; fi
+              # JPEG: a App Store recusa capturas com canal alfa (o PNG do simulador tem).
+              xcrun simctl io "$UDID" screenshot --type=jpeg "build/telas/$TAG-$n.jpg"
+            done
+            xcrun simctl shutdown "$UDID"
+          done
+          ls -l build/telas
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-store-telas
+          path: ios/build/telas/*.jpg
+      # Fora da main, as telas também vão para docs/app-store/telas/ na própria branch (fácil de ver no GitHub).
+      - name: Salvar as telas na branch
+        if: ${{ github.ref_name != 'main' }}
+        working-directory: .
+        run: |
+          mkdir -p docs/app-store/telas
+          rm -f docs/app-store/telas/*.png
+          cp ios/build/telas/*.jpg docs/app-store/telas/
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A docs/app-store/telas
+          git diff --cached --quiet && exit 0
+          git commit -m "docs(app-store): capturas de tela geradas no simulador"
+          git pull --rebase origin "${{ github.ref_name }}"
+          git push origin "HEAD:${{ github.ref_name }}"

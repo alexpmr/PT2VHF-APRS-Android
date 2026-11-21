@@ -114,4 +114,30 @@ final class AprsTests: XCTestCase {
     func testDistance() {
         XCTAssertEqual(Geo.distanceKm(-15.78, -47.93, -23.55, -46.63), 873, accuracy: 10)
     }
+
+    /// #101: mesmas regras de ACK do Android 1.4.
+    func testAckVariants() throws {
+        for body in ["ack12", "ack12 ", "ack12}", "ack12}AB"] {
+            let m = try XCTUnwrap(AprsParser.message(":PT2VHF-9 :" + body), body)
+            XCTAssertTrue(m.isAck, body)
+            XCTAssertEqual(m.ackedId, "12", body)
+        }
+        let rej = try XCTUnwrap(AprsParser.message(":PT2VHF-9 :rej7"))
+        XCTAssertTrue(rej.isRej)
+        XCTAssertEqual(rej.ackedId, "7")
+        let normal = try XCTUnwrap(AprsParser.message(":PT2VHF-9 :ack recebido{3"))
+        XCTAssertNil(normal.ackedId)
+        XCTAssertEqual(normal.id, "3")
+    }
+
+    func testAckMatchesBaseCall() {
+        XCTAssertTrue(Aprs.ackMatches(dest: "PT2ATC", ackFrom: "PT2ATC-7"))
+        XCTAssertTrue(Aprs.ackMatches(dest: "PT2ATC-7", ackFrom: "PT2ATC"))
+        XCTAssertTrue(Aprs.ackMatches(dest: "pt2atc-7", ackFrom: "PT2ATC-7"))
+        XCTAssertFalse(Aprs.ackMatches(dest: "PT2ATC-7", ackFrom: "PT2ATC-9"))
+        XCTAssertFalse(Aprs.ackMatches(dest: "PT2ATC", ackFrom: "PT2ATD"))
+        XCTAssertEqual(Aprs.ackSource(addressee: "PT2VHF", ownCall: "PT2VHF-9"), "PT2VHF")
+        XCTAssertEqual(Aprs.ackSource(addressee: "PT2VHF-9", ownCall: "PT2VHF-9"), "PT2VHF-9")
+        XCTAssertEqual(Aprs.ackSource(addressee: "PY2ABC", ownCall: "PT2VHF-9"), "PT2VHF-9")
+    }
 }

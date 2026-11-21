@@ -117,7 +117,7 @@ struct StationDetail: View {
                         if let c = s.courseDeg {
                             LabeledContent("Rumo", value: "\(Geo.compass(c)) \(c)°")
                         }
-                        LabeledContent("Recebida por", value: s.via == .rf ? "RF (TNC)" : (s.via == .own ? "Própria" : "Internet (APRS-IS)"))
+                        LabeledContent("Recebida por", value: s.via == .rf ? "RF (TNC)" : (s.via == .own ? String(localized: "Própria") : "Internet (APRS-IS)"))
                         if !s.path.isEmpty { LabeledContent("Caminho", value: s.path.joined(separator: ",")) }
                     }
                     Section("Pacote") {
