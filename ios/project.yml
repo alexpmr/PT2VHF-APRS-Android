@@ -7,7 +7,8 @@ options:
   developmentLanguage: pt-BR
 settings:
   base:
-    MARKETING_VERSION: "1.0"
+    MARKETING_VERSION: "1.4"
+    # O GitHub Actions troca pelo número da execução ao enviar ao TestFlight (sempre crescente).
     CURRENT_PROJECT_VERSION: "1"
     SWIFT_VERSION: "5.0"
     DEVELOPMENT_TEAM: ${DEVELOPMENT_TEAM}

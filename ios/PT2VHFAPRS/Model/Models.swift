@@ -24,7 +24,7 @@ struct Station: Identifiable, Equatable {
     var coordinate: CLLocationCoordinate2D { CLLocationCoordinate2D(latitude: lat, longitude: lon) }
 }
 
-enum MessageState: String, Codable { case received, pending, acked, rejected, failed }
+enum MessageState: String, Codable { case received, pending, acked, rejected, failed, cancelled }
 
 struct ChatMessage: Identifiable, Codable, Equatable {
     var id = UUID()
@@ -38,6 +38,8 @@ struct ChatMessage: Identifiable, Codable, Equatable {
     var nextTry: Date?
     /// Boletins e mensagens gerais (BLN*, CQ, ALL etc.) ficam numa conversa à parte.
     var isBulletin: Bool = false
+    /// Remetente de boletim/CQ (a conversa é pelo destino, ex.: BLN1 ou CQ).
+    var from: String?
 }
 
 struct LogEntry: Identifiable {

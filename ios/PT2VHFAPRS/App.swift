@@ -15,7 +15,7 @@ struct PT2VHFAPRSApp: App {
 
 struct ContentView: View {
     @EnvironmentObject var model: AppModel
-    @State private var tab = 0
+    @State private var tab = DemoData.startTab
     @State private var showSetup = false
 
     var body: some View {
@@ -34,7 +34,7 @@ struct ContentView: View {
         }
         .onAppear {
             model.onLaunch()
-            if !model.hasValidCall { showSetup = true }
+            if !model.hasValidCall && !DemoData.isOn { showSetup = true }
         }
         .sheet(isPresented: $showSetup) {
             NavigationStack {
@@ -44,7 +44,7 @@ struct ContentView: View {
                         ToolbarItem(placement: .confirmationAction) {
                             Button("Pronto") {
                                 showSetup = false
-                                if model.hasValidCall && model.autoConnect { model.connect() }
+                                model.reconnectIfIdentityChanged()
                             }
                         }
                     }

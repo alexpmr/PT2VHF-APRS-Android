@@ -4,7 +4,10 @@ import SwiftUI
 struct MapScreen: View {
     @EnvironmentObject var model: AppModel
     @Environment(\.colorScheme) private var systemScheme
-    @State private var camera: MapCameraPosition = .userLocation(fallback: .automatic)
+    @State private var camera: MapCameraPosition = DemoData.isOn
+        ? .region(MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: DemoData.center.lat, longitude: DemoData.center.lon),
+                                     span: MKCoordinateSpan(latitudeDelta: 0.32, longitudeDelta: 0.32)))
+        : .userLocation(fallback: .automatic)
     @State private var selected: Station?
     @State private var visibleRegion: MKCoordinateRegion?
     @AppStorage("map_labels") private var showLabels = true

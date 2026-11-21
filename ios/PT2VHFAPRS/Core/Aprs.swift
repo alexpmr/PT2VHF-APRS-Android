@@ -126,9 +126,46 @@ struct AprsMessage: Equatable {
     var addressee: String
     var text: String
     var id: String?
-    var isAck: Bool { text.hasPrefix("ack") && text.count <= 8 }
-    var isRej: Bool { text.hasPrefix("rej") && text.count <= 8 }
-    var ackedId: String? { (isAck || isRej) ? String(text.dropFirst(3)).trimmingCharacters(in: .whitespaces) : nil }
+    var isAck: Bool { ackParts?.rej == false }
+    var isRej: Bool { ackParts?.rej == true }
+    var ackedId: String? { ackParts?.id }
+
+    /// #101: "ack12", "ack12}", "ack12}AB" e "ack12 " (espaço/CR no fim) são todos ACK do número 12.
+    private var ackParts: (rej: Bool, id: String)? {
+        let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard id == nil, t.count >= 4, t.hasPrefix("ack") || t.hasPrefix("rej") else { return nil }
+        let rest = t.dropFirst(3)
+        let num = rest.split(separator: "}", maxSplits: 1, omittingEmptySubsequences: false).first.map(String.init) ?? ""
+        let tail = rest.dropFirst(num.count).dropFirst()
+        guard (1...5).contains(num.count), num.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber) }),
+              tail.count <= 5, tail.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber) }) else { return nil }
+        return (t.hasPrefix("rej"), num)
+    }
+}
+
+extension Aprs {
+    /// Indicativo sem SSID ("PT2VHF-9" → "PT2VHF").
+    static func baseCall(_ call: String) -> String {
+        String(call.trimmingCharacters(in: .whitespaces).uppercased().split(separator: "-").first ?? "")
+    }
+
+    /// #101: o ACK vindo de `ackFrom` confirma mensagem enviada para `dest`? Igual, ou mesmo indicativo base quando um
+    /// dos lados está sem SSID (mensagem para PT2ATC respondida por PT2ATC-7, ou o contrário).
+    static func ackMatches(dest: String, ackFrom: String) -> Bool {
+        let d = dest.trimmingCharacters(in: .whitespaces).uppercased()
+        let f = ackFrom.trimmingCharacters(in: .whitespaces).uppercased()
+        if d == f { return true }
+        let db = baseCall(d), fb = baseCall(f)
+        return !db.isEmpty && db == fb && (!d.contains("-") || !f.contains("-"))
+    }
+
+    /// #101: o ACK sai do endereço que o remetente usou: mensagem para "PT2VHF" recebida por PT2VHF-9 é confirmada
+    /// como PT2VHF; caso contrário, com o indicativo completo.
+    static func ackSource(addressee: String, ownCall: String) -> String {
+        let a = addressee.trimmingCharacters(in: .whitespaces).uppercased()
+        let own = ownCall.trimmingCharacters(in: .whitespaces).uppercased()
+        return a != own && !a.isEmpty && a == baseCall(own) ? a : own
+    }
 }
 
 enum AprsParser {

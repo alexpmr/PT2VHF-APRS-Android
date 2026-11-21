@@ -4,7 +4,7 @@ struct MessagesScreen: View {
     @EnvironmentObject var model: AppModel
     @State private var newPeer = ""
     @State private var askPeer = false
-    @State private var openPeer: String?
+    @State private var openPeer: String? = DemoData.openChat ? DemoData.chatPeer : nil
 
     var body: some View {
         NavigationStack {
@@ -30,6 +30,12 @@ struct MessagesScreen: View {
                     .swipeActions {
                         Button(role: .destructive) { model.deleteConversation(conv.peer) } label: {
                             Label("Apagar", systemImage: "trash")
+                        }
+                        if !conv.last.isBulletin {
+                            Button { model.block(conv.peer) } label: {
+                                Label("Bloquear", systemImage: "hand.raised")
+                            }
+                            .tint(.orange)
                         }
                     }
                 }
@@ -79,7 +85,7 @@ struct ConversationView: View {
                 ScrollView {
                     LazyVStack(spacing: 6) {
                         ForEach(thread) { m in
-                            Bubble(message: m) { model.retry(m) }.id(m.id)
+                            Bubble(message: m).id(m.id)
                         }
                     }
                     .padding(.horizontal, 10)
@@ -125,13 +131,16 @@ struct ConversationView: View {
 }
 
 struct Bubble: View {
+    @EnvironmentObject var model: AppModel
     let message: ChatMessage
-    let onRetry: () -> Void
 
     var body: some View {
         HStack {
             if !message.incoming { Spacer(minLength: 40) }
             VStack(alignment: message.incoming ? .leading : .trailing, spacing: 3) {
+                if let from = message.from {
+                    Text(from).font(.caption.monospaced().bold()).foregroundStyle(.tint)
+                }
                 Text(message.text).textSelection(.enabled)
                 HStack(spacing: 4) {
                     Text(message.date, format: .dateTime.day().month().hour().minute())
@@ -146,8 +155,28 @@ struct Bubble: View {
                         in: RoundedRectangle(cornerRadius: 16))
             .contextMenu {
                 Button { UIPasteboard.general.string = message.text } label: { Label("Copiar", systemImage: "doc.on.doc") }
-                if !message.incoming && (message.state == .failed || message.state == .pending) {
-                    Button(action: onRetry) { Label("Reenviar", systemImage: "arrow.clockwise") }
+                if message.incoming {
+                    let sender = message.from ?? message.peer
+                    Button(role: .destructive) { model.block(sender) } label: {
+                        Label("Bloquear \(sender)", systemImage: "hand.raised")
+                    }
+                }
+                // #105: desistir do ACK e reenviar num toque só (nova mensagem, novo número).
+                if !message.incoming && model.hasValidCall {
+                    if message.state == .pending {
+                        Button { model.resendAsNew(message) } label: {
+                            Label("Desistir do ACK e reenviar", systemImage: "arrow.clockwise")
+                        }
+                        Button(role: .destructive) { model.giveUpAck(message) } label: {
+                            Label("Desistir do ACK", systemImage: "xmark.circle")
+                        }
+                    } else if message.state == .acked {
+                        Button { model.resendAsNew(message) } label: {
+                            Label("Reenviar como nova mensagem", systemImage: "arrow.clockwise")
+                        }
+                    } else {
+                        Button { model.resendAsNew(message) } label: { Label("Reenviar", systemImage: "arrow.clockwise") }
+                    }
                 }
             }
             if message.incoming { Spacer(minLength: 40) }
@@ -165,6 +194,8 @@ struct Bubble: View {
             Image(systemName: "xmark.octagon.fill").foregroundStyle(.red)
         case .failed:
             Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+        case .cancelled:
+            Image(systemName: "xmark.circle").foregroundStyle(.secondary)
         case .received:
             EmptyView()
         }

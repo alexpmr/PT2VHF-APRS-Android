@@ -14,14 +14,14 @@ struct RadioScreen: View {
                         if model.isConnected || model.isState == .connecting {
                             Button("Desconectar") { model.disconnect() }
                         } else {
-                            Button("Conectar") { model.connect() }.disabled(!model.hasValidCall)
+                            Button("Conectar") { model.connect() }
                         }
                     }
                     if case .disconnected(let reason) = model.isState, !reason.isEmpty {
                         Text(reason).font(.caption).foregroundStyle(.secondary)
                     }
                     if !model.hasValidCall {
-                        Text("Informe um indicativo válido em Ajustes para conectar e transmitir.")
+                        Text("Sem indicativo o app só ouve (N0CALL): mostra estações e mensagens, mas não transmite. Informe o seu indicativo em Ajustes para transmitir.")
                             .font(.caption).foregroundStyle(.orange)
                     }
                 }
