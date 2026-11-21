@@ -119,6 +119,8 @@ jobs:
     needs: build
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.screenshots }}
     runs-on: macos-15
+    permissions:
+      contents: write
     defaults:
       run:
         working-directory: ios
@@ -162,3 +164,17 @@ jobs:
         with:
           name: app-store-telas
           path: ios/build/telas/*.png
+      # Fora da main, as telas também vão para docs/app-store/telas/ na própria branch (fácil de ver no GitHub).
+      - name: Salvar as telas na branch
+        if: ${{ github.ref_name != 'main' }}
+        working-directory: .
+        run: |
+          mkdir -p docs/app-store/telas
+          cp ios/build/telas/*.png docs/app-store/telas/
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/app-store/telas
+          git diff --cached --quiet && exit 0
+          git commit -m "docs(app-store): capturas de tela geradas no simulador"
+          git pull --rebase origin "${{ github.ref_name }}"
+          git push origin "HEAD:${{ github.ref_name }}"
