@@ -101,7 +101,7 @@ final class AprsIsClient {
                 self.drainLines()
             }
             if complete || error != nil {
-                self.closeAndRetry(session, reason: error?.localizedDescription ?? "servidor fechou a conexão")
+                self.closeAndRetry(session, reason: error?.localizedDescription ?? String(localized: "servidor fechou a conexão"))
                 return
             }
             self.receive(c, session: session)

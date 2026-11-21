@@ -352,7 +352,9 @@ enum Geo {
     }
 
     static func compass(_ deg: Int) -> String {
-        let names = ["N", "NE", "L", "SE", "S", "SO", "O", "NO"]
+        let names = ["N", "NE", String(localized: "L", comment: "Rumo: leste"), "SE", "S",
+                     String(localized: "SO", comment: "Rumo: sudoeste"), String(localized: "O", comment: "Rumo: oeste"),
+                     String(localized: "NO", comment: "Rumo: noroeste")]
         return names[Int((Double(deg % 360) / 45).rounded()) % 8]
     }
 }

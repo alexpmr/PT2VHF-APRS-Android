@@ -39,7 +39,7 @@ targets:
       properties:
         UIBackgroundModes: [location, bluetooth-central]
         ITSAppUsesNonExemptEncryption: false
-        CFBundleLocalizations: [pt-BR, en]
+        CFBundleLocalizations: [pt-BR, en, es, fr, it]
   PT2VHFAPRSTests:
     type: bundle.unit-test
     platform: iOS

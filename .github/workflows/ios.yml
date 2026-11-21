@@ -51,7 +51,17 @@ jobs:
         run: |
           set -o pipefail
           xcodebuild build -project PT2VHFAPRS.xcodeproj -scheme PT2VHFAPRS -configuration Release \
-            -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO | tail -n 40
+            -destination 'generic/platform=iOS' -derivedDataPath build/dd CODE_SIGNING_ALLOWED=NO | tail -n 40
+
+      - name: Conferir traduções (pt-BR, en, es, fr, it)
+        run: |
+          APP=build/dd/Build/Products/Release-iphoneos/PT2VHFAPRS.app
+          ls -d "$APP"/*.lproj
+          for l in en es fr it; do
+            test -f "$APP/$l.lproj/Localizable.strings" || { echo "::error::Falta $l.lproj/Localizable.strings"; exit 1; }
+            test -f "$APP/$l.lproj/InfoPlist.strings" || { echo "::error::Falta $l.lproj/InfoPlist.strings"; exit 1; }
+          done
+          plutil -p "$APP/en.lproj/Localizable.strings" | head -n 5
 
   testflight:
     name: TestFlight
