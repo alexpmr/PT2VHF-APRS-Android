@@ -155,7 +155,8 @@ jobs:
                 -AppleLanguages "(pt-BR)" -AppleLocale pt_BR
               # O mapa precisa de alguns segundos para baixar os tiles.
               if [ $n -eq 1 ]; then sleep 20; else sleep 6; fi
-              xcrun simctl io "$UDID" screenshot "build/telas/$TAG-$n.png"
+              # JPEG: a App Store recusa capturas com canal alfa (o PNG do simulador tem).
+              xcrun simctl io "$UDID" screenshot --type=jpeg "build/telas/$TAG-$n.jpg"
             done
             xcrun simctl shutdown "$UDID"
           done
@@ -163,17 +164,18 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: app-store-telas
-          path: ios/build/telas/*.png
+          path: ios/build/telas/*.jpg
       # Fora da main, as telas também vão para docs/app-store/telas/ na própria branch (fácil de ver no GitHub).
       - name: Salvar as telas na branch
         if: ${{ github.ref_name != 'main' }}
         working-directory: .
         run: |
           mkdir -p docs/app-store/telas
-          cp ios/build/telas/*.png docs/app-store/telas/
+          rm -f docs/app-store/telas/*.png
+          cp ios/build/telas/*.jpg docs/app-store/telas/
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/app-store/telas
+          git add -A docs/app-store/telas
           git diff --cached --quiet && exit 0
           git commit -m "docs(app-store): capturas de tela geradas no simulador"
           git pull --rebase origin "${{ github.ref_name }}"

@@ -46,7 +46,7 @@ aparelho sem assinatura em todo PR que mexe em `ios/`.
 
 **Capturas de tela da App Store:** Actions → **iOS build** → *Run workflow* com "Gerar as capturas de tela"
 marcado. O app abre no simulador em modo demonstração (`-demo`, estações e mensagens fictícias, sem conectar) e o
-artefato `app-store-telas` traz 6 telas do iPhone 6,9" e 6 do iPad 13", já no tamanho pedido pela Apple.
+artefato `app-store-telas` (e a pasta `docs/app-store/telas/` da branch) traz 6 telas do iPhone 6,9" e 6 do iPad 13", já no tamanho pedido pela Apple.
 Não precisa de Mac nem de conta Apple.
 
 ## Publicar no TestFlight (uma vez só, pelo mantenedor)

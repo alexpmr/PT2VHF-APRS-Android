@@ -342,7 +342,8 @@ idioma (dá para gerar as outras línguas trocando `-AppleLanguages` no workflow
 
 Geradas sem Mac pelo GitHub Actions: **iOS build → Run workflow → "Gerar as capturas de tela"**. O app abre no
 simulador em modo demonstração (`-demo`): estações e mensagens fictícias em volta de São Paulo, relógio 9:41,
-bateria cheia. O artefato `app-store-telas` traz os PNGs prontos para subir.
+bateria cheia. As imagens (JPEG, sem canal alfa, que a Apple recusa) ficam em `docs/app-store/telas/`
+(`iPhone16ProMax-N.jpg` e `iPadPro13inchM4-N.jpg`, na ordem da tabela) e no artefato `app-store-telas`.
 
 | # | Tela | Legenda sugerida (PT) | Caption (EN) |
 |---|---|---|---|
