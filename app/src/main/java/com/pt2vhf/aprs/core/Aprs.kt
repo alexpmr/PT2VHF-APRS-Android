@@ -178,6 +178,8 @@ fun parsePosition(info: String): Position? {
         (info.startsWith("/") || info.startsWith("@")) && info.length > 8 -> info.substring(8)
         else -> return null
     }
+    // #109: posição comprimida (base-91), padrão dos trackers/iGates LoRa APRS.
+    if (body.isNotEmpty() && !body[0].isDigit()) return parseCompressedPosition(body)
     val m = UNCOMPRESSED.find(body) ?: return null
     val g = m.groupValues
     val latMin = ambiguousMinutes(g[2]) ?: return null
@@ -198,6 +200,50 @@ fun parsePosition(info: String): Position? {
         comment = comment.substring(7)
     }
     return Position(lat, lon, g[4][0], g[8][0], comment.trim(), course, speed)
+}
+
+private fun base91Value(s: String): Int? {
+    var v = 0
+    for (c in s) { if (c.code !in 33..123) return null; v = v * 91 + (c.code - 33) }
+    return v
+}
+
+private val COMPRESSED_TELEMETRY = Regex("\\|(?:[!-{]{2}){2,7}\\|\\s*$")
+
+/**
+ * Posição comprimida (APRS 1.0.1, cap. 9): `T YYYY XXXX $ cs t` + comentário.
+ * Overlay `a`–`j` vira `0`–`9` na tabela alternativa; cs traz curso/velocidade (ou altitude/alcance, ignorados).
+ */
+fun parseCompressedPosition(body: String): Position? {
+    if (body.length < 13) return null
+    val table = body[0]
+    val symbolTable = when (table) {
+        '/', '\\' -> table
+        in 'A'..'Z' -> table
+        in 'a'..'j' -> '0' + (table - 'a')
+        else -> return null
+    }
+    val y = base91Value(body.substring(1, 5)) ?: return null
+    val x = base91Value(body.substring(5, 9)) ?: return null
+    val lat = 90.0 - y / 380926.0
+    val lon = -180.0 + x / 190463.0
+    if (lat !in -90.0..90.0 || lon !in -180.0..180.0) return null
+    val symbol = body[9]
+    val c = body[10]
+    val sp = body[11]
+    val t = body[12]
+    var course: Int? = null
+    var speed: Double? = null
+    val gga = t.code in 33..123 && ((t.code - 33) shr 3 and 0x03) == 2
+    if (c != ' ' && !gga && c.code in 33..122 && sp.code in 33..123) {
+        val cv = (c.code - 33) * 4
+        val knots = Math.pow(1.08, (sp.code - 33).toDouble()) - 1.0
+        course = cv.takeIf { it in 1..360 }
+        speed = if (course != null || knots > 0.5) knots * 1.852 else null
+    }
+    // Telemetria base-91 no fim do comentário (|ss11|, comum nos firmwares LoRa) não é texto para exibir.
+    val comment = body.substring(13).replace(COMPRESSED_TELEMETRY, "").trim()
+    return Position(lat, lon, symbolTable, symbol, comment, course, speed)
 }
 
 /** Precompiled: literal closing brace is part of APRS reply-ack syntax. */

@@ -107,7 +107,7 @@ private fun base91(s: String): Int? {
     return v
 }
 
-/** Posição de qualquer formato suportado: não comprimida ou Mic-E. */
+/** Posição de qualquer formato suportado: não comprimida, comprimida (#109) ou Mic-E. */
 fun parsePacketPosition(packet: AprsPacket): Position? =
     parsePosition(packet.info) ?: parseMicE(packet.destination, packet.info)?.position
 
