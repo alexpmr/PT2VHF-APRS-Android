@@ -3787,5 +3787,6 @@ pacotes não comprimidos e Mic-E continuam iguais; testes unitários cobrindo o 
 
 **Relacionados:** #89 (Mic-E e dados do pacote).
 
-**Status (24/11/2026):** registrado; correção em PR, sem versão nova (aguardar autorização).
+**Status (24/11/2026):** implementado em PR (`parseCompressedPosition` em `core/Aprs.kt`, testes em
+`CompressedPositionTest`); sem versão nova até autorização. Precisa de confirmação de PY4XV com o rádio LoRa.
 

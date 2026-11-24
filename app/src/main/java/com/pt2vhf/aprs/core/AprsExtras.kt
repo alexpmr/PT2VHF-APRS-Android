@@ -77,7 +77,7 @@ fun objectInfo(name: String, alive: Boolean, lat: Double, lon: Double, table: Ch
 
 data class ObjectReport(val name: String, val alive: Boolean, val position: Position, val item: Boolean)
 
-/** Lê objeto/item recebido (formato não comprimido). */
+/** Lê objeto/item recebido (posição não comprimida ou comprimida, #109). */
 fun parseObject(info: String): ObjectReport? {
     if (info.startsWith(";") && info.length >= 18) {
         val name = info.substring(1, 10).trim()
