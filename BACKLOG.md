@@ -15,6 +15,8 @@ Itens registrados para as próximas versões. Não implementar até o pedido de 
   toque (hoje são dois passos: Cancelar tentativas e depois Reenviar). Não implementado.
 - **Backlog novo (18/11/2026, sugestão de PU2PYC):** #106 escolher o som de cada notificação (mensagem, ACK, digi).
   Não implementado.
+- **Backlog novo (24/11/2026, relato de PY4XV):** #109 estações LoRa APRS recebidas por RF aparecem no Log, mas não
+  no mapa nem em Estações (falta decodificar posição comprimida). Correção em PR, sem versão nova.
 - **Backlog novo (18/11/2026, sugestão de PU2PYC):** #107 campo do servidor APRS-IS sempre em minúsculo ao digitar.
   Não implementado.
 - **Backlog (18/11/2026, mantenedor):** #106 ampliado (notificações por tipo: pessoal, boletim, genérica etc., em
@@ -3765,3 +3767,25 @@ num chip pequeno; os chips APRS-IS/GPS continuam visíveis em celular comum.
 **Relacionados:** #98 (nome do rádio no chip), #74.
 
 **Status (18/11/2026):** implementado e lançado na **v1.4** (versionCode 20). Aguarda teste em aparelho.
+
+### 109. Estações LoRa APRS recebidas por RF não aparecem no mapa nem em Estações
+_Relato de PY4XV, repassado pelo mantenedor em 24/11/2026 ("Recebe por RF, aparecem as estações no log mas não no mapa
+nem em estações")._
+
+**Hoje (conferido no código):** o pacote chega pelo TNC, vira texto TNC2 e é gravado no Log
+(`AprsService.handleLine`), mas a posição só é lida em dois formatos: não comprimida (`parsePosition`, `core/Aprs.kt`)
+e Mic-E (`parseMicE`). Não existe decodificação de **posição comprimida** (base-91, APRS 1.0.1 cap. 9). Trackers e
+iGates LoRa APRS (ex.: firmwares CA2RXU/richonguzman) transmitem posição comprimida por padrão para economizar tempo
+de ar, por isso a estação nunca ganha coordenadas e não entra no mapa nem na lista. O app iOS já decodifica esse
+formato; só o Android está sem.
+
+**Pedido:** estações com posição comprimida (com ou sem horário, e objetos/itens comprimidos) aparecem no mapa e em
+Estações, com curso/velocidade quando vierem no pacote.
+
+**Critérios de aceite:** um pacote como `PY4XV-7>APLRT1,WIDE1-1:!/5L!!<*e7>7P[` aparece no mapa na posição certa;
+pacotes não comprimidos e Mic-E continuam iguais; testes unitários cobrindo o formato.
+
+**Relacionados:** #89 (Mic-E e dados do pacote).
+
+**Status (24/11/2026):** registrado; correção em PR, sem versão nova (aguardar autorização).
+
