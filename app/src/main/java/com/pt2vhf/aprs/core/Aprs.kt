@@ -208,6 +208,8 @@ private fun base91Value(s: String): Int? {
     return v
 }
 
+private val COMPRESSED_TELEMETRY = Regex("\\|(?:[!-{]{2}){2,7}\\|\\s*$")
+
 /**
  * Posição comprimida (APRS 1.0.1, cap. 9): `T YYYY XXXX $ cs t` + comentário.
  * Overlay `a`–`j` vira `0`–`9` na tabela alternativa; cs traz curso/velocidade (ou altitude/alcance, ignorados).
@@ -239,7 +241,9 @@ fun parseCompressedPosition(body: String): Position? {
         course = cv.takeIf { it in 1..360 }
         speed = if (course != null || knots > 0.5) knots * 1.852 else null
     }
-    return Position(lat, lon, symbolTable, symbol, body.substring(13).trim(), course, speed)
+    // Telemetria base-91 no fim do comentário (|ss11|, comum nos firmwares LoRa) não é texto para exibir.
+    val comment = body.substring(13).replace(COMPRESSED_TELEMETRY, "").trim()
+    return Position(lat, lon, symbolTable, symbol, comment, course, speed)
 }
 
 /** Precompiled: literal closing brace is part of APRS reply-ack syntax. */

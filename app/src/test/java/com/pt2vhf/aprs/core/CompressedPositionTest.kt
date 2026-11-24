@@ -55,4 +55,26 @@ class CompressedPositionTest {
         // Não comprimida continua igual.
         assertEquals(-15.5, parsePosition("!1530.00S/04730.00W>")!!.lat, 1e-6)
     }
+
+    @Test fun py4xcLoraPacketsFromLog() {
+        // Pacotes reais do Log de PY4XC/PY4XV (LoRa APRS 915 MHz, firmware APLRG1).
+        val gw = AprsPacket.parse("PY4XC-1>APLRG1,PY4XC-15*:=LXc#7C\\1ha !GLoRa APRS 915MHz|*:%%|")!!
+        val p1 = parsePacketPosition(gw)!!
+        assertEquals(-20.2397, p1.lat, 1e-3)
+        assertEquals(-42.9050, p1.lon, 1e-3)
+        assertEquals('L', p1.symbolTable)
+        assertEquals('a', p1.symbol)
+        assertEquals("LoRa APRS 915MHz", p1.comment)
+        assertNull(p1.course)
+
+        val digi = AprsPacket.parse("PY4XC-15>APLRG1,WIDE1-1:=LXc?jC\\=8# !GLoRa APRS 915MHz")!!
+        val p2 = parsePacketPosition(digi)!!
+        assertEquals(-20.24, p2.lat, 0.01)
+        assertEquals(-42.90, p2.lon, 0.01)
+        assertEquals('#', p2.symbol)
+        assertEquals("LoRa APRS 915MHz", p2.comment)
+
+        val other = parsePosition("=LXc#7C\\1ha !GLoRa APRS 915MHz|*9%\"|")!!
+        assertEquals("LoRa APRS 915MHz", other.comment)
+    }
 }
