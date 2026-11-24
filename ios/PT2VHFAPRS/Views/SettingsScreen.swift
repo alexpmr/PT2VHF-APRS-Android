@@ -108,7 +108,7 @@ struct SettingsForm: View {
             Section("Sobre") {
                 LabeledContent("Versão", value: AppModel.version)
                 Link("www.PT2VHF.com", destination: URL(string: "https://www.pt2vhf.com/aprs-android")!)
-                LabeledContent("Colaboradores", value: "PU2PYC, PP5AU, PU2MUS, PP5PK")
+                LabeledContent("Colaboradores", value: "PU2PYC, PP5AU, PU2MUS, PP5PK, PY6TL, PY4XV")
                 Text("Gratuito, sem anúncios. Mesmo protocolo e TOCALL (APZVHF) do app Android.")
                     .font(.caption).foregroundStyle(.secondary)
             }

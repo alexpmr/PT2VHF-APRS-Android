@@ -1,5 +1,9 @@
 # Changelog
 
+## Próxima versão — não lançada
+
+- **Colaboradores:** PY4XV entra como apoiador na aba Sobre (Android e iOS); no iOS PY6TL também passa a aparecer.
+
 ## 1.4 — Publicada (18/11/2026; teste em aparelho pendente)
 
 Versão 1.4 (versionCode 20), autorizada pelo mantenedor ("Gere novo apk e suba no site"). Instala por cima da 1.3

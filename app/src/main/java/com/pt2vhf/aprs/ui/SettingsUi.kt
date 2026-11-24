@@ -901,7 +901,7 @@ internal enum class SettingsTab {
 }
 
 /** #79: radioamadores que ajudaram a melhorar o app (indicativos não se traduzem). Ampliar só aqui. */
-internal val CONTRIBUTORS = listOf("PU2PYC", "PP5AU", "PU2MUS", "PP5PK", "PY6TL")
+internal val CONTRIBUTORS = listOf("PU2PYC", "PP5AU", "PU2MUS", "PP5PK", "PY6TL", "PY4XV")
 
 private const val SSID_HELP_SEEN = "ssid_help_seen"
 
