@@ -1,0 +1,231 @@
+{
+  "version": "1.3.6",
+  "project": "PT2VHF-APRS-Android",
+  "user_name": "Alex",
+  "chat_language": "pt-br",
+  "doc_language": "Português",
+  "answer_mode": "file",
+  "doc_level": "completo",
+  "output_folder": "_reversa_sdd",
+  "forward_folder": "_reversa_forward",
+  "phase": "concluido",
+  "completed": [
+    "reconhecimento",
+    "escavacao",
+    "interpretacao",
+    "geracao",
+    "revisao"
+  ],
+  "pending": [],
+  "checkpoints": {
+    "scout": {
+      "completed_at": "2026-11-27T22:30:00Z",
+      "files": [
+        "_reversa_sdd/inventory.md",
+        "_reversa_sdd/dependencies.md",
+        ".reversa/context/surface.json"
+      ]
+    },
+    "archaeologist": {
+      "completed_at": "2026-11-27T22:45:00Z",
+      "modules_analyzed": [
+        "protocolo-aprs",
+        "modem-e-radio",
+        "gateway-igate-digi",
+        "estado-e-persistencia",
+        "servico-e-transportes",
+        "atualizacao-e-site",
+        "api-externa",
+        "interface"
+      ],
+      "modules_pending": [],
+      "files": [
+        "_reversa_sdd/code-analysis.md",
+        "_reversa_sdd/data-dictionary.md",
+        "_reversa_sdd/flowcharts/protocolo-aprs.md",
+        "_reversa_sdd/flowcharts/modem-e-radio.md",
+        "_reversa_sdd/flowcharts/gateway-igate-digi.md",
+        "_reversa_sdd/flowcharts/estado-e-persistencia.md",
+        "_reversa_sdd/flowcharts/servico-e-transportes.md",
+        "_reversa_sdd/flowcharts/atualizacao-e-site.md",
+        "_reversa_sdd/flowcharts/api-externa.md",
+        "_reversa_sdd/flowcharts/interface.md",
+        ".reversa/context/modules.json"
+      ]
+    },
+    "detective": {
+      "completed_at": "2026-11-27T23:10:00Z",
+      "files": [
+        "_reversa_sdd/domain.md",
+        "_reversa_sdd/state-machines.md",
+        "_reversa_sdd/permissions.md",
+        "_reversa_sdd/adrs/"
+      ]
+    },
+    "architect": {
+      "completed_at": "2026-11-27T23:20:00Z",
+      "files": [
+        "_reversa_sdd/architecture.md",
+        "_reversa_sdd/c4-context.md",
+        "_reversa_sdd/c4-containers.md",
+        "_reversa_sdd/c4-components.md",
+        "_reversa_sdd/erd-complete.md",
+        "_reversa_sdd/traceability/spec-impact-matrix.md"
+      ]
+    },
+    "writer": {
+      "completed_at": "2026-11-27T23:40:00Z",
+      "units": [
+        "protocolo-aprs",
+        "modem-e-radio",
+        "gateway-igate-digi",
+        "estado-e-persistencia",
+        "servico-e-transportes",
+        "atualizacao-e-site",
+        "api-externa",
+        "interface"
+      ],
+      "files": [
+        "_reversa_sdd/user-stories/historias.md",
+        "_reversa_sdd/traceability/code-spec-matrix.md"
+      ]
+    },
+    "reviewer": {
+      "completed_at": "2026-11-27T23:50:00Z",
+      "confidence": 97.5,
+      "green": 416,
+      "yellow": 16,
+      "red": 3,
+      "open_questions": 9,
+      "files": [
+        "_reversa_sdd/confidence-report.md",
+        "_reversa_sdd/questions.md",
+        "_reversa_sdd/gaps.md"
+      ]
+    }
+  },
+  "engines": [
+    "claude-code"
+  ],
+  "agents": [
+    "impeccable",
+    "reversa",
+    "reversa-add",
+    "reversa-agents-help",
+    "reversa-arbiter",
+    "reversa-archaeologist",
+    "reversa-architect",
+    "reversa-arquitetura-3d",
+    "reversa-audit",
+    "reversa-autonomous",
+    "reversa-brainstorm",
+    "reversa-challenger",
+    "reversa-clarify",
+    "reversa-code-express",
+    "reversa-coding",
+    "reversa-curator",
+    "reversa-data-master",
+    "reversa-debugger",
+    "reversa-debugger-debate",
+    "reversa-debugger-fix",
+    "reversa-debugger-graph",
+    "reversa-decouple",
+    "reversa-depth-inspection",
+    "reversa-design-system",
+    "reversa-designer",
+    "reversa-detective",
+    "reversa-docs",
+    "reversa-docs-analyst",
+    "reversa-docs-mapper",
+    "reversa-docs-publisher",
+    "reversa-docs-storyteller",
+    "reversa-drafter",
+    "reversa-especialista-d3",
+    "reversa-explorer",
+    "reversa-extract-soul",
+    "reversa-forward",
+    "reversa-forward-autonomous",
+    "reversa-framer",
+    "reversa-highcharts-visualizer",
+    "reversa-ideator",
+    "reversa-image-prompt-json",
+    "reversa-inspector",
+    "reversa-migrate",
+    "reversa-modularize",
+    "reversa-n8n",
+    "reversa-new",
+    "reversa-optimize",
+    "reversa-paradigm-advisor",
+    "reversa-plan",
+    "reversa-pre-spec",
+    "reversa-pricing",
+    "reversa-pricing-advisor",
+    "reversa-pricing-estimate",
+    "reversa-pricing-product",
+    "reversa-pricing-profile",
+    "reversa-pricing-research",
+    "reversa-pricing-size",
+    "reversa-principles",
+    "reversa-prune",
+    "reversa-quality",
+    "reversa-reconstructor",
+    "reversa-refactor",
+    "reversa-requirements",
+    "reversa-researcher",
+    "reversa-restructure",
+    "reversa-resume",
+    "reversa-reviewer",
+    "reversa-scout",
+    "reversa-screen-translator",
+    "reversa-selo-generativo",
+    "reversa-simplify",
+    "reversa-spec-sdd",
+    "reversa-standardize",
+    "reversa-strategist",
+    "reversa-sync",
+    "reversa-to-do",
+    "reversa-visor",
+    "reversa-writer"
+  ],
+  "created_files": [
+    ".reversa/templates/actions-template.md",
+    ".reversa/templates/principles-template.md",
+    ".reversa/templates/quality-template.md",
+    ".reversa/templates/requirements-template.md",
+    ".reversa/templates/roadmap-template.md",
+    ".reversa/scripts/sh/bind-to-extraction.sh",
+    ".reversa/scripts/sh/prepare-roadmap.sh",
+    ".reversa/scripts/sh/verify-prerequisites.sh",
+    ".reversa/scripts/ps/bind-to-extraction.ps1",
+    ".reversa/scripts/ps/prepare-roadmap.ps1",
+    ".reversa/scripts/ps/verify-prerequisites.ps1",
+    ".reversa/hooks.yml",
+    ".reversa/setup.json",
+    ".reversa/reversa-config.json",
+    ".reversa/hooks/README.md",
+    ".reversa/hooks/check-legacy-policy.mjs",
+    ".reversa/state.json",
+    ".reversa/config.toml",
+    ".reversa/config.user.toml",
+    ".reversa/plan.md",
+    ".reversa/version",
+    ".reversa/_config/manifest.yaml"
+  ],
+  "specs_choice": "auto",
+  "autonomous": {
+    "started_at": "2026-11-27T22:15:00Z"
+  },
+  "redator_progress": {
+    "done": [
+      "protocolo-aprs",
+      "modem-e-radio",
+      "gateway-igate-digi",
+      "estado-e-persistencia",
+      "servico-e-transportes",
+      "atualizacao-e-site",
+      "api-externa",
+      "interface"
+    ],
+    "pending": []
+  }
+}

@@ -1,0 +1,431 @@
+{
+  "generated_at": "2026-11-27T22:45:00Z",
+  "modules": [
+    {
+      "name": "protocolo-aprs",
+      "path": "app/src/main/java/com/pt2vhf/aprs/core",
+      "purpose": "Parser e codificador APRS, KISS/AX.25, Mic-E, telemetria, clima, objetos, validação de indicativo e SmartBeaconing",
+      "primary_files": [
+        "app/src/main/java/com/pt2vhf/aprs/core/Aprs.kt",
+        "app/src/main/java/com/pt2vhf/aprs/core/Kiss.kt",
+        "app/src/main/java/com/pt2vhf/aprs/core/AprsDevice.kt",
+        "app/src/main/java/com/pt2vhf/aprs/core/AprsExtras.kt",
+        "app/src/main/java/com/pt2vhf/aprs/core/AprsPath.kt",
+        "app/src/main/java/com/pt2vhf/aprs/core/AprsText.kt",
+        "app/src/main/java/com/pt2vhf/aprs/core/AprsTelemetry.kt",
+        "app/src/main/java/com/pt2vhf/aprs/core/AprsWeather.kt",
+        "app/src/main/java/com/pt2vhf/aprs/core/PacketDecoder.kt",
+        "app/src/main/java/com/pt2vhf/aprs/core/CallsignPrefixes.kt",
+        "app/src/main/java/com/pt2vhf/aprs/core/DeviceIdTable.kt",
+        "app/src/main/java/com/pt2vhf/aprs/core/AsciiFold.kt"
+      ],
+      "functions": [
+        {
+          "name": "AprsPacket.parse",
+          "file": "app/src/main/java/com/pt2vhf/aprs/core/Aprs.kt",
+          "params": [
+            "line: String"
+          ],
+          "returns": "AprsPacket?",
+          "confidence": "confirmed"
+        },
+        {
+          "name": "parsePosition",
+          "file": "app/src/main/java/com/pt2vhf/aprs/core/Aprs.kt",
+          "params": [
+            "info: String"
+          ],
+          "returns": "Position?",
+          "confidence": "confirmed"
+        },
+        {
+          "name": "parseMessage",
+          "file": "app/src/main/java/com/pt2vhf/aprs/core/Aprs.kt",
+          "params": [
+            "info: String"
+          ],
+          "returns": "AprsMessage?",
+          "confidence": "confirmed"
+        },
+        {
+          "name": "parseMicE",
+          "file": "app/src/main/java/com/pt2vhf/aprs/core/AprsDevice.kt",
+          "params": [
+            "destination: String",
+            "info: String"
+          ],
+          "returns": "MicE?",
+          "confidence": "confirmed"
+        },
+        {
+          "name": "aprsPasscode",
+          "file": "app/src/main/java/com/pt2vhf/aprs/core/Aprs.kt",
+          "params": [
+            "callsign: String"
+          ],
+          "returns": "Int",
+          "confidence": "confirmed"
+        },
+        {
+          "name": "checkAmateurCallsign",
+          "file": "app/src/main/java/com/pt2vhf/aprs/core/CallsignPrefixes.kt",
+          "params": [
+            "value: String"
+          ],
+          "returns": "CallsignCheck",
+          "confidence": "confirmed"
+        }
+      ],
+      "entities": [
+        {
+          "name": "AprsPacket",
+          "fields": [
+            {
+              "name": "source",
+              "type": "String",
+              "required": true
+            },
+            {
+              "name": "destination",
+              "type": "String",
+              "required": true
+            },
+            {
+              "name": "path",
+              "type": "List<String>",
+              "required": true
+            },
+            {
+              "name": "info",
+              "type": "String",
+              "required": true
+            },
+            {
+              "name": "thirdPartyGateway",
+              "type": "String?",
+              "required": false
+            }
+          ],
+          "confidence": "confirmed"
+        }
+      ],
+      "business_rules": [
+        "Comentário de posição limitado a 43 caracteres e sempre terminado em www.PT2VHF.com",
+        "Mensagem limitada a 67 caracteres por parte",
+        "Posição comprimida não suportada (#109)"
+      ]
+    },
+    {
+      "name": "modem-e-radio",
+      "path": "app/src/main/java/com/pt2vhf/aprs/core",
+      "purpose": "Modem AFSK 1200 bd, HDLC, perfis KISS-BLE, PTT RTS/DTR/CAT e controle USB serial",
+      "primary_files": [
+        "app/src/main/java/com/pt2vhf/aprs/core/Afsk.kt",
+        "app/src/main/java/com/pt2vhf/aprs/core/RadioControl.kt"
+      ],
+      "functions": [
+        {
+          "name": "AfskModulator.modulate",
+          "file": "app/src/main/java/com/pt2vhf/aprs/core/Afsk.kt",
+          "params": [
+            "frame: ByteArray",
+            "txDelayMs: Int",
+            "voxLeadMs: Int",
+            "tailMs: Int",
+            "amplitude: Double"
+          ],
+          "returns": "ShortArray",
+          "confidence": "confirmed"
+        },
+        {
+          "name": "AfskDemodulator.feed",
+          "file": "app/src/main/java/com/pt2vhf/aprs/core/Afsk.kt",
+          "params": [
+            "samples: ShortArray",
+            "length: Int"
+          ],
+          "returns": "List<ByteArray>",
+          "confidence": "confirmed"
+        },
+        {
+          "name": "CatPtt.command",
+          "file": "app/src/main/java/com/pt2vhf/aprs/core/RadioControl.kt",
+          "params": [
+            "protocol: String",
+            "transmit: Boolean",
+            "civAddress: Int"
+          ],
+          "returns": "ByteArray",
+          "confidence": "confirmed"
+        }
+      ],
+      "entities": [],
+      "business_rules": [
+        "PTT solto sempre após TX, mesmo em erro",
+        "Espera até 3 s com canal ocupado"
+      ]
+    },
+    {
+      "name": "gateway-igate-digi",
+      "path": "app/src/main/java/com/pt2vhf/aprs/core",
+      "purpose": "iGate RF↔APRS-IS e digipeater inteligente",
+      "primary_files": [
+        "app/src/main/java/com/pt2vhf/aprs/core/Igate.kt",
+        "app/src/main/java/com/pt2vhf/aprs/core/SmartDigipeater.kt",
+        "app/src/main/java/com/pt2vhf/aprs/service/AprsService.kt"
+      ],
+      "functions": [
+        {
+          "name": "rfToIs",
+          "file": "app/src/main/java/com/pt2vhf/aprs/core/Igate.kt",
+          "params": [
+            "raw: String",
+            "myCall: String"
+          ],
+          "returns": "GateResult",
+          "confidence": "confirmed"
+        },
+        {
+          "name": "isToRf",
+          "file": "app/src/main/java/com/pt2vhf/aprs/core/Igate.kt",
+          "params": [
+            "raw",
+            "myCall",
+            "tocall",
+            "rfPath",
+            "isLocal"
+          ],
+          "returns": "GateResult",
+          "confidence": "confirmed"
+        },
+        {
+          "name": "SmartDigipeater.onHeard",
+          "file": "app/src/main/java/com/pt2vhf/aprs/core/SmartDigipeater.kt",
+          "params": [
+            "raw",
+            "now",
+            "myLat",
+            "myLon",
+            "knownPosition"
+          ],
+          "returns": "DigiDecision",
+          "confidence": "confirmed"
+        }
+      ],
+      "entities": [
+        {
+          "name": "DigiConfig",
+          "fields": [
+            {
+              "name": "maxN",
+              "type": "Int",
+              "required": true
+            },
+            {
+              "name": "viscousDelayMs",
+              "type": "Long",
+              "required": true
+            }
+          ],
+          "confidence": "confirmed"
+        }
+      ],
+      "business_rules": [
+        "IS→RF só mensagens para estações locais",
+        "Dedupe 30 s",
+        "Prioridade para mensagens e emergência"
+      ]
+    },
+    {
+      "name": "estado-e-persistencia",
+      "path": "app/src/main/java/com/pt2vhf/aprs/data",
+      "purpose": "Estado compartilhado, regras de mensagens, retenção, SQLite e preferências",
+      "primary_files": [
+        "app/src/main/java/com/pt2vhf/aprs/data/AprsRepository.kt",
+        "app/src/main/java/com/pt2vhf/aprs/data/Models.kt",
+        "app/src/main/java/com/pt2vhf/aprs/data/Settings.kt",
+        "app/src/main/java/com/pt2vhf/aprs/data/MessageLogic.kt",
+        "app/src/main/java/com/pt2vhf/aprs/data/StationStore.kt",
+        "app/src/main/java/com/pt2vhf/aprs/data/MessageStore.kt",
+        "app/src/main/java/com/pt2vhf/aprs/data/PacketLogStore.kt",
+        "app/src/main/java/com/pt2vhf/aprs/data/SettingsBackup.kt",
+        "app/src/main/java/com/pt2vhf/aprs/data/InternalText.kt"
+      ],
+      "functions": [
+        {
+          "name": "AprsRepository.ingest",
+          "file": "app/src/main/java/com/pt2vhf/aprs/data/AprsRepository.kt",
+          "params": [
+            "packet",
+            "medium",
+            "ownCall",
+            "now"
+          ],
+          "returns": "IncomingMessage?",
+          "confidence": "confirmed"
+        },
+        {
+          "name": "retentionVictims",
+          "file": "app/src/main/java/com/pt2vhf/aprs/data/MessageLogic.kt",
+          "params": [
+            "messages",
+            "policy",
+            "now"
+          ],
+          "returns": "Set<Long>",
+          "confidence": "confirmed"
+        },
+        {
+          "name": "ackMatchesDestination",
+          "file": "app/src/main/java/com/pt2vhf/aprs/data/MessageLogic.kt",
+          "params": [
+            "dest",
+            "ackFrom"
+          ],
+          "returns": "Boolean",
+          "confidence": "confirmed"
+        }
+      ],
+      "entities": [
+        {
+          "name": "Station",
+          "fields": [],
+          "confidence": "confirmed"
+        },
+        {
+          "name": "ChatMessage",
+          "fields": [],
+          "confidence": "confirmed"
+        },
+        {
+          "name": "Settings",
+          "fields": [],
+          "confidence": "confirmed"
+        }
+      ],
+      "business_rules": [
+        "Mensagem pendente nunca é apagada pela retenção",
+        "Enviando vira Interrompida ao reiniciar",
+        "Apagar só após commit no SQLite"
+      ]
+    },
+    {
+      "name": "servico-e-transportes",
+      "path": "app/src/main/java/com/pt2vhf/aprs/service",
+      "purpose": "Serviço em primeiro plano, APRS-IS, TNCs, GPS, tracker, notificações, widget e Android Auto",
+      "primary_files": [
+        "app/src/main/java/com/pt2vhf/aprs/service/AprsService.kt",
+        "app/src/main/java/com/pt2vhf/aprs/service/Connections.kt",
+        "app/src/main/java/com/pt2vhf/aprs/service/BleTnc.kt",
+        "app/src/main/java/com/pt2vhf/aprs/service/UsbTnc.kt",
+        "app/src/main/java/com/pt2vhf/aprs/service/AudioTnc.kt",
+        "app/src/main/java/com/pt2vhf/aprs/service/NotificationTypes.kt",
+        "app/src/main/java/com/pt2vhf/aprs/service/StatusWidget.kt",
+        "app/src/main/java/com/pt2vhf/aprs/service/CarApp.kt"
+      ],
+      "functions": [
+        {
+          "name": "AprsService.transmit",
+          "file": "app/src/main/java/com/pt2vhf/aprs/service/AprsService.kt",
+          "params": [
+            "info: String"
+          ],
+          "returns": "Medium?",
+          "confidence": "confirmed"
+        },
+        {
+          "name": "AprsService.sendWithRetry",
+          "file": "app/src/main/java/com/pt2vhf/aprs/service/AprsService.kt",
+          "params": [
+            "local",
+            "dest",
+            "text",
+            "msgId",
+            "attempt",
+            "generation"
+          ],
+          "returns": "Boolean",
+          "confidence": "confirmed"
+        },
+        {
+          "name": "AprsIsClient.start",
+          "file": "app/src/main/java/com/pt2vhf/aprs/service/Connections.kt",
+          "params": [
+            "host",
+            "port",
+            "call",
+            "passcode",
+            "filter"
+          ],
+          "returns": "Unit",
+          "confidence": "confirmed"
+        }
+      ],
+      "entities": [],
+      "business_rules": [
+        "Mensagem privada: APRS-IS primeiro, RF como alternativa",
+        "Beacon: RF e APRS-IS juntos",
+        "Somente recepção bloqueia toda TX"
+      ]
+    },
+    {
+      "name": "atualizacao-e-site",
+      "path": "app/src/main/java/com/pt2vhf/aprs/data",
+      "purpose": "Aviso de nova versão e registro do indicativo no site",
+      "primary_files": [
+        "app/src/main/java/com/pt2vhf/aprs/data/UpdateManager.kt",
+        "app/src/main/java/com/pt2vhf/aprs/data/UpdateCheck.kt"
+      ],
+      "functions": [
+        {
+          "name": "UpdateCheck.fetchResult",
+          "file": "app/src/main/java/com/pt2vhf/aprs/data/UpdateCheck.kt",
+          "params": [
+            "call: String?"
+          ],
+          "returns": "Result",
+          "confidence": "confirmed"
+        }
+      ],
+      "entities": [],
+      "business_rules": [
+        "Só link do domínio oficial",
+        "Nunca instala sozinho"
+      ]
+    },
+    {
+      "name": "api-externa",
+      "path": "app/src/main/java/com/pt2vhf/aprs/service",
+      "purpose": "Intents públicos para outros apps",
+      "primary_files": [
+        "app/src/main/java/com/pt2vhf/aprs/service/ApiContract.kt",
+        "app/src/main/java/com/pt2vhf/aprs/service/ApiReceiver.kt"
+      ],
+      "functions": [],
+      "entities": [],
+      "business_rules": [
+        "API desligada por padrão",
+        "Permissão perigosa própria"
+      ]
+    },
+    {
+      "name": "interface",
+      "path": "app/src/main/java/com/pt2vhf/aprs/ui",
+      "purpose": "Telas Compose",
+      "primary_files": [
+        "app/src/main/java/com/pt2vhf/aprs/ui/App.kt",
+        "app/src/main/java/com/pt2vhf/aprs/ui/Screens.kt",
+        "app/src/main/java/com/pt2vhf/aprs/ui/MessagesUi.kt",
+        "app/src/main/java/com/pt2vhf/aprs/ui/SettingsUi.kt",
+        "app/src/main/java/com/pt2vhf/aprs/ui/StationDetailUi.kt",
+        "app/src/main/java/com/pt2vhf/aprs/ui/RadioUi.kt",
+        "app/src/main/java/com/pt2vhf/aprs/ui/LogsUi.kt"
+      ],
+      "functions": [],
+      "entities": [],
+      "business_rules": [
+        "Banner só na abertura a frio"
+      ]
+    }
+  ]
+}

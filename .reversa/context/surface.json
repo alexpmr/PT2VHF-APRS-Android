@@ -1,0 +1,57 @@
+{
+  "generated_at": "2026-11-27T22:30:00Z",
+  "project_root": "/home/user/PT2VHF-APRS-Android",
+  "languages": [
+    { "name": "Kotlin", "extensions": [".kt", ".kts"], "file_count": 100 },
+    { "name": "XML", "extensions": [".xml"], "file_count": 84 },
+    { "name": "Swift", "extensions": [".swift"], "file_count": 15 }
+  ],
+  "primary_language": "Kotlin",
+  "frameworks": [
+    { "name": "Android Gradle Plugin", "version": "8.7.3", "source": "build.gradle.kts" },
+    { "name": "Kotlin", "version": "2.0.21", "source": "build.gradle.kts" },
+    { "name": "Jetpack Compose BOM", "version": "2024.12.01", "source": "app/build.gradle.kts" },
+    { "name": "osmdroid", "version": "6.1.20", "source": "app/build.gradle.kts" },
+    { "name": "androidx.car.app", "version": "1.4.0", "source": "app/build.gradle.kts" },
+    { "name": "kotlinx-coroutines-android", "version": "1.9.0", "source": "app/build.gradle.kts" }
+  ],
+  "package_manager": "gradle",
+  "entry_points": [
+    { "path": "app/src/main/java/com/pt2vhf/aprs/UiText.kt", "type": "application" },
+    { "path": "app/src/main/java/com/pt2vhf/aprs/MainActivity.kt", "type": "app_entry" },
+    { "path": "app/src/main/java/com/pt2vhf/aprs/service/AprsService.kt", "type": "foreground_service" },
+    { "path": "app/src/main/java/com/pt2vhf/aprs/service/ApiReceiver.kt", "type": "broadcast_receiver" },
+    { "path": "app/src/main/java/com/pt2vhf/aprs/service/CarApp.kt", "type": "car_app_service" },
+    { "path": "app/src/main/java/com/pt2vhf/aprs/service/StatusWidget.kt", "type": "app_widget" }
+  ],
+  "config_files": ["app/build.gradle.kts", "gradle.properties", "settings.gradle.kts", "app/src/main/AndroidManifest.xml"],
+  "ci_cd": [".github/workflows/android.yml", ".github/workflows/ios.yml"],
+  "database_hints": [
+    { "path": "app/src/main/java/com/pt2vhf/aprs/data/StationStore.kt", "type": "sqlite_open_helper" },
+    { "path": "app/src/main/java/com/pt2vhf/aprs/data/MessageStore.kt", "type": "sqlite_open_helper" },
+    { "path": "app/src/main/java/com/pt2vhf/aprs/data/PacketLogStore.kt", "type": "sqlite_open_helper" },
+    { "path": "app/src/main/java/com/pt2vhf/aprs/data/Settings.kt", "type": "shared_preferences" }
+  ],
+  "test_framework": "JUnit 4",
+  "test_file_count": 27,
+  "modules": [
+    "protocolo-aprs",
+    "modem-e-radio",
+    "gateway-igate-digi",
+    "estado-e-persistencia",
+    "servico-e-transportes",
+    "atualizacao-e-site",
+    "api-externa",
+    "interface"
+  ],
+  "total_files": 223,
+  "out_of_scope": ["ios/"],
+  "organization_suggestion": {
+    "granularity": "module",
+    "rationale": "O código está dividido em pacotes por responsabilidade (core, data, service, ui) e cada pacote agrupa módulos lógicos bem delimitados.",
+    "signals": [
+      { "type": "top_level_domain_folders", "evidence": ["app/src/main/java/com/pt2vhf/aprs/core/", "app/src/main/java/com/pt2vhf/aprs/data/", "app/src/main/java/com/pt2vhf/aprs/service/", "app/src/main/java/com/pt2vhf/aprs/ui/"] }
+    ],
+    "features": []
+  }
+}
