@@ -10,7 +10,7 @@ flowchart TD
     B -- sim --> X[ignorar]
     B -- não --> C{tem '>' antes de ':'?}
     C -- não --> X
-    C -- sim --> D{info começa com '}'?}
+    C -- sim --> D{"info começa com '}'?"}
     D -- sim, profundidade 0 --> E[parse do cabeçalho interno<br/>thirdPartyGateway = origem externa]
     D -- sim, profundidade 1 --> X
     D -- não --> F[AprsPacket]
